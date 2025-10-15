@@ -1,0 +1,59 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+// Optimized Vite config for production
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    // Code splitting optimization
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-components': [
+            './src/components/ui/Avatar',
+            './src/components/ui/Button',
+            './src/components/ui/Input',
+            './src/components/ui/Modal',
+            './src/components/ui/Tooltip',
+          ],
+          'chat': [
+            './src/components/chat/MessageList',
+            './src/components/chat/MessageInput',
+          ],
+          'layout': [
+            './src/components/layout/GuildList',
+            './src/components/layout/Sidebar',
+            './src/components/layout/MemberList',
+          ],
+        },
+      },
+    },
+    // Minification
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true,
+      },
+    },
+    // Chunk size warning limit
+    chunkSizeWarningLimit: 1000,
+    // Source maps for debugging (disable in production)
+    sourcemap: false,
+  },
+  // Optimizations
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'zustand', 'axios'],
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
+});

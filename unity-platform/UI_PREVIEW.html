@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unity Platform - UI Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: hsl(224, 71%, 4%);
+            color: hsl(213, 31%, 91%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scrollbar-hide::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-hide::-webkit-scrollbar-thumb {
+            background: hsl(215, 28%, 17%);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <!-- Main Container -->
+    <div class="flex h-full">
+        <!-- Server List (Left) -->
+        <div class="w-18 bg-[hsl(224,71%,4%)] flex flex-col items-center py-3 gap-2 border-r border-[hsl(215,28%,17%)]">
+            <!-- Home Button -->
+            <button class="w-12 h-12 rounded-full bg-purple-600 hover:bg-purple-700 hover:rounded-xl transition-all duration-200 flex items-center justify-center text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+            </button>
+
+            <div class="w-8 h-0.5 bg-[hsl(215,28%,17%)] rounded-full my-1"></div>
+
+            <!-- Server Icons -->
+            <button class="w-12 h-12 rounded-full bg-[hsl(215,28%,17%)] hover:bg-[hsl(215,28%,25%)] hover:rounded-xl transition-all duration-200 flex items-center justify-center text-xl font-semibold">
+                U
+            </button>
+            <button class="w-12 h-12 rounded-full bg-[hsl(215,28%,17%)] hover:bg-[hsl(215,28%,25%)] hover:rounded-xl transition-all duration-200 flex items-center justify-center text-xl font-semibold">
+                G
+            </button>
+            <button class="w-12 h-12 rounded-full bg-[hsl(215,28%,17%)] hover:bg-[hsl(215,28%,25%)] hover:rounded-xl transition-all duration-200 flex items-center justify-center text-xl font-semibold">
+                E
+            </button>
+
+            <div class="flex-1"></div>
+
+            <!-- Add Server Button -->
+            <button class="w-12 h-12 rounded-full bg-[hsl(215,28%,17%)] hover:bg-green-600 hover:rounded-xl transition-all duration-200 flex items-center justify-center text-green-500 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Channel List (Left Sidebar) -->
+        <div class="w-60 bg-[hsl(215,28%,17%)] flex flex-col">
+            <!-- Server Header -->
+            <div class="h-12 px-4 flex items-center border-b border-[hsl(224,71%,4%)] shadow-sm">
+                <h2 class="font-semibold truncate">Unity Gaming Community</h2>
+            </div>
+
+            <!-- Channels -->
+            <div class="flex-1 overflow-y-auto scrollbar-hide p-2">
+                <!-- Text Channels -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between px-2 py-1 text-xs font-semibold text-[hsl(217,11%,65%)] uppercase">
+                        Text Channels
+                        <button class="hover:text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="space-y-0.5 mt-1">
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm bg-[hsl(215,28%,25%)] text-white">
+                            <span class="text-[hsl(217,11%,65%)]">#</span>
+                            <span class="truncate">general</span>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-[hsl(217,11%,65%)] hover:bg-[hsl(215,28%,25%)] hover:text-white">
+                            <span>#</span>
+                            <span class="truncate">announcements</span>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-[hsl(217,11%,65%)] hover:bg-[hsl(215,28%,25%)] hover:text-white">
+                            <span>#</span>
+                            <span class="truncate">team-chat</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Voice Channels -->
+                <div>
+                    <div class="flex items-center justify-between px-2 py-1 text-xs font-semibold text-[hsl(217,11%,65%)] uppercase">
+                        Voice Channels
+                        <button class="hover:text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="space-y-0.5 mt-1">
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-[hsl(217,11%,65%)] hover:bg-[hsl(215,28%,25%)] hover:text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                            </svg>
+                            <span class="truncate">General Voice</span>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-[hsl(217,11%,65%)] hover:bg-[hsl(215,28%,25%)] hover:text-white">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                            </svg>
+                            <span class="truncate">Team Voice</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events Button -->
+            <div class="p-2 border-t border-[hsl(224,71%,4%)]">
+                <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-[hsl(217,11%,65%)] hover:bg-[hsl(215,28%,25%)] hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>Events</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Channel Header -->
+            <div class="h-12 px-4 flex items-center border-b border-[hsl(215,28%,17%)] shadow-sm">
+                <span class="text-[hsl(217,11%,65%)] mr-2">#</span>
+                <h3 class="font-semibold">general</h3>
+                <div class="mx-2 text-[hsl(217,11%,65%)]">|</div>
+                <p class="text-sm text-[hsl(217,11%,65%)] truncate">Welcome to Unity Gaming Community!</p>
+            </div>
+
+            <!-- Messages -->
+            <div class="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-4">
+                <!-- Message 1 -->
+                <div class="flex gap-3 hover:bg-[hsl(215,28%,17%)] px-2 py-1 rounded group">
+                    <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-semibold">
+                        A
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-semibold text-sm">Admin User</span>
+                            <span class="text-xs text-[hsl(217,11%,65%)]">11:30 AM</span>
+                        </div>
+                        <div class="text-sm text-[hsl(213,31%,91%)] mt-1">
+                            Welcome to Unity Gaming Community! 🎮
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message 2 -->
+                <div class="flex gap-3 hover:bg-[hsl(215,28%,17%)] px-2 py-1 rounded group">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-semibold">
+                        G
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-semibold text-sm">Pro Gamer</span>
+                            <span class="text-xs text-[hsl(217,11%,65%)]">11:31 AM</span>
+                        </div>
+                        <div class="text-sm text-[hsl(213,31%,91%)] mt-1">
+                            Thanks! Excited to be here! Looking forward to the tournaments 🏆
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message 3 -->
+                <div class="flex gap-3 hover:bg-[hsl(215,28%,17%)] px-2 py-1 rounded group">
+                    <div class="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center font-semibold">
+                        C
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-semibold text-sm">Creative Designer</span>
+                            <span class="text-xs text-[hsl(217,11%,65%)]">11:32 AM</span>
+                        </div>
+                        <div class="text-sm text-[hsl(213,31%,91%)] mt-1">
+                            The UI looks amazing! Love the dark theme 🎨
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Message -->
+                <div class="flex items-center gap-2 text-sm text-[hsl(217,11%,65%)] px-2">
+                    <div class="flex-1 h-px bg-[hsl(215,28%,17%)]"></div>
+                    <span class="text-xs">Today</span>
+                    <div class="flex-1 h-px bg-[hsl(215,28%,17%)]"></div>
+                </div>
+
+                <!-- Message with Actions -->
+                <div class="flex gap-3 hover:bg-[hsl(215,28%,17%)] px-2 py-1 rounded group">
+                    <div class="w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center font-semibold">
+                        M
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-semibold text-sm">Moderator</span>
+                            <span class="text-xs bg-blue-600 px-1.5 py-0.5 rounded">MOD</span>
+                            <span class="text-xs text-[hsl(217,11%,65%)]">11:35 AM</span>
+                        </div>
+                        <div class="text-sm text-[hsl(213,31%,91%)] mt-1">
+                            Don't forget about the tournament this weekend! Register in #tournaments
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            <button class="flex items-center gap-1 px-2 py-1 bg-[hsl(224,71%,4%)] rounded hover:bg-[hsl(215,28%,17%)] text-xs">
+                                <span>👍</span>
+                                <span>3</span>
+                            </button>
+                            <button class="flex items-center gap-1 px-2 py-1 bg-[hsl(224,71%,4%)] rounded hover:bg-[hsl(215,28%,17%)] text-xs">
+                                <span>🎮</span>
+                                <span>5</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="opacity-0 group-hover:opacity-100 flex items-start gap-1">
+                        <button class="p-1 hover:bg-[hsl(224,71%,4%)] rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                            </svg>
+                        </button>
+                        <button class="p-1 hover:bg-[hsl(224,71%,4%)] rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <div class="border-t border-[hsl(215,28%,17%)] p-4">
+                <div class="flex items-end gap-2">
+                    <button class="p-2 hover:bg-[hsl(215,28%,17%)] rounded text-[hsl(217,11%,65%)] hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </button>
+                    <div class="flex-1 bg-[hsl(215,28%,17%)] rounded-lg">
+                        <input type="text" placeholder="Type a message..." class="w-full bg-transparent px-4 py-3 focus:outline-none" />
+                    </div>
+                    <button class="p-2 hover:bg-[hsl(215,28%,17%)] rounded text-[hsl(217,11%,65%)] hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </button>
+                    <button class="p-2 bg-purple-600 hover:bg-purple-700 rounded text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Member List (Right Sidebar) -->
+        <div class="w-60 bg-[hsl(215,28%,17%)] flex flex-col overflow-y-auto scrollbar-hide">
+            <div class="p-3">
+                <!-- Online Members -->
+                <div class="mb-4">
+                    <div class="text-xs font-semibold text-[hsl(217,11%,65%)] uppercase mb-2">
+                        Online — 4
+                    </div>
+                    <div class="space-y-1">
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[hsl(224,71%,4%)]">
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-sm font-semibold">A</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[hsl(215,28%,17%)]"></div>
+                            </div>
+                            <div class="flex-1 min-w-0 text-left">
+                                <div class="text-sm font-medium truncate flex items-center gap-1">
+                                    Admin User
+                                    <svg class="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[hsl(224,71%,4%)]">
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm font-semibold">G</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[hsl(215,28%,17%)]"></div>
+                            </div>
+                            <div class="flex-1 min-w-0 text-left">
+                                <div class="text-sm font-medium truncate">Pro Gamer</div>
+                            </div>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[hsl(224,71%,4%)]">
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-sm font-semibold">C</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-yellow-500 rounded-full border-2 border-[hsl(215,28%,17%)]"></div>
+                            </div>
+                            <div class="flex-1 min-w-0 text-left">
+                                <div class="text-sm font-medium truncate">Creative Designer</div>
+                            </div>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[hsl(224,71%,4%)]">
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center text-sm font-semibold">M</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[hsl(215,28%,17%)]"></div>
+                            </div>
+                            <div class="flex-1 min-w-0 text-left">
+                                <div class="text-sm font-medium truncate">Moderator</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Offline Members -->
+                <div>
+                    <div class="text-xs font-semibold text-[hsl(217,11%,65%)] uppercase mb-2">
+                        Offline — 2
+                    </div>
+                    <div class="space-y-1">
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[hsl(224,71%,4%)] opacity-50">
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm font-semibold">U</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[hsl(215,28%,17%)]"></div>
+                            </div>
+                            <div class="flex-1 min-w-0 text-left">
+                                <div class="text-sm font-medium truncate">User123</div>
+                            </div>
+                        </button>
+                        <button class="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[hsl(224,71%,4%)] opacity-50">
+                            <div class="relative">
+                                <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm font-semibold">P</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[hsl(215,28%,17%)]"></div>
+                            </div>
+                            <div class="flex-1 min-w-0 text-left">
+                                <div class="text-sm font-medium truncate">Player456</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Badge -->
+    <div class="fixed bottom-4 right-4 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+        <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+        <span class="text-sm font-medium">Unity Platform UI Preview</span>
+    </div>
+</body>
+</html>
