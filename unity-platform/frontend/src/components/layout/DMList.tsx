@@ -22,18 +22,25 @@ interface DMChannel {
 }
 
 interface DMListProps {
-  channels: DMChannel[];
-  currentChannelId?: string;
-  onChannelSelect: (channelId: string) => void;
+  channels?: DMChannel[];
+  currentDMChannelId?: string;
+  currentChannelId?: string; // Backward compatibility
+  onDMSelect?: (dmChannelId: string) => void;
+  onChannelSelect?: (channelId: string) => void; // Backward compatibility
   onCreateDM?: () => void;
 }
 
 export const DMList = React.memo<DMListProps>(({
-  channels,
+  channels = [],
+  currentDMChannelId,
   currentChannelId,
+  onDMSelect,
   onChannelSelect,
   onCreateDM,
 }) => {
+  const handleSelect = onDMSelect || onChannelSelect || (() => {});
+  const activeId = currentDMChannelId || currentChannelId;
+
   return (
     <div className="w-60 bg-[#2b2d31] flex flex-col">
       {/* Header */}
@@ -61,13 +68,13 @@ export const DMList = React.memo<DMListProps>(({
         ) : (
           <div className="space-y-0.5">
             {channels.map((channel) => {
-              const isActive = channel.id === currentChannelId;
+              const isActive = channel.id === activeId;
               const otherParticipant = channel.participants[0]; // For DMs
 
               return (
                 <button
                   key={channel.id}
-                  onClick={() => onChannelSelect(channel.id)}
+                  onClick={() => handleSelect(channel.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-2 py-2 rounded-md transition-all',
                     'hover:bg-white/10',

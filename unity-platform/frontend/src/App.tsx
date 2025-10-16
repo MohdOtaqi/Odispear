@@ -16,13 +16,35 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#2b2d31',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)'
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
-          path="/app"
+          path="/app/*"
           element={
             isAuthenticated ? <MainApp /> : <Navigate to="/login" replace />
           }

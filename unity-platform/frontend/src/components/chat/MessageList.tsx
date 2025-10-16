@@ -20,6 +20,7 @@ interface Message {
 
 interface MessageListProps {
   channelId: string;
+  isDM?: boolean;
 }
 
 // Optimized Message Item with React.memo

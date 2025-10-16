@@ -8,37 +8,37 @@ const Home: React.FC = () => {
       icon: MessageCircle,
       title: 'Real-time Chat',
       description: 'Lightning-fast messaging with threads, reactions, and rich embeds',
-      gradient: 'from-purple-600 to-blue-600',
+      gradient: 'from-primary-500 to-accent-500',
     },
     {
       icon: Users,
       title: 'Voice Channels',
       description: 'Crystal-clear voice chat with video and screen sharing',
-      gradient: 'from-blue-600 to-cyan-600',
+      gradient: 'from-primary-400 to-primary-600',
     },
     {
       icon: Calendar,
       title: 'Events & Calendar',
       description: 'Built-in event scheduling with RSVP and reminders',
-      gradient: 'from-cyan-600 to-green-600',
+      gradient: 'from-primary-500 via-accent-400 to-success',
     },
     {
       icon: Trophy,
       title: 'Tournaments',
       description: 'Integrated tournament system with brackets and scheduling',
-      gradient: 'from-green-600 to-yellow-600',
+      gradient: 'from-success to-warning',
     },
     {
       icon: Shield,
       title: 'Moderation',
       description: 'Powerful tools to keep your community safe and friendly',
-      gradient: 'from-yellow-600 to-red-600',
+      gradient: 'from-warning to-error',
     },
     {
       icon: Sparkles,
       title: 'Customization',
       description: 'Personalize your server with roles, badges, and themes',
-      gradient: 'from-red-600 to-pink-600',
+      gradient: 'from-error to-accent-500',
     },
   ];
 
@@ -47,18 +47,18 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-blue-900/30 to-pink-900/30" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-900/20 via-neutral-900 to-accent-900/20" />
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-pink-600/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary-400/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
         </div>
 
         {/* Content */}
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
           {/* Logo */}
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-purple-600 to-blue-600 rounded-3xl mb-8 animate-glow shadow-2xl">
-            <Zap className="w-12 h-12 text-white animate-bounce" />
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-primary rounded-3xl mb-8 shadow-glow animate-pulse-glow">
+            <Zap className="w-12 h-12 text-white" />
           </div>
 
           {/* Heading */}
@@ -76,14 +76,14 @@ const Home: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-in-up" style={{ animationDelay: '0.3s' }}>
             <Link
               to="/register"
-              className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-all hover-lift shadow-2xl flex items-center justify-center gap-2"
+              className="group px-8 py-4 bg-gradient-primary hover:shadow-glow-accent text-white font-semibold rounded-xl transition-all hover:-translate-y-1 active:scale-95 shadow-glow flex items-center justify-center gap-2"
             >
               Get Started Free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               to="/login"
-              className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/50 text-white font-semibold rounded-xl transition-all hover-lift backdrop-blur-sm"
+              className="px-8 py-4 bg-neutral-800/80 hover:bg-neutral-700/80 border border-neutral-700 hover:border-primary-500 text-white font-semibold rounded-xl transition-all hover:-translate-y-1 backdrop-blur-xl"
             >
               Login
             </Link>
