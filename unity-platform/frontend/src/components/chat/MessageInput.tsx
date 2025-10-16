@@ -7,6 +7,7 @@ import { useDebounce } from '../../hooks/usePerformance';
 
 interface MessageInputProps {
   channelId: string;
+  isDM?: boolean;
 }
 
 export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {

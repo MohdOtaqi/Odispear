@@ -7,6 +7,7 @@ import { Tooltip } from '../ui/Tooltip';
 interface SidebarProps {
   currentChannelId?: string;
   onChannelSelect: (channelId: string) => void;
+  onVoiceChannelJoin?: (channelId: string) => void;
 }
 
 const ChannelButton = React.memo<{
@@ -38,6 +39,7 @@ ChannelButton.displayName = 'ChannelButton';
 export const Sidebar = React.memo<SidebarProps>(({
   currentChannelId,
   onChannelSelect,
+  onVoiceChannelJoin,
 }) => {
   const { currentGuild, channels } = useGuildStore();
 
@@ -105,12 +107,14 @@ export const Sidebar = React.memo<SidebarProps>(({
             </div>
             <div className="space-y-0.5 mt-1">
               {voiceChannels.map((channel) => (
-                <ChannelButton
+                <button
                   key={channel.id}
-                  channel={channel}
-                  isActive={channel.id === currentChannelId}
-                  onClick={() => handleChannelClick(channel.id)}
-                />
+                  onClick={() => onVoiceChannelJoin?.(channel.id)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 hover:bg-white/10 hover:text-white text-gray-400"
+                >
+                  <Volume2 className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate font-medium">{channel.name}</span>
+                </button>
               ))}
             </div>
           </div>
