@@ -55,7 +55,7 @@ export const Sidebar = React.memo<SidebarProps>(({
   }
 
   return (
-    <div className="w-60 bg-[#2b2d31] flex flex-col">
+    <div className="flex-1 bg-[#2b2d31] flex flex-col overflow-hidden">
       {/* Guild Header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 shadow-sm hover:bg-white/5 cursor-pointer transition-colors group">
         <h2 className="font-semibold truncate text-white">{currentGuild.name}</h2>

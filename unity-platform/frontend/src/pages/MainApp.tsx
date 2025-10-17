@@ -10,7 +10,7 @@ import { CreateGuildModal } from '../components/modals/CreateGuildModal';
 import { UserSettingsModal } from '../components/modals/UserSettingsModal';
 import { FriendsPage } from './FriendsPage';
 import UserProfile from '../components/UserProfile';
-import { VoiceChat } from '../components/VoiceChat';
+import { VoicePanel } from '../components/VoicePanel';
 import { useAuthStore } from '../store/authStore';
 import { useGuildStore } from '../store/guildStore';
 import { useMessageStore } from '../store/messageStore';
@@ -207,11 +207,25 @@ export const MainApp: React.FC = () => {
           <>
             {currentGuild ? (
               <>
-                <Sidebar 
-                  currentChannelId={currentChannelId || undefined} 
-                  onChannelSelect={handleChannelSelect}
-                  onVoiceChannelJoin={handleVoiceChannelJoin}
-                />
+                <div className="flex flex-col w-60 bg-neutral-850">
+                  <Sidebar 
+                    currentChannelId={currentChannelId || undefined} 
+                    onChannelSelect={handleChannelSelect}
+                    onVoiceChannelJoin={handleVoiceChannelJoin}
+                  />
+                  
+                  {/* Voice Panel */}
+                  {showVoiceChat && selectedVoiceChannelId && (
+                    <VoicePanel
+                      channelId={selectedVoiceChannelId}
+                      channelName={channels.find(c => c.id === selectedVoiceChannelId)?.name || 'Voice Channel'}
+                      onLeave={() => {
+                        setShowVoiceChat(false);
+                        setSelectedVoiceChannelId(null);
+                      }}
+                    />
+                  )}
+                </div>
 
                 <div className="flex-1 flex flex-col relative">
                   {currentChannel ? (
@@ -295,16 +309,6 @@ export const MainApp: React.FC = () => {
         />
       )}
 
-      {/* Voice Chat */}
-      {showVoiceChat && selectedVoiceChannelId && (
-        <VoiceChat
-          channelId={selectedVoiceChannelId}
-          onLeave={() => {
-            setShowVoiceChat(false);
-            setSelectedVoiceChannelId(null);
-          }}
-        />
-      )}
     </div>
   );
 };
