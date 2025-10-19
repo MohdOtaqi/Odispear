@@ -90,12 +90,18 @@ export const VoicePanel: React.FC<VoicePanelProps> = ({ channelId, channelName, 
       const { token, appId, uid } = response.data;
 
       console.log('Voice credentials:', { appId, channelId, uid });
+      console.log('Token length:', token?.length);
 
       if (!appId || !token) {
         throw new Error('Invalid Agora credentials received from server');
       }
 
-      // Join the channel
+      if (appId.length !== 32) {
+        throw new Error('Invalid Agora App ID format. Please check your configuration.');
+      }
+
+      // Join the channel with Agora
+      console.log('Attempting to join Agora channel...');
       await clientRef.current.join(appId, channelId, token, uid);
 
       // Create and publish audio track
@@ -116,7 +122,20 @@ export const VoicePanel: React.FC<VoicePanelProps> = ({ channelId, channelName, 
       toast.success('Connected to voice channel');
     } catch (error: any) {
       console.error('Failed to join voice channel:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to join voice channel';
+      
+      let errorMessage = 'Failed to join voice channel';
+      
+      // Handle specific Agora errors
+      if (error.code === 'CAN_NOT_GET_GATEWAY_SERVER') {
+        errorMessage = 'Invalid Agora App ID. Please configure valid Agora credentials in backend/.env';
+      } else if (error.code === 'INVALID_TOKEN') {
+        errorMessage = 'Invalid voice token. Please try again.';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
       setIsConnecting(false);

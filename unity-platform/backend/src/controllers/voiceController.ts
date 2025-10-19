@@ -15,6 +15,14 @@ export const getVoiceToken = async (
     const { channelId } = req.params;
     const userId = req.user!.id;
 
+    // Check if Agora is configured
+    if (!process.env.AGORA_APP_ID || !process.env.AGORA_APP_CERTIFICATE) {
+      throw new AppError(
+        'Voice chat is not configured. Please set AGORA_APP_ID and AGORA_APP_CERTIFICATE in .env',
+        500
+      );
+    }
+
     // Validate access
     const hasAccess = await validateVoiceAccess(userId, channelId, { query });
 
@@ -26,11 +34,13 @@ export const getVoiceToken = async (
     const { token, appId, uid } = generateVoiceToken(channelId, userId, 'publisher', 3600);
 
     // Log voice channel join
-    logger.info(`User ${userId} joining voice channel ${channelId}`);
+    logger.info(`User ${userId} requesting voice token for channel ${channelId}`);
+    logger.debug(`Generated token for uid ${uid}, appId: ${appId}`);
 
     res.json({
       token,
       appId,
+      channelId,
       channelName: channelId,
       uid,
       expiresIn: 3600,
