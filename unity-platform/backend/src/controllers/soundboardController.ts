@@ -1,10 +1,29 @@
 import { Request, Response } from 'express';
 import pool from '../config/database';
 import { AppError } from '../middleware/errorHandler';
-import { uploadToS3, deleteFromS3 } from '../services/s3Service';
 import { v4 as uuidv4 } from 'uuid';
 
-export const getSounds = async (req: Request, res: Response) => {
+// Mock S3 functions until S3Service is properly configured
+const uploadToS3 = async (buffer: Buffer, key: string, mimeType: string): Promise<string> => {
+  // Return a mock URL for now
+  return `/uploads/${key}`;
+};
+
+const deleteFromS3 = async (key: string): Promise<void> => {
+  // Mock delete function
+  console.log('Mock delete:', key);
+};
+
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    username: string;
+  };
+  file?: Express.Multer.File;
+}
+
+export const getSounds = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const guildId = req.query.guildId as string;
@@ -36,7 +55,7 @@ export const getSounds = async (req: Request, res: Response) => {
 
     const result = await pool.query(query, params);
     
-    const sounds = result.rows.map(row => ({
+    const sounds = result.rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       url: row.url,
@@ -59,7 +78,7 @@ export const getSounds = async (req: Request, res: Response) => {
   }
 };
 
-export const uploadSound = async (req: Request, res: Response) => {
+export const uploadSound = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const { name, emoji, category, guildId } = req.body;
@@ -106,7 +125,7 @@ export const uploadSound = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteSound = async (req: Request, res: Response) => {
+export const deleteSound = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const soundId = req.params.soundId;
@@ -142,7 +161,7 @@ export const deleteSound = async (req: Request, res: Response) => {
   }
 };
 
-export const toggleFavorite = async (req: Request, res: Response) => {
+export const toggleFavorite = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const soundId = req.params.soundId;
@@ -174,7 +193,7 @@ export const toggleFavorite = async (req: Request, res: Response) => {
   }
 };
 
-export const playSound = async (req: Request, res: Response) => {
+export const playSound = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const { soundId, channelId } = req.body;
@@ -217,7 +236,7 @@ export const playSound = async (req: Request, res: Response) => {
   }
 };
 
-export const getGuildSounds = async (req: Request, res: Response) => {
+export const getGuildSounds = async (req: AuthRequest, res: Response) => {
   try {
     const guildId = req.params.guildId;
     const userId = req.user?.id;
@@ -241,7 +260,7 @@ export const getGuildSounds = async (req: Request, res: Response) => {
       [guildId, userId]
     );
 
-    const sounds = result.rows.map(row => ({
+    const sounds = result.rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       url: row.url,
