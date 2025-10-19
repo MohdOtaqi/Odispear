@@ -41,7 +41,7 @@ export const RegisterPage: React.FC = () => {
 
     try {
       await register(email, username, password);
-      toast.success('Account created successfully!');
+      toast.success('Welcome to Unity Platform! 🚀');
       navigate('/app');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Registration failed');

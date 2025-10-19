@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { MainApp } from './pages/MainApp';
+import { UnifiedApp } from './pages/UnifiedApp';
+import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import { useAuthStore } from './store/authStore';
 
@@ -44,9 +45,15 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
-          path="/app/*"
+          path="/app"
           element={
-            isAuthenticated ? <MainApp /> : <Navigate to="/login" replace />
+            isAuthenticated ? <UnifiedApp /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
           }
         />
       </Routes>

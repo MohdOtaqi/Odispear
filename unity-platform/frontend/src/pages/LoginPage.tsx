@@ -19,7 +19,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      toast.success('Logged in successfully!');
+      toast.success('Welcome back! 🎮');
       navigate('/app');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Login failed');
