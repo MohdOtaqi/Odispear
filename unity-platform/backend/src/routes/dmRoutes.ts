@@ -19,7 +19,8 @@ const router = Router();
 router.use(authenticateToken);
 
 // DM channel management
-router.get('/', getDMChannels);
+router.get('/channels', getDMChannels); // Changed from '/' to '/channels'
+router.get('/', getDMChannels); // Keep backward compatibility
 router.post('/create', createDM);
 router.post('/group', createGroupDM);
 router.delete('/:channelId/leave', leaveDM);
