@@ -28,6 +28,7 @@ import memberRoutes from './routes/memberRoutes';
 import voiceRoutes from './routes/voiceRoutes';
 import statusRoutes from './routes/statusRoutes';
 import reactionRoutes from './routes/reactionRoutes';
+import soundboardRoutes from './routes/soundboardRoutes';
 
 dotenv.config();
 validateEnvironment();
@@ -89,6 +90,7 @@ app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1/voice', voiceRoutes);
 app.use('/api/v1/status', statusRoutes);
 app.use('/api/v1/reactions', reactionRoutes);
+app.use('/api/v1/soundboard', soundboardRoutes);
 
 // API documentation route
 app.get('/api/docs', (req, res) => {
