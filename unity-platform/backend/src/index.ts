@@ -26,6 +26,8 @@ import dmRoutes from './routes/dmRoutes';
 import rolesRoutes from './routes/rolesRoutes';
 import memberRoutes from './routes/memberRoutes';
 import voiceRoutes from './routes/voiceRoutes';
+import statusRoutes from './routes/statusRoutes';
+import reactionRoutes from './routes/reactionRoutes';
 
 dotenv.config();
 validateEnvironment();
@@ -85,6 +87,8 @@ app.use('/api/v1/dm', dmRoutes);
 app.use('/api/v1/roles', rolesRoutes);
 app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1/voice', voiceRoutes);
+app.use('/api/v1/status', statusRoutes);
+app.use('/api/v1/reactions', reactionRoutes);
 
 // API documentation route
 app.get('/api/docs', (req, res) => {
