@@ -1,11 +1,36 @@
 # 🎤 Agora Voice Chat Setup
 
-## ✅ Credentials Received
+## ⚠️ IMPORTANT: Get Real Agora Credentials
 
-Your Agora credentials for Unity Platform:
-- **App ID**: `90323a9c98fc45b2922bca94a9f08fbb`
-- **Certificate**: `b4a91481752d4a22bcdd43fb2bcac015`
-- **Project Name**: unity-platform-uploads
+The current credentials in your `.env` file are **INVALID/EXAMPLE** credentials.
+You MUST create a real Agora account and get valid credentials.
+
+## Step 1: Create Agora Account & Project
+
+1. **Go to**: https://console.agora.io
+2. **Sign up** for a free account (or login)
+3. **Create a new project**:
+   - Click "Create" or "New Project"
+   - Name it: `Unity Platform Voice`
+   - Choose: **Secured mode: APP ID + Token (Recommended)**
+   - Click "Submit"
+
+4. **Get your credentials**:
+   - After creating, you'll see your **App ID** (32 characters)
+   - Click the "Config" or "Edit" button
+   - You'll see the **Primary Certificate** 
+   - Copy both values
+
+## Step 2: Update Your .env Files
+
+### For Local Development:
+
+**File**: `backend/.env`
+```env
+# Replace these with YOUR real Agora credentials:
+AGORA_APP_ID=your_32_character_app_id_here
+AGORA_APP_CERTIFICATE=your_certificate_here
+```
 
 ---
 

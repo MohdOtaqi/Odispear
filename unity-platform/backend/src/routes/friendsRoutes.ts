@@ -24,8 +24,8 @@ router.get('/', getFriends);
 router.post('/request', sendFriendRequest);
 router.get('/pending', getPendingRequests);
 router.get('/sent', getSentRequests);
-router.post('/accept/:requestId', acceptFriendRequest);
-router.post('/reject/:requestId', rejectFriendRequest);
+router.post('/:requestId/accept', acceptFriendRequest);
+router.post('/:requestId/reject', rejectFriendRequest);
 router.delete('/:friendId', removeFriend);
 
 // Block management
