@@ -16,6 +16,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitialized: boolean; // Track if we've checked for existing session
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
@@ -25,10 +26,11 @@ interface AuthState {
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  isInitialized: false,
   error: null,
 
   login: async (email: string, password: string) => {
@@ -95,21 +97,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchCurrentUser: async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
-      set({ isAuthenticated: false, user: null });
+      set({ isAuthenticated: false, user: null, isInitialized: true });
       return;
     }
 
     set({ isLoading: true });
     try {
       const response = await authAPI.getCurrentUser();
-      set({ user: response.data, isAuthenticated: true, isLoading: false });
+      set({ 
+        user: response.data, 
+        isAuthenticated: true, 
+        isLoading: false,
+        isInitialized: true 
+      });
 
       // Connect WebSocket
       socketManager.connect(token);
     } catch (error) {
+      // Token expired or invalid - clean up
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ 
+        user: null, 
+        isAuthenticated: false, 
+        isLoading: false,
+        isInitialized: true 
+      });
     }
   },
 

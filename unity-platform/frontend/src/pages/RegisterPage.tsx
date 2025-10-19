@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -13,8 +13,15 @@ export const RegisterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
-  const register = useAuthStore((state) => state.register);
+  const { register, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/app', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const passwordStrength = (password: string) => {
     let strength = 0;
@@ -41,8 +48,8 @@ export const RegisterPage: React.FC = () => {
 
     try {
       await register(email, username, password);
-      toast.success('Welcome to Unity Platform! 🚀');
-      navigate('/app');
+      toast.success('Welcome to Unity Platform! 🎉');
+      navigate('/app', { replace: true });
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Registration failed');
     } finally {

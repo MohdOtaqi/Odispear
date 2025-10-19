@@ -1,19 +1,30 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { UnifiedApp } from './pages/UnifiedApp';
-import Dashboard from './pages/Dashboard';
+import { MainApp } from './pages/MainApp';
 import Home from './pages/Home';
 import { useAuthStore } from './store/authStore';
 
 function App() {
-  const { isAuthenticated, fetchCurrentUser } = useAuthStore();
+  const { isAuthenticated, isInitialized, fetchCurrentUser } = useAuthStore();
 
   useEffect(() => {
     fetchCurrentUser();
-  }, []);
+  }, [fetchCurrentUser]);
+
+  // Show loading screen while checking for existing session
+  if (!isInitialized) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400 text-lg">Loading Unity Platform...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
@@ -45,15 +56,9 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
-          path="/app"
+          path="/app/*"
           element={
-            isAuthenticated ? <UnifiedApp /> : <Navigate to="/login" replace />
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+            isAuthenticated ? <MainApp /> : <Navigate to="/login" replace />
           }
         />
       </Routes>

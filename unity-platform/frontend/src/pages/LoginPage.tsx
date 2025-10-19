@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -10,8 +10,15 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const login = useAuthStore((state) => state.login);
+  const { login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/app', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,10 +26,10 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      toast.success('Welcome back! 🎮');
-      navigate('/app');
+      toast.success('Welcome back!');
+      navigate('/app', { replace: true });
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Login failed');
+      toast.error(error.response?.data?.error || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
