@@ -11,6 +11,7 @@ import { UserSettingsModal } from '../components/modals/UserSettingsModal';
 import { FriendsPage } from './FriendsPage';
 import UserProfile from '../components/UserProfile';
 import { VoicePanelAdvanced } from '../components/VoiceChat/VoicePanelAdvanced';
+import { useVoiceChat } from '../components/VoiceChat/VoiceChatProvider';
 import { useAuthStore } from '../store/authStore';
 import { useGuildStore } from '../store/guildStore';
 import { useMessageStore } from '../store/messageStore';
@@ -32,6 +33,7 @@ export const MainApp: React.FC = () => {
 
   const { user, isAuthenticated } = useAuthStore();
   const { guilds, currentGuild, channels, fetchGuilds, selectGuild } = useGuildStore();
+  const { joinChannel: joinVoiceChannel, leaveChannel: leaveVoiceChannel } = useVoiceChat();
   const { 
     loadMessages, 
     handleNewMessage, 
@@ -113,9 +115,17 @@ export const MainApp: React.FC = () => {
     navigate(`/app/dms/${dmChannelId}`);
   };
 
-  const handleVoiceChannelJoin = (channelId: string) => {
-    setSelectedVoiceChannelId(channelId);
-    setShowVoiceChat(true);
+  const handleVoiceChannelJoin = async (channelId: string) => {
+    const channel = channels.find(c => c.id === channelId);
+    if (!channel) return;
+    
+    try {
+      await joinVoiceChannel(channelId, channel.name);
+      setSelectedVoiceChannelId(channelId);
+      setShowVoiceChat(true);
+    } catch (error) {
+      console.error('Failed to join voice channel:', error);
+    }
   };
 
   const currentChannel = channels.find((c) => c.id === currentChannelId);
@@ -218,7 +228,8 @@ export const MainApp: React.FC = () => {
                   {showVoiceChat && selectedVoiceChannelId && (
                     <VoicePanelAdvanced
                       channelName={channels.find(c => c.id === selectedVoiceChannelId)?.name || 'Voice Channel'}
-                      onLeave={() => {
+                      onLeave={async () => {
+                        await leaveVoiceChannel();
                         setShowVoiceChat(false);
                         setSelectedVoiceChannelId(null);
                       }}
