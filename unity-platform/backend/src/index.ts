@@ -36,6 +36,9 @@ validateEnvironment();
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy - required for rate limiting behind Nginx
+app.set('trust proxy', 1);
+
 // Allow multiple CORS origins for local development
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
