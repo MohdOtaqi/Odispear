@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { X, Copy, Check, Users, Clock, Link2, Trash2 } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { X, Copy, Check, Users, Clock } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Tooltip } from '../ui/Tooltip';
 import toast from 'react-hot-toast';
-import api from '../../lib/api';
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -12,26 +11,15 @@ interface InviteModalProps {
   guildName: string;
 }
 
-interface Invite {
-  id: string;
-  code: string;
-  uses: number;
-  max_uses: number | null;
-  expires_at: string | null;
-  creator_username: string;
-  created_at: string;
-}
-
 export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guildId, guildName }) => {
   const [copied, setCopied] = useState(false);
   const [maxUses, setMaxUses] = useState(0);
   const [expiresIn, setExpiresIn] = useState(86400); // 24 hours
   const [isLoading, setIsLoading] = useState(false);
-  const [invites, setInvites] = useState<Invite[]>([]);
-  const [currentInvite, setCurrentInvite] = useState<Invite | null>(null);
-  const [showExisting, setShowExisting] = useState(false);
   
-  const inviteUrl = currentInvite ? `${window.location.origin}/invite/${currentInvite.code}` : '';
+  // Mock invite code - replace with actual API call
+  const inviteCode = `unity.gg/${guildId.substring(0, 8)}`;
+  const inviteUrl = `https://${inviteCode}`;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -44,53 +32,18 @@ export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guil
     }
   }, [inviteUrl]);
 
-  const fetchInvites = useCallback(async () => {
-    if (!isOpen || !guildId) return;
-    try {
-      const { data } = await api.get(`/guilds/${guildId}/invites`);
-      setInvites(data);
-      if (data.length > 0 && !currentInvite) {
-        setCurrentInvite(data[0]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch invites:', error);
-    }
-  }, [guildId, isOpen, currentInvite]);
-
   const handleGenerate = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data } = await api.post(`/guilds/${guildId}/invites`, {
-        maxUses: maxUses || null,
-        maxAge: expiresIn || null,
-        temporary: false
-      });
-      setCurrentInvite(data);
-      setInvites(prev => [data, ...prev]);
+      // TODO: Call API to generate invite
+      await new Promise(resolve => setTimeout(resolve, 500));
       toast.success('New invite created!');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to create invite');
+      toast.error('Failed to create invite');
     } finally {
       setIsLoading(false);
     }
-  }, [guildId, maxUses, expiresIn]);
-
-  const handleDelete = useCallback(async (code: string) => {
-    try {
-      await api.delete(`/invites/${code}`);
-      setInvites(prev => prev.filter(inv => inv.code !== code));
-      if (currentInvite?.code === code) {
-        setCurrentInvite(invites.find(inv => inv.code !== code) || null);
-      }
-      toast.success('Invite deleted');
-    } catch (error: any) {
-      toast.error('Failed to delete invite');
-    }
-  }, [currentInvite, invites]);
-
-  useEffect(() => {
-    fetchInvites();
-  }, [fetchInvites]);
+  }, [maxUses, expiresIn]);
 
   if (!isOpen) return null;
 
@@ -180,49 +133,6 @@ export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guil
               </select>
             </div>
           </div>
-
-          {/* Existing Invites */}
-          {invites.length > 0 && (
-            <div>
-              <button
-                onClick={() => setShowExisting(!showExisting)}
-                className="flex items-center justify-between w-full text-sm font-semibold text-gray-300 mb-2 hover:text-white transition-colors"
-              >
-                <span>
-                  <Link2 className="w-4 h-4 inline mr-2" />
-                  Existing Invites ({invites.length})
-                </span>
-                <span className="text-xs">{showExisting ? '▼' : '▶'}</span>
-              </button>
-              {showExisting && (
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {invites.map(invite => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center justify-between p-2 bg-[#1e1f22] rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-                      onClick={() => setCurrentInvite(invite)}
-                    >
-                      <div className="flex-1 text-xs">
-                        <span className="text-white font-mono">{invite.code}</span>
-                        <span className="text-gray-500 ml-2">
-                          {invite.uses}/{invite.max_uses || '∞'} uses
-                        </span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(invite.code);
-                        }}
-                        className="p-1 text-red-400 hover:bg-red-500/20 rounded transition-colors"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Info Box */}
           <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">

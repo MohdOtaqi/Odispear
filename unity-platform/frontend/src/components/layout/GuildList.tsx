@@ -1,9 +1,7 @@
 import React, { useCallback } from 'react';
-import { Plus, Home, Users, Headphones, Settings, User, UserPlus, Cog } from 'lucide-react';
+import { Plus, Home } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGuildStore } from '../../store/guildStore';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
 import { Tooltip } from '../ui/Tooltip';
 
 interface GuildListProps {
