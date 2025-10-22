@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { MainApp } from './pages/MainApp';
 import Home from './pages/Home';
+import { InvitePage } from './pages/InvitePage';
 import { useAuthStore } from './store/authStore';
 import { VoiceChatProvider } from './components/VoiceChat/VoiceChatProvider';
 
@@ -56,6 +57,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/invite/:code" element={<InvitePage />} />
         <Route
           path="/app/*"
           element={

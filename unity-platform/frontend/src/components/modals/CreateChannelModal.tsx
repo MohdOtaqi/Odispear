@@ -14,6 +14,8 @@ interface CreateChannelModalProps {
 export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, onClose }) => {
   const [channelName, setChannelName] = useState('');
   const [channelType, setChannelType] = useState<'text' | 'voice'>('text');
+  const [bitrate, setBitrate] = useState(64);
+  const [userLimit, setUserLimit] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   
   const { currentGuild, selectGuild } = useGuildStore();
@@ -24,11 +26,19 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
 
     setIsLoading(true);
     try {
-      await api.post(`/api/v1/channels`, {
+      const payload: any = {
         guild_id: currentGuild.id,
         name: channelName.toLowerCase().replace(/\s+/g, '-'),
         type: channelType
-      });
+      };
+
+      // Add voice channel specific settings
+      if (channelType === 'voice') {
+        payload.bitrate = bitrate * 1000; // Convert to bps
+        payload.user_limit = userLimit || null;
+      }
+
+      await api.post(`/api/v1/channels`, payload);
 
       toast.success(`Created ${channelType} channel: ${channelName}`);
       
@@ -38,6 +48,8 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
       // Reset and close
       setChannelName('');
       setChannelType('text');
+      setBitrate(64);
+      setUserLimit(0);
       onClose();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to create channel');
@@ -119,9 +131,54 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
             value={channelName}
             onChange={(e) => setChannelName(e.target.value)}
             placeholder={channelType === 'text' ? 'new-channel' : 'New Voice Channel'}
-            className="mb-6"
+            className="mb-4"
             required
           />
+
+          {/* Voice Channel Options */}
+          {channelType === 'voice' && (
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Bitrate (kbps)
+                </label>
+                <select
+                  value={bitrate}
+                  onChange={(e) => setBitrate(Number(e.target.value))}
+                  className="w-full px-4 py-2 bg-[#1e1f22] border border-white/10 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-all"
+                >
+                  <option value={8}>8 kbps</option>
+                  <option value={16}>16 kbps</option>
+                  <option value={32}>32 kbps</option>
+                  <option value={64}>64 kbps (Standard)</option>
+                  <option value={96}>96 kbps (High)</option>
+                  <option value={128}>128 kbps (Very High)</option>
+                  <option value={256}>256 kbps (Premium)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Higher bitrate = better audio quality</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  User Limit
+                </label>
+                <select
+                  value={userLimit}
+                  onChange={(e) => setUserLimit(Number(e.target.value))}
+                  className="w-full px-4 py-2 bg-[#1e1f22] border border-white/10 rounded-lg text-white focus:border-purple-500 focus:outline-none transition-all"
+                >
+                  <option value={0}>No limit</option>
+                  <option value={2}>2 users</option>
+                  <option value={5}>5 users</option>
+                  <option value={10}>10 users</option>
+                  <option value={25}>25 users</option>
+                  <option value={50}>50 users</option>
+                  <option value={99}>99 users</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Maximum number of users in this channel</p>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-3">

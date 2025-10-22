@@ -1,0 +1,258 @@
+================================================================
+UNITY PLATFORM - SETUP AND RUN INSTRUCTIONS
+================================================================
+
+PREREQUISITE SOFTWARE:
+- Node.js v18+ installed
+- PostgreSQL 14+ installed and running
+- Redis server installed and running
+
+================================================================
+STEP 1: DATABASE SETUP
+================================================================
+
+1. Create PostgreSQL database:
+   Open PowerShell and run:
+   
+   psql -U postgres
+   CREATE DATABASE unity_platform;
+   \q
+
+2. Run database migrations in order:
+   cd database
+   
+   psql -U postgres -d unity_platform -f schema.sql
+   psql -U postgres -d unity_platform -f friends_dm_migration.sql
+   psql -U postgres -d unity_platform -f guild_invites_migration.sql
+   psql -U postgres -d unity_platform -f voice_sessions.sql
+   psql -U postgres -d unity_platform -f soundboard_migration.sql
+   psql -U postgres -d unity_platform -f add_user_columns_migration.sql
+   psql -U postgres -d unity_platform -f user_profile_migration.sql
+   psql -U postgres -d unity_platform -f seed.sql
+
+================================================================
+STEP 2: BACKEND SETUP
+================================================================
+
+1. Navigate to backend directory:
+   cd ..\backend
+
+2. Install dependencies:
+   npm install
+
+3. Install additional dependency for image processing:
+   npm install sharp bcrypt
+
+4. Configure environment variables:
+   Copy .env.example to .env and update values:
+   
+   PORT=3000
+   NODE_ENV=development
+   
+   DATABASE_URL=postgresql://postgres:your_password@localhost:5432/unity_platform
+   
+   REDIS_URL=redis://localhost:6379
+   
+   JWT_SECRET=your_super_secret_jwt_key_change_this
+   JWT_EXPIRES_IN=7d
+   REFRESH_TOKEN_EXPIRES_IN=30d
+   
+   CORS_ORIGIN=http://localhost:5173,http://localhost:8080
+   
+   FRONTEND_URL=http://localhost:5173
+   
+   RATE_LIMIT_WINDOW_MS=60000
+   RATE_LIMIT_MAX_REQUESTS=100
+
+================================================================
+STEP 3: FRONTEND SETUP
+================================================================
+
+1. Navigate to frontend directory:
+   cd ..\frontend
+
+2. Install dependencies:
+   npm install
+
+3. Configure environment variables:
+   Copy .env.example to .env and update:
+   
+   VITE_API_URL=http://localhost:3000/api/v1
+   VITE_WS_URL=http://localhost:3000
+
+================================================================
+STEP 4: RUNNING THE APPLICATION
+================================================================
+
+IMPORTANT: Run these commands in SEPARATE PowerShell windows
+
+Window 1 - Start Redis:
+   redis-server
+
+Window 2 - Start PostgreSQL (if not running as service):
+   # Usually runs as Windows service, verify with:
+   Get-Service postgresql*
+
+Window 3 - Start Backend:
+   cd unity-platform\backend
+   npm run dev
+
+Window 4 - Start Frontend:
+   cd unity-platform\frontend
+   npm run dev
+
+================================================================
+QUICK START COMMANDS (Copy and paste in PowerShell)
+================================================================
+
+# Window 1 - Backend
+cd "C:\SandboxShare\Projects\Test 2\unity-platform\backend"
+npm run dev
+
+# Window 2 - Frontend  
+cd "C:\SandboxShare\Projects\Test 2\unity-platform\frontend"
+npm run dev
+
+================================================================
+ACCESS THE APPLICATION
+================================================================
+
+Frontend: http://localhost:5173
+Backend API: http://localhost:3000
+API Docs: http://localhost:3000/api/docs
+Health Check: http://localhost:3000/health
+
+================================================================
+NEW FEATURES IMPLEMENTED
+================================================================
+
+1. ✅ Server Invitation System
+   - Fixed invite link functionality
+   - Added /invite/:code page for joining servers
+   - Automatic redirect after login for pending invites
+
+2. ✅ Real-time Chat (Already working via WebSocket)
+   - Message create/update/delete events
+   - Typing indicators
+   - Real-time presence updates
+
+3. ✅ Friend System (Already implemented)
+   - Add/remove friends
+   - Accept/reject friend requests
+   - Block/unblock users
+   - Friend list with online status
+
+4. ✅ Voice Channel Creation
+   - Create voice channels with custom settings
+   - Configure bitrate (8-256 kbps)
+   - Set user limits (2-99 users)
+   - Full voice channel management
+
+5. ✅ Mouse Button Configuration
+   - Configure keybinds for voice controls
+   - Support for mouse buttons 4-8
+   - Push-to-talk, mute, deafen controls
+   - Custom key combinations with modifiers
+
+6. ✅ Role-Based Permissions System
+   - Create and manage server roles
+   - 17 different permission flags
+   - Custom role colors
+   - Role hierarchy and display options
+   - Role-based channel restrictions
+
+7. ✅ Enhanced Profile Editing
+   - Upload avatar and banner images
+   - Edit display name, bio, and status
+   - Change password functionality
+   - View account information
+   - Image processing with sharp
+
+8. ✅ UI Improvements
+   - Fixed alignment issues
+   - Enhanced gradients and animations
+   - Improved modal layouts
+   - Better responsive design
+   - Modern glass-morphism effects
+
+================================================================
+TROUBLESHOOTING
+================================================================
+
+If Backend won't start:
+- Check PostgreSQL is running
+- Check Redis is running  
+- Verify .env file exists with correct values
+- Run: npm install in backend directory
+
+If Frontend won't start:
+- Verify backend is running first
+- Check .env file in frontend directory
+- Run: npm install in frontend directory
+- Clear browser cache
+
+If Database errors:
+- Verify PostgreSQL service is running
+- Check database credentials in .env
+- Re-run migrations if needed
+
+If Images won't upload:
+- Ensure 'sharp' package is installed: npm install sharp
+- Check uploads directory has write permissions
+- Verify file size limits in userController.ts
+
+================================================================
+TESTING THE NEW FEATURES
+================================================================
+
+1. Server Invitations:
+   - Create a server
+   - Click "Invite People" in server menu
+   - Copy the invite link
+   - Open in new incognito window or different browser
+   - Should see invite page with server info
+   - Join and verify you're added to the server
+
+2. Voice Channels:
+   - Click "+" next to channels
+   - Select "Voice Channel"
+   - Configure bitrate and user limit
+   - Create and test joining
+
+3. Keybinds:
+   - Go to User Settings (gear icon)
+   - Navigate to Keybinds section
+   - Click "Record" on any action
+   - Press a key combination or mouse button
+   - Save and test in voice channel
+
+4. Roles:
+   - Go to Server Settings
+   - Navigate to Roles section
+   - Create new role with custom permissions
+   - Assign role to users
+   - Test permission restrictions
+
+5. Profile Editing:
+   - Click profile icon (bottom left)
+   - Upload avatar and banner
+   - Edit bio and display name
+   - Save changes
+
+================================================================
+PRODUCTION DEPLOYMENT NOTES
+================================================================
+
+For production deployment:
+1. Set NODE_ENV=production in backend .env
+2. Build frontend: npm run build
+3. Serve frontend build with nginx or similar
+4. Use proper PostgreSQL credentials
+5. Enable SSL/HTTPS
+6. Configure proper CORS origins
+7. Set secure JWT_SECRET
+8. Enable rate limiting
+9. Set up proper logging
+10. Configure Redis persistence
+
+================================================================

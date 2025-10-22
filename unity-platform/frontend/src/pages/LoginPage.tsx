@@ -27,7 +27,15 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       toast.success('Welcome back!');
-      navigate('/app', { replace: true });
+      
+      // Check for pending invite
+      const pendingInvite = localStorage.getItem('pendingInvite');
+      if (pendingInvite) {
+        localStorage.removeItem('pendingInvite');
+        navigate(`/invite/${pendingInvite}`, { replace: true });
+      } else {
+        navigate('/app', { replace: true });
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Invalid email or password');
     } finally {
