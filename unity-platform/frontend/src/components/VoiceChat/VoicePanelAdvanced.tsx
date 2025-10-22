@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mic, MicOff, PhoneOff, Volume2, VolumeX, Settings, User, Wifi, WifiOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mic, MicOff, PhoneOff, Volume2, VolumeX, Settings, User, Wifi, WifiOff, Activity } from 'lucide-react';
 import { useVoiceChat } from './VoiceChatProvider';
 // Keep your settings modal, it can still set state in the provider
 import { VoiceSettingsModal } from './VoiceSettingsModal'; 
@@ -18,27 +18,65 @@ export const VoicePanelAdvanced: React.FC<VoicePanelAdvancedProps> = ({
     isConnecting,
     localParticipant,
     participants,
-    settings,
+    isDeafened,
     leaveChannel,
     toggleMute,
     toggleDeafen,
-    setInputVolume,
-    setOutputVolume,
   } = useVoiceChat();
 
   const [showSettings, setShowSettings] = useState(false);
+  const [ping, setPing] = useState<number>(0);
+  const [packetLoss, setPacketLoss] = useState<number>(0);
+
+  // Measure real network latency
+  useEffect(() => {
+    if (!isConnected) {
+      setPing(0);
+      setPacketLoss(0);
+      return;
+    }
+
+    const measureLatency = async () => {
+      const start = performance.now();
+      try {
+        // Ping the backend API to measure network latency
+        await fetch('/health', { method: 'HEAD' });
+        const latency = Math.round(performance.now() - start);
+        setPing(latency);
+      } catch (error) {
+        console.error('Latency measurement failed:', error);
+      }
+    };
+
+    // Measure latency every 3 seconds
+    const interval = setInterval(measureLatency, 3000);
+    measureLatency(); // Initial measurement
+
+    return () => clearInterval(interval);
+  }, [isConnected]);
+
+  // Simulate packet loss calculation (Daily.co provides this via quality stats)
+  useEffect(() => {
+    if (localParticipant?.quality) {
+      const quality = localParticipant.quality;
+      // Estimate packet loss based on quality
+      const loss = quality.network?.level === 'bad' ? 5 : quality.network?.level === 'low' ? 2 : 0;
+      setPacketLoss(loss);
+    }
+  }, [localParticipant]);
 
   const handleLeave = async () => {
     await leaveChannel();
     onLeave();
   };
 
-  const connectionQuality = localParticipant?.quality?.network?.level || 'good';
-  const connectionColor = {
+  const connectionQuality: 'good' | 'low' | 'bad' = (localParticipant?.quality?.network?.level as 'good' | 'low' | 'bad') || 'good';
+  const connectionColor: Record<'good' | 'low' | 'bad', string> = {
     good: 'text-green-500',
     low: 'text-yellow-500',
     bad: 'text-red-500',
-  }[connectionQuality] || 'text-gray-500';
+  };
+  const qualityColorClass = connectionColor[connectionQuality] || 'text-gray-500';
 
   return (
     <div className="w-full bg-neutral-850 border-t border-neutral-700 animate-slide-up">
@@ -48,9 +86,30 @@ export const VoicePanelAdvanced: React.FC<VoicePanelAdvancedProps> = ({
           {isConnected && <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />}
           <span className="text-sm font-semibold text-white">{isConnecting ? "Connecting..." : channelName}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {isConnected ? <Wifi className={`w-4 h-4 ${connectionColor}`} /> : <WifiOff className="w-4 h-4 text-gray-500" />}
-          <span className={`text-xs ${connectionColor} capitalize`}>{isConnected ? connectionQuality : 'Offline'}</span>
+        <div className="flex items-center gap-3">
+          {isConnected ? (
+            <>
+              <div className="flex items-center gap-1">
+                <Wifi className={`w-4 h-4 ${qualityColorClass}`} />
+                <span className={`text-xs ${qualityColorClass}`}>
+                  {ping}ms
+                </span>
+              </div>
+              {packetLoss > 0 && (
+                <div className="flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-yellow-500" />
+                  <span className="text-xs text-yellow-500">
+                    {packetLoss}% loss
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-4 h-4 text-gray-500" />
+              <span className="text-xs text-gray-500">Offline</span>
+            </>
+          )}
         </div>
       </div>
 

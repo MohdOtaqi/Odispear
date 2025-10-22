@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { X, Mic, Volume2, Keyboard, Sliders } from 'lucide-react';
+import { X, Mic, Volume2 } from 'lucide-react';
 import { useVoiceChat } from './VoiceChatProvider';
-import AgoraRTC from 'agora-rtc-sdk-ng';
 
 interface VoiceSettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = 'devices' | 'voice' | 'keybindings' | 'advanced';
+type TabType = 'devices' | 'voice';
 
 export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose }) => {
-  const { settings, updateSettings } = useVoiceChat();
+  const { settings, setInputVolume, setOutputVolume } = useVoiceChat();
   const [activeTab, setActiveTab] = useState<TabType>('devices');
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMic, setSelectedMic] = useState<string>('default');
+  const [selectedSpeaker, setSelectedSpeaker] = useState<string>('default');
   const [testingMic, setTestingMic] = useState(false);
   const [micTestLevel, setMicTestLevel] = useState(0);
+  const [localInputVolume, setLocalInputVolume] = useState(settings.inputVolume * 100 || 100);
+  const [localOutputVolume, setLocalOutputVolume] = useState(settings.outputVolume * 100 || 100);
 
   useEffect(() => {
     loadDevices();
@@ -23,11 +26,17 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
 
   const loadDevices = async () => {
     try {
-      const mics = await AgoraRTC.getMicrophones();
-      // Note: getSpeakers is not available in Web SDK
-      // Speakers are controlled by the browser/OS
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      
+      const mics = devices.filter(device => device.kind === 'audioinput');
+      const spkrs = devices.filter(device => device.kind === 'audiooutput');
+      
       setMicrophones(mics);
-      setSpeakers([]); // No speaker enumeration in browser
+      setSpeakers(spkrs);
+      
+      // Clean up the stream
+      stream.getTracks().forEach(track => track.stop());
     } catch (error) {
       console.error('Failed to load devices:', error);
     }
@@ -42,16 +51,24 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
 
     setTestingMic(true);
     try {
-      const track = await AgoraRTC.createMicrophoneAudioTrack();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      const microphone = audioContext.createMediaStreamSource(stream);
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      microphone.connect(analyser);
+      
       const interval = setInterval(() => {
-        const level = track.getVolumeLevel() * 100;
-        setMicTestLevel(level);
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        setMicTestLevel(average / 255 * 100);
       }, 100);
 
       setTimeout(() => {
         clearInterval(interval);
-        track.stop();
-        track.close();
+        stream.getTracks().forEach(track => track.stop());
+        audioContext.close();
         setTestingMic(false);
         setMicTestLevel(0);
       }, 3000);
@@ -64,8 +81,6 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
   const tabs = [
     { id: 'devices' as TabType, label: 'Audio Devices', icon: Mic },
     { id: 'voice' as TabType, label: 'Voice Settings', icon: Volume2 },
-    { id: 'keybindings' as TabType, label: 'Keybindings', icon: Keyboard },
-    { id: 'advanced' as TabType, label: 'Advanced', icon: Sliders },
   ];
 
   return (
@@ -111,8 +126,8 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
                   Input Device
                 </label>
                 <select
-                  value={settings.selectedMicrophone || ''}
-                  onChange={(e) => updateSettings({ selectedMicrophone: e.target.value })}
+                  value={selectedMic}
+                  onChange={(e) => setSelectedMic(e.target.value)}
                   className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
                 >
                   <option value="">Default Microphone</option>
@@ -133,8 +148,12 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
                   type="range"
                   min="0"
                   max="100"
-                  value={settings.inputVolume}
-                  onChange={(e) => updateSettings({ inputVolume: Number(e.target.value) })}
+                  value={localInputVolume}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    setLocalInputVolume(value);
+                    setInputVolume(value);
+                  }}
                   className="w-full"
                 />
               </div>
@@ -170,8 +189,12 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
                   type="range"
                   min="0"
                   max="100"
-                  value={settings.outputVolume}
-                  onChange={(e) => updateSettings({ outputVolume: Number(e.target.value) })}
+                  value={localOutputVolume}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    setLocalOutputVolume(value);
+                    setOutputVolume(value);
+                  }}
                   className="w-full"
                 />
               </div>
@@ -181,234 +204,37 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
           {/* Voice Settings Tab */}
           {activeTab === 'voice' && (
             <div className="space-y-6">
-              {/* Audio Quality */}
-              <div>
-                <label className="block text-sm font-semibold text-white mb-2">
-                  Audio Quality
-                </label>
-                <select
-                  value={settings.audioQuality}
-                  onChange={(e) => updateSettings({ audioQuality: e.target.value as any })}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
-                >
-                  <option value="low">Low (8 kHz)</option>
-                  <option value="medium">Medium (16 kHz)</option>
-                  <option value="high">High (48 kHz)</option>
-                  <option value="music">Music (48 kHz stereo)</option>
-                </select>
-                <p className="mt-2 text-xs text-neutral-400">
-                  Higher quality uses more bandwidth
+              {/* Audio Quality Info */}
+              <div className="p-4 bg-neutral-800 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-2">Voice Quality</h3>
+                <p className="text-sm text-neutral-400">
+                  Daily.co automatically optimizes audio quality based on your connection.
                 </p>
               </div>
 
-              {/* Noise Suppression */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-white">Noise Suppression</div>
-                  <div className="text-xs text-neutral-400">Reduce background noise</div>
-                </div>
-                <label className="relative inline-block w-12 h-6">
-                  <input
-                    type="checkbox"
-                    checked={settings.noiseSuppression}
-                    onChange={(e) => updateSettings({ noiseSuppression: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-full h-full bg-neutral-700 peer-checked:bg-purple-600 rounded-full transition-colors cursor-pointer peer-focus:ring-2 peer-focus:ring-purple-500"></div>
-                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-6"></div>
-                </label>
-              </div>
-
-              {/* Echo Cancellation */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-white">Echo Cancellation</div>
-                  <div className="text-xs text-neutral-400">Prevent audio feedback</div>
-                </div>
-                <label className="relative inline-block w-12 h-6">
-                  <input
-                    type="checkbox"
-                    checked={settings.echoCancellation}
-                    onChange={(e) => updateSettings({ echoCancellation: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-full h-full bg-neutral-700 peer-checked:bg-purple-600 rounded-full transition-colors cursor-pointer peer-focus:ring-2 peer-focus:ring-purple-500"></div>
-                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-6"></div>
-                </label>
-              </div>
-
-              {/* Auto Gain Control */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-white">Auto Gain Control</div>
-                  <div className="text-xs text-neutral-400">Automatically adjust volume</div>
-                </div>
-                <label className="relative inline-block w-12 h-6">
-                  <input
-                    type="checkbox"
-                    checked={settings.autoGainControl}
-                    onChange={(e) => updateSettings({ autoGainControl: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-full h-full bg-neutral-700 peer-checked:bg-purple-600 rounded-full transition-colors cursor-pointer peer-focus:ring-2 peer-focus:ring-purple-500"></div>
-                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-6"></div>
-                </label>
-              </div>
-
-              {/* Voice Changer */}
-              <div>
-                <label className="block text-sm font-semibold text-white mb-2">
-                  Voice Changer (Fun!)
-                </label>
-                <select
-                  value={settings.voiceChanger}
-                  onChange={(e) => updateSettings({ voiceChanger: e.target.value as any })}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
-                >
-                  <option value="none">None</option>
-                  <option value="robot">🤖 Robot</option>
-                  <option value="child">👶 Child</option>
-                  <option value="elder">👴 Elder</option>
-                  <option value="monster">👹 Monster</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Keybindings Tab */}
-          {activeTab === 'keybindings' && (
-            <div className="space-y-6">
-              {/* Voice Mode */}
-              <div>
-                <label className="block text-sm font-semibold text-white mb-3">
-                  Voice Mode
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-3 p-3 bg-neutral-800 rounded-lg cursor-pointer hover:bg-neutral-700 transition-colors">
-                    <input
-                      type="radio"
-                      checked={settings.voiceActivation}
-                      onChange={() => updateSettings({ voiceActivation: true, pushToTalk: false })}
-                      className="w-4 h-4 text-purple-600"
-                    />
-                    <div>
-                      <div className="font-medium text-white">Voice Activity</div>
-                      <div className="text-xs text-neutral-400">Automatically transmit when you speak</div>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 bg-neutral-800 rounded-lg cursor-pointer hover:bg-neutral-700 transition-colors">
-                    <input
-                      type="radio"
-                      checked={settings.pushToTalk}
-                      onChange={() => updateSettings({ pushToTalk: true, voiceActivation: false })}
-                      className="w-4 h-4 text-purple-600"
-                    />
-                    <div>
-                      <div className="font-medium text-white">Push to Talk</div>
-                      <div className="text-xs text-neutral-400">Hold a key to transmit</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Push to Talk Key */}
-              {settings.pushToTalk && (
-                <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
-                    Push to Talk Key
-                  </label>
-                  <select
-                    value={settings.pushToTalkKey}
-                    onChange={(e) => updateSettings({ pushToTalkKey: e.target.value })}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
-                  >
-                    <option value="Space">Space</option>
-                    <option value="ControlLeft">Left Ctrl</option>
-                    <option value="ControlRight">Right Ctrl</option>
-                    <option value="AltLeft">Left Alt</option>
-                    <option value="AltRight">Right Alt</option>
-                    <option value="Backquote">` (Backtick)</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Voice Activation Threshold */}
-              {settings.voiceActivation && (
-                <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
-                    Voice Activation Threshold: {settings.voiceThreshold}%
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={settings.voiceThreshold}
-                    onChange={(e) => updateSettings({ voiceThreshold: Number(e.target.value) })}
-                    className="w-full"
-                  />
-                  <p className="mt-2 text-xs text-neutral-400">
-                    Lower = more sensitive (may pick up background noise)
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Advanced Tab */}
-          {activeTab === 'advanced' && (
-            <div className="space-y-6">
-              {/* Pitch Shift */}
-              <div>
-                <label className="block text-sm font-semibold text-white mb-2">
-                  Pitch Adjustment: {settings.pitchShift > 0 ? '+' : ''}{settings.pitchShift}
-                </label>
-                <input
-                  type="range"
-                  min="-12"
-                  max="12"
-                  value={settings.pitchShift}
-                  onChange={(e) => updateSettings({ pitchShift: Number(e.target.value) })}
-                  className="w-full"
-                />
-                <p className="mt-2 text-xs text-neutral-400">
-                  Adjust voice pitch (semitones)
+              {/* Noise Suppression Info */}
+              <div className="p-4 bg-neutral-800 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-2">Noise Suppression</h3>
+                <p className="text-sm text-neutral-400">
+                  Daily.co includes automatic noise suppression to remove background noise.
                 </p>
               </div>
 
-              {/* Debug Info */}
-              <div className="p-4 bg-neutral-800 rounded-lg border border-neutral-700">
-                <div className="text-sm font-semibold text-white mb-2">Debug Information</div>
-                <div className="space-y-1 text-xs text-neutral-400 font-mono">
-                  <div>SDK Version: {AgoraRTC.VERSION}</div>
-                  <div>Audio Quality: {settings.audioQuality}</div>
-                  <div>Noise Suppression: {settings.noiseSuppression ? 'On' : 'Off'}</div>
-                  <div>Echo Cancellation: {settings.echoCancellation ? 'On' : 'Off'}</div>
-                  <div>AGC: {settings.autoGainControl ? 'On' : 'Off'}</div>
-                </div>
+              {/* Echo Cancellation Info */}
+              <div className="p-4 bg-neutral-800 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-2">Echo Cancellation</h3>
+                <p className="text-sm text-neutral-400">
+                  Echo cancellation is enabled by default in your browser and Daily.co.
+                </p>
               </div>
 
-              {/* Reset Button */}
-              <button
-                onClick={() => {
-                  updateSettings({
-                    inputVolume: 100,
-                    outputVolume: 100,
-                    pushToTalk: false,
-                    pushToTalkKey: 'Space',
-                    voiceActivation: true,
-                    voiceThreshold: 30,
-                    audioQuality: 'high',
-                    noiseSuppression: true,
-                    echoCancellation: true,
-                    autoGainControl: true,
-                    pitchShift: 0,
-                    voiceChanger: 'none',
-                  });
-                }}
-                className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Reset to Defaults
-              </button>
+              {/* Auto Gain Control Info */}
+              <div className="p-4 bg-neutral-800 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-2">Automatic Gain Control</h3>
+                <p className="text-sm text-neutral-400">
+                  Your microphone sensitivity is automatically adjusted by Daily.co.
+                </p>
+              </div>
             </div>
           )}
         </div>

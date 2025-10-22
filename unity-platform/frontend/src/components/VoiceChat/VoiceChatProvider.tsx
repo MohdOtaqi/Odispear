@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import Daily, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
-import { voiceAPI } from '../../lib/api';
+import { voiceAPI } from '../../lib/voiceAPI';
 import toast from 'react-hot-toast';
 
 // Voice Chat Context State
@@ -10,6 +10,7 @@ interface VoiceChatState {
   channelId: string | null;
   participants: DailyParticipant[];
   localParticipant: DailyParticipant | null;
+  isDeafened: boolean;
   
   // Actions
   joinChannel: (channelId: string, channelName: string) => Promise<void>;
@@ -176,6 +177,7 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     channelId,
     participants,
     localParticipant,
+    isDeafened,
     joinChannel,
     leaveChannel,
     toggleMute,
