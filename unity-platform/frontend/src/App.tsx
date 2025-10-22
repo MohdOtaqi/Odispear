@@ -6,6 +6,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { MainApp } from './pages/MainApp';
 import Home from './pages/Home';
 import { useAuthStore } from './store/authStore';
+import { VoiceChatProvider } from './components/VoiceChat/VoiceChatProvider';
 
 function App() {
   const { isAuthenticated, isInitialized, fetchCurrentUser } = useAuthStore();
@@ -58,7 +59,13 @@ function App() {
         <Route
           path="/app/*"
           element={
-            isAuthenticated ? <MainApp /> : <Navigate to="/login" replace />
+            isAuthenticated ? (
+              <VoiceChatProvider>
+                <MainApp />
+              </VoiceChatProvider>
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
       </Routes>
