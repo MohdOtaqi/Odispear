@@ -54,6 +54,21 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return;
     }
 
+    // Check if we're on HTTPS or localhost (required for microphone access)
+    const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+    if (!isSecureContext) {
+      toast.error('Voice chat requires HTTPS. Please use HTTPS to access this site.');
+      console.error('Voice chat requires HTTPS. Current protocol:', window.location.protocol);
+      return;
+    }
+
+    // Check if browser supports media devices
+    if (!navigator.mediaDevices) {
+      toast.error('Your browser does not support voice chat');
+      console.error('MediaDevices API not available');
+      return;
+    }
+
     setIsConnecting(true);
     
     try {
@@ -72,10 +87,21 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const { token, roomUrl } = data;
 
       // 3. Create Daily call object with error handling
-      const co = Daily.createCallObject({
-        strictMode: false, // Allow operation even if browser doesn't support all features
-      });
-      callObjectRef.current = co;
+      let co;
+      try {
+        co = Daily.createCallObject({
+          strictMode: false, // Allow operation even if browser doesn't support all features
+          subscribeToTracksAutomatically: true,
+          showLeaveButton: false,
+          showFullscreenButton: false,
+        });
+        callObjectRef.current = co;
+      } catch (createError) {
+        console.error('Failed to create Daily call object:', createError);
+        toast.error('Failed to initialize voice chat. Please check your browser compatibility.');
+        setIsConnecting(false);
+        return;
+      }
 
       // 4. Set up event listeners
       co.on('joined-meeting', (e) => {
