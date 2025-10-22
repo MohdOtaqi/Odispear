@@ -10,7 +10,7 @@ import { CreateGuildModal } from '../components/modals/CreateGuildModal';
 import { UserSettingsModal } from '../components/modals/UserSettingsModal';
 import { FriendsPage } from './FriendsPage';
 import UserProfile from '../components/UserProfile';
-import { VoicePanel } from '../components/VoicePanel';
+import { VoicePanelAdvanced } from '../components/VoiceChat/VoicePanelAdvanced';
 import { useAuthStore } from '../store/authStore';
 import { useGuildStore } from '../store/guildStore';
 import { useMessageStore } from '../store/messageStore';
@@ -216,8 +216,7 @@ export const MainApp: React.FC = () => {
                   
                   {/* Voice Panel */}
                   {showVoiceChat && selectedVoiceChannelId && (
-                    <VoicePanel
-                      channelId={selectedVoiceChannelId}
+                    <VoicePanelAdvanced
                       channelName={channels.find(c => c.id === selectedVoiceChannelId)?.name || 'Voice Channel'}
                       onLeave={() => {
                         setShowVoiceChat(false);
