@@ -38,7 +38,7 @@ export const useVoiceChat = () => {
 };
 
 export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [callObject, setCallObject] = useState<DailyCall | null>(null);
+  const callObjectRef = useRef<DailyCall | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [channelId, setChannelId] = useState<string | null>(null);
@@ -49,20 +49,35 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [settings, setSettings] = useState({ inputVolume: 1, outputVolume: 1 });
 
   const joinChannel = useCallback(async (channelIdParam: string, channelName: string) => {
-    if (isConnecting || isConnected) return;
+    if (isConnecting || isConnected) {
+      toast.error('Already in a voice channel');
+      return;
+    }
 
     setIsConnecting(true);
     
     try {
-      // 1. Get token from our backend
+      // 1. Destroy any existing call object first
+      if (callObjectRef.current) {
+        try {
+          await callObjectRef.current.destroy();
+        } catch (e) {
+          console.warn('Error destroying previous call object:', e);
+        }
+        callObjectRef.current = null;
+      }
+
+      // 2. Get token from our backend
       const { data } = await voiceAPI.getVoiceToken(channelIdParam);
       const { token, roomUrl } = data;
 
-      // 2. Create Daily call object
-      const co = Daily.createCallObject();
-      setCallObject(co);
+      // 3. Create Daily call object with error handling
+      const co = Daily.createCallObject({
+        strictMode: false, // Allow operation even if browser doesn't support all features
+      });
+      callObjectRef.current = co;
 
-      // 3. Set up event listeners
+      // 4. Set up event listeners
       co.on('joined-meeting', (e) => {
         setIsConnected(true);
         setIsConnecting(false);
@@ -76,8 +91,10 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setChannelId(null);
         setParticipants([]);
         setLocalParticipant(null);
-        co.destroy();
-        setCallObject(null);
+        if (callObjectRef.current) {
+          callObjectRef.current.destroy();
+          callObjectRef.current = null;
+        }
       });
 
       co.on('participant-joined', (e) => {
@@ -101,7 +118,7 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsConnecting(false);
       });
 
-      // 4. Join the meeting
+      // 5. Join the meeting
       await co.join({
         url: roomUrl,
         token: token,
@@ -115,61 +132,88 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.error('Failed to join voice channel:', error);
       toast.error(error.response?.data?.error || 'Failed to join voice channel');
       setIsConnecting(false);
+      
+      // Cleanup on error
+      if (callObjectRef.current) {
+        try {
+          await callObjectRef.current.destroy();
+        } catch (e) {
+          console.warn('Error cleaning up call object:', e);
+        }
+        callObjectRef.current = null;
+      }
     }
   }, [isConnecting, isConnected]);
 
   const leaveChannel = useCallback(async () => {
-    if (callObject) {
-      await callObject.leave();
+    if (callObjectRef.current) {
+      try {
+        await callObjectRef.current.leave();
+        // Destroy is called in the 'left-meeting' event handler
+      } catch (error) {
+        console.error('Error leaving channel:', error);
+        // Force cleanup on error
+        try {
+          await callObjectRef.current.destroy();
+        } catch (e) {
+          console.warn('Error destroying call object:', e);
+        }
+        callObjectRef.current = null;
+        setIsConnected(false);
+        setChannelId(null);
+      }
     }
-  }, [callObject]);
+  }, []);
 
   const toggleMute = useCallback(() => {
-    if (callObject) {
-      const isMuted = callObject.localAudio();
-      callObject.setLocalAudio(!isMuted);
+    if (callObjectRef.current) {
+      const isMuted = callObjectRef.current.localAudio();
+      callObjectRef.current.setLocalAudio(!isMuted);
     }
-  }, [callObject]);
+  }, []);
 
   const toggleDeafen = useCallback(() => {
-    if (callObject) {
+    if (callObjectRef.current) {
       const newDeafenedState = !isDeafened;
       for (const p of participants) {
         if (!p.local) {
-          callObject.updateParticipant(p.session_id, {
+          callObjectRef.current.updateParticipant(p.session_id, {
             setAudio: newDeafenedState ? false : true
           });
         }
       }
       setIsDeafened(newDeafenedState);
       // Also mute self
-      if (newDeafenedState && callObject.localAudio()) {
-        callObject.setLocalAudio(false);
+      if (newDeafenedState && callObjectRef.current.localAudio()) {
+        callObjectRef.current.setLocalAudio(false);
       }
       toast.success(newDeafenedState ? 'Deafened' : 'Undeafened');
     }
-  }, [callObject, isDeafened, participants]);
+  }, [isDeafened, participants]);
 
   const setInputVolume = useCallback((volume: number) => {
-    if (callObject) {
-      callObject.setInputDevicesAsync({ audioGain: volume / 100 });
+    if (callObjectRef.current) {
+      callObjectRef.current.setInputDevicesAsync({ audioGain: volume / 100 });
       setSettings(s => ({...s, inputVolume: volume}));
     }
-  }, [callObject]);
+  }, []);
 
   const setOutputVolume = useCallback((volume: number) => {
-    if (callObject) {
-      callObject.setOutputDeviceAsync({ outputGain: volume / 100 });
+    if (callObjectRef.current) {
+      callObjectRef.current.setOutputDeviceAsync({ outputGain: volume / 100 });
       setSettings(s => ({...s, outputVolume: volume}));
     }
-  }, [callObject]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      callObject?.destroy();
+      if (callObjectRef.current) {
+        callObjectRef.current.destroy();
+        callObjectRef.current = null;
+      }
     };
-  }, [callObject]);
+  }, []);
 
   const value: VoiceChatState = {
     isConnected,
