@@ -154,8 +154,8 @@ export const friendsAPI = {
     api.get('/friends/sent'),
   getBlocked: () =>
     api.get('/friends/blocked'),
-  sendRequest: (userId: string) =>
-    api.post('/friends/request', { friend_id: userId }),
+  sendRequest: (username: string) =>
+    api.post('/friends/request', { username }),
   acceptRequest: (friendshipId: string) =>
     api.post(`/friends/${friendshipId}/accept`),
   rejectRequest: (friendshipId: string) =>
