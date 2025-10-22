@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { Hash, Volume2, Calendar, Plus, ChevronDown } from 'lucide-react';
+import { Hash, Volume2, Calendar, Plus, ChevronDown, Settings, UserPlus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGuildStore } from '../../store/guildStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -8,6 +8,8 @@ interface SidebarProps {
   currentChannelId?: string;
   onChannelSelect: (channelId: string) => void;
   onVoiceChannelJoin?: (channelId: string) => void;
+  onOpenServerSettings?: () => void;
+  onOpenInvite?: () => void;
 }
 
 const ChannelButton = React.memo<{
