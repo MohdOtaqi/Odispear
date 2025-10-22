@@ -10,6 +10,11 @@ import { CreateGuildModal } from '../components/modals/CreateGuildModal';
 import { UserSettingsModal } from '../components/modals/UserSettingsModal';
 import { FriendsPage } from './FriendsPage';
 import UserProfile from '../components/UserProfile';
+import { ServerSettings } from '../components/ServerSettings/ServerSettings';
+import { InviteModal } from '../components/modals/InviteModal';
+import { ProfileEditor } from '../components/ProfileEditor/ProfileEditor';
+import { ServerDropdown } from '../components/ServerMenu/ServerDropdown';
+import { CreateChannelModal } from '../components/modals/CreateChannelModal';
 import { VoicePanelAdvanced } from '../components/VoiceChat/VoicePanelAdvanced';
 import { useVoiceChat } from '../components/VoiceChat/VoiceChatProvider';
 import { useAuthStore } from '../store/authStore';
@@ -30,6 +35,10 @@ export const MainApp: React.FC = () => {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showVoiceChat, setShowVoiceChat] = useState(false);
   const [selectedVoiceChannelId, setSelectedVoiceChannelId] = useState<string | null>(null);
+  const [showServerSettings, setShowServerSettings] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [showCreateChannel, setShowCreateChannel] = useState(false);
 
   const { user, isAuthenticated } = useAuthStore();
   const { guilds, currentGuild, channels, fetchGuilds, selectGuild } = useGuildStore();
@@ -162,9 +171,9 @@ export const MainApp: React.FC = () => {
         {/* Bottom Actions */}
         <div className="mt-auto p-2 space-y-2">
           <button
-            onClick={() => setShowUserProfile(true)}
+            onClick={() => setShowProfileEditor(true)}
             className="w-12 h-12 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all flex items-center justify-center"
-            title="My Profile"
+            title="Edit Profile"
           >
             <User className="w-5 h-5" />
           </button>
@@ -218,10 +227,19 @@ export const MainApp: React.FC = () => {
             {currentGuild ? (
               <>
                 <div className="flex flex-col w-60 bg-neutral-850">
+                  {/* Server Dropdown Menu */}
+                  <ServerDropdown
+                    onOpenServerSettings={() => setShowServerSettings(true)}
+                    onOpenInvite={() => setShowInviteModal(true)}
+                    onCreateChannel={() => setShowCreateChannel(true)}
+                  />
+                  
                   <Sidebar 
                     currentChannelId={currentChannelId || undefined} 
                     onChannelSelect={handleChannelSelect}
                     onVoiceChannelJoin={handleVoiceChannelJoin}
+                    onOpenServerSettings={() => setShowServerSettings(true)}
+                    onOpenInvite={() => setShowInviteModal(true)}
                   />
                   
                   {/* Voice Panel */}
@@ -299,6 +317,23 @@ export const MainApp: React.FC = () => {
       {/* Modals */}
       <CreateGuildModal isOpen={showCreateGuild} onClose={() => setShowCreateGuild(false)} />
       <UserSettingsModal isOpen={showUserSettings} onClose={() => setShowUserSettings(false)} />
+      {currentGuild && (
+        <>
+          <ServerSettings 
+            isOpen={showServerSettings} 
+            onClose={() => setShowServerSettings(false)} 
+            guildId={currentGuild.id}
+          />
+          <InviteModal 
+            isOpen={showInviteModal} 
+            onClose={() => setShowInviteModal(false)} 
+            guildId={currentGuild.id}
+            guildName={currentGuild.name}
+          />
+        </>
+      )}
+      <ProfileEditor isOpen={showProfileEditor} onClose={() => setShowProfileEditor(false)} />
+      <CreateChannelModal isOpen={showCreateChannel} onClose={() => setShowCreateChannel(false)} />
       
       {user && (
         <UserProfile

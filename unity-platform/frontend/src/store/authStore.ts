@@ -8,8 +8,12 @@ interface User {
   username: string;
   display_name: string;
   avatar_url?: string;
+  banner_url?: string;
+  bio?: string;
   status: 'online' | 'idle' | 'dnd' | 'offline';
   status_text?: string;
+  custom_status?: string;
+  created_at?: string;
 }
 
 interface AuthState {
@@ -23,6 +27,7 @@ interface AuthState {
   logout: () => Promise<void>;
   fetchCurrentUser: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  updateUser: (data: Partial<User>) => void;
   clearError: () => void;
 }
 
@@ -140,5 +145,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  clearError: () => set({ error: null }),
+  updateUser: (data: Partial<User>) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, ...data } : null
+    }));
+  },
+
+  clearError: () => {
+    set({ error: null });
+  },
 }));
