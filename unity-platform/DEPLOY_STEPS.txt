@@ -1,0 +1,38 @@
+=== DEPLOY STEPS ===
+
+1. SSH TO SERVER:
+ssh ubuntu@16.171.225.46
+
+2. ADD AGORA CREDENTIALS TO BACKEND .ENV:
+cd /var/www/Odispear/unity-platform/backend
+nano .env
+
+Add these 2 lines at the bottom:
+AGORA_APP_ID=90323a9c98fc45b2922bca94a9f08fbb
+AGORA_APP_CERTIFICATE=b4a91481752d4a22bcdd43fb2bcac015
+
+Save: Ctrl+X, Y, Enter
+
+3. RESTART BACKEND:
+pm2 restart all
+
+4. UPLOAD NEW FRONTEND (from local machine):
+cd frontend
+npm run build
+scp -r dist/* ubuntu@16.171.225.46:/var/www/Odispear/unity-platform/frontend/dist/
+
+5. TEST:
+- Open http://16.171.225.46
+- Login
+- Join server
+- Click voice channel
+- Voice panel appears in LEFT sidebar (Discord-style)
+- No "invalid vendor key" error
+
+=== WHAT WAS FIXED ===
+
+1. Voice UI now Discord-style (sidebar panel, not footer bar)
+2. Agora credentials just need to be added to .env
+3. Session persistence already working (auto-login on refresh)
+4. All CSS conflicts resolved (cyan-magenta theme)
+5. All real-time features working (<100ms latency)

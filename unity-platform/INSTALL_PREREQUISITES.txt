@@ -1,0 +1,76 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║              UNITY PLATFORM - INSTALLATION PREREQUISITES             ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+You need to install these 3 software packages to run Unity Platform:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 1. NODE.JS (Required - JavaScript Runtime)
+   
+   Download from: https://nodejs.org/
+   
+   ✓ Click "Download for Windows (x64)"
+   ✓ Choose the LTS version (Long Term Support)
+   ✓ Run the installer
+   ✓ Make sure "Add to PATH" is checked
+   ✓ Click through the installation wizard
+   
+   After installing, open PowerShell and verify:
+   → node --version    (should show v18.x.x or higher)
+   → npm --version     (should show 9.x.x or higher)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 2. POSTGRESQL (Required - Database)
+   
+   Download from: https://www.postgresql.org/download/windows/
+   
+   ✓ Download PostgreSQL 14 or higher
+   ✓ Run the installer
+   ✓ Set a password (REMEMBER THIS!)
+   ✓ Keep default port: 5432
+   ✓ Install pgAdmin (recommended)
+   
+   After installing, verify:
+   → psql --version    (should show PostgreSQL 14.x or higher)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 3. REDIS (Required - Cache/Real-time)
+   
+   Download from: https://github.com/microsoftarchive/redis/releases
+   
+   ✓ Download Redis-x64-3.2.100.msi
+   ✓ Run the installer
+   ✓ Service starts automatically
+   
+   After installing, verify:
+   → redis-cli ping    (should respond with "PONG")
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 AFTER INSTALLING ALL THREE:
+
+   Open PowerShell and run:
+   
+   cd C:\Users\WDAGUtilityAccount\CascadeProjects\unity-platform
+   powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 QUICK LINKS:
+
+   Node.js:     https://nodejs.org/
+   PostgreSQL:  https://www.postgresql.org/download/windows/
+   Redis:       https://github.com/microsoftarchive/redis/releases
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️  Total Installation Time: ~15-20 minutes
+💾 Disk Space Required: ~2GB
+🔧 Difficulty: Easy (just click through installers)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Questions? Check START_HERE.md for detailed instructions!
