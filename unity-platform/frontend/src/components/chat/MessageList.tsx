@@ -21,6 +21,7 @@ interface Message {
 interface MessageListProps {
   channelId: string;
   isDM?: boolean;
+  onUserClick?: (userId: string) => void;
 }
 
 // Optimized Message Item with React.memo
@@ -28,7 +29,8 @@ const MessageItem = React.memo<{
   message: Message;
   isOwn: boolean;
   isGrouped: boolean;
-}>(({ message, isOwn, isGrouped }) => {
+  onUserClick?: (userId: string) => void;
+}>(({ message, isOwn, isGrouped, onUserClick }) => {
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
 
@@ -46,12 +48,18 @@ const MessageItem = React.memo<{
         {/* Avatar (only show if not grouped) */}
         <div className="w-10 flex-shrink-0">
           {!isGrouped && (
-            <Avatar
-              src={message.avatar_url}
-              alt={message.username}
-              fallback={message.username.charAt(0)}
-              size="md"
-            />
+            <div 
+              onClick={() => onUserClick?.(message.author_id)}
+              className="cursor-pointer"
+              title={`View ${message.username}'s profile`}
+            >
+              <Avatar
+                src={message.avatar_url}
+                alt={message.username}
+                fallback={message.username.charAt(0)}
+                size="md"
+              />
+            </div>
           )}
         </div>
 
@@ -59,7 +67,11 @@ const MessageItem = React.memo<{
         <div className="flex-1 min-w-0">
           {!isGrouped && (
             <div className="flex items-baseline gap-2 mb-0.5">
-              <span className="font-semibold text-white hover:underline cursor-pointer">
+              <span 
+                onClick={() => onUserClick?.(message.author_id)}
+                className="font-semibold text-white hover:underline cursor-pointer transition-colors"
+                title={`View ${message.username}'s profile`}
+              >
                 {message.display_name || message.username}
               </span>
               <span className="text-xs text-gray-500">
@@ -136,7 +148,7 @@ const MessageItem = React.memo<{
 MessageItem.displayName = 'MessageItem';
 
 // Optimized Message List with auto-scroll
-export const MessageList = React.memo<MessageListProps>(({ channelId }) => {
+export const MessageList = React.memo<MessageListProps>(({ channelId, onUserClick }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -194,6 +206,7 @@ export const MessageList = React.memo<MessageListProps>(({ channelId }) => {
             message={message}
             isOwn={message.author_id === currentUser?.id}
             isGrouped={shouldGroupMessage(message, messages[index - 1])}
+            onUserClick={onUserClick}
           />
         ))}
         <div ref={messagesEndRef} />

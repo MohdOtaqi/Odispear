@@ -9,7 +9,7 @@ import { MessageInput } from '../components/chat/MessageInput';
 import { CreateGuildModal } from '../components/modals/CreateGuildModal';
 import { UserSettingsModal } from '../components/modals/UserSettingsModal';
 import { FriendsPage } from './FriendsPage';
-import UserProfile from '../components/UserProfile';
+import { UserProfileModal } from '../components/UserProfileModal';
 import { ServerSettings } from '../components/ServerSettings/ServerSettings';
 import { InviteModal } from '../components/modals/InviteModal';
 import { ProfileEditor } from '../components/ProfileEditor/ProfileEditor';
@@ -34,6 +34,7 @@ export const MainApp: React.FC = () => {
   const [showCreateGuild, setShowCreateGuild] = useState(false);
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const [showVoiceChat, setShowVoiceChat] = useState(false);
   const [selectedVoiceChannelId, setSelectedVoiceChannelId] = useState<string | null>(null);
   const [showServerSettings, setShowServerSettings] = useState(false);
@@ -141,6 +142,18 @@ export const MainApp: React.FC = () => {
     navigate(`/app/dms/${dmChannelId}`);
   };
 
+  const handleUserClick = (userId: string) => {
+    setSelectedProfileUserId(userId);
+    setShowUserProfile(true);
+  };
+
+  const handleNavigateToDM = async (dmChannelId: string) => {
+    // Fetch DM channels to update the list
+    await fetchDMChannels();
+    // Navigate to the DM
+    handleDMSelect(dmChannelId);
+  };
+
   const handleVoiceChannelJoin = async (channelId: string) => {
     const channel = channels.find(c => c.id === channelId);
     if (!channel) return;
@@ -223,7 +236,7 @@ export const MainApp: React.FC = () => {
                       </h3>
                     </div>
                   </div>
-                  <MessageList channelId={currentDMChannel.id} isDM />
+                  <MessageList channelId={currentDMChannel.id} isDM onUserClick={handleUserClick} />
                   <MessageInput channelId={currentDMChannel.id} isDM />
                 </>
               ) : (
@@ -289,7 +302,7 @@ export const MainApp: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      <MessageList channelId={currentChannel.id} />
+                      <MessageList channelId={currentChannel.id} onUserClick={handleUserClick} />
                       <MessageInput channelId={currentChannel.id} />
                     </>
                   ) : (
@@ -352,22 +365,16 @@ export const MainApp: React.FC = () => {
       <ProfileEditor isOpen={showProfileEditor} onClose={() => setShowProfileEditor(false)} />
       <CreateChannelModal isOpen={showCreateChannel} onClose={() => setShowCreateChannel(false)} />
       
-      {user && (
-        <UserProfile
-          isOpen={showUserProfile}
-          onClose={() => setShowUserProfile(false)}
-          user={{
-            id: user.id,
-            username: user.username,
-            discriminator: '0001',
-            avatar: user.avatar_url,
-            status: user.status as any,
-            customStatus: user.status_text,
-            createdAt: (user as any).created_at || new Date().toISOString(),
-            bio: '',
-            level: 5,
-            xp: 250,
+      {/* User Profile Modal */}
+      {showUserProfile && selectedProfileUserId && (
+        <UserProfileModal
+          userId={selectedProfileUserId}
+          onClose={() => {
+            setShowUserProfile(false);
+            setSelectedProfileUserId(null);
           }}
+          guildId={currentGuild?.id}
+          onNavigateToDM={handleNavigateToDM}
         />
       )}
 

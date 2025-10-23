@@ -88,9 +88,10 @@ interface UserProfileModalProps {
   userId: string;
   onClose: () => void;
   guildId?: string;
+  onNavigateToDM?: (dmChannelId: string) => void;
 }
 
-export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onClose, guildId }) => {
+export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onClose, guildId, onNavigateToDM }) => {
   const { user: currentUser } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'about' | 'activity' | 'mutual' | 'roles'>('about');
@@ -301,13 +302,21 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   const handleSendMessage = async () => {
     try {
-      // Create DM channel with this user
+      // Create or get existing DM channel with this user
       const { data } = await api.post('/dm/create', { user_id: userId });
-      // Close modal and navigate to DM
+      // Close modal
       onClose();
-      window.location.href = `/app/dms/${data.id}`;
-    } catch (error) {
+      // Navigate to DM using callback (if provided) or fallback to manual navigation
+      if (onNavigateToDM) {
+        onNavigateToDM(data.id);
+      } else {
+        // Fallback: Use router navigation programmatically
+        window.location.href = `/app/dms/${data.id}`;
+      }
+      toast.success('Opening DM...');
+    } catch (error: any) {
       console.error('Failed to create DM:', error);
+      toast.error(error.response?.data?.error || 'Failed to open DM');
     }
   };
 
