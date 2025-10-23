@@ -14,8 +14,6 @@ CREATE TABLE users (
   avatar_url TEXT,
   status VARCHAR(20) DEFAULT 'offline' CHECK (status IN ('online', 'idle', 'dnd', 'offline')),
   status_text VARCHAR(200),
-  custom_status VARCHAR(200),
-  last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   email_verified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -24,7 +22,6 @@ CREATE TABLE users (
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_status ON users(status);
-CREATE INDEX idx_users_last_seen ON users(last_seen);
 
 -- Guilds (Servers) table
 CREATE TABLE guilds (
