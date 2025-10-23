@@ -9,29 +9,45 @@ export const createDM = async (
   next: NextFunction
 ) => {
   try {
-    const { recipientId } = req.body;
+    const { recipientId, user_id } = req.body;
+    const targetUserId = recipientId || user_id;  // Support both parameter names
     const userId = req.user!.id;
 
-    if (recipientId === userId) {
+    if (!targetUserId) {
+      throw new AppError('Recipient user ID is required', 400);
+    }
+
+    if (targetUserId === userId) {
       throw new AppError('Cannot create DM with yourself', 400);
     }
 
-    // Check if users are friends
-    const friendshipCheck = await query(
-      `SELECT id FROM friendships 
-       WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
-       AND status = 'accepted'`,
-      [userId, recipientId]
+    // Check if users are friends OR share a server
+    const relationshipCheck = await query(
+      `SELECT 1 FROM (
+        -- Check if they are friends
+        SELECT 1 FROM friendships 
+        WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
+        AND status = 'accepted'
+        
+        UNION
+        
+        -- Check if they share a server
+        SELECT 1 FROM guild_members gm1
+        JOIN guild_members gm2 ON gm1.guild_id = gm2.guild_id
+        WHERE gm1.user_id = $1 AND gm2.user_id = $2
+        LIMIT 1
+      ) as relationship`,
+      [userId, targetUserId]
     );
 
-    if (friendshipCheck.rows.length === 0) {
-      throw new AppError('Can only DM friends', 403);
+    if (relationshipCheck.rows.length === 0) {
+      throw new AppError('You can only message friends or users in the same server', 403);
     }
 
     // Use database function to get or create DM channel
     const result = await query(
       'SELECT get_or_create_dm_channel($1, $2) as channel_id',
-      [userId, recipientId]
+      [userId, targetUserId]
     );
 
     const channelId = result.rows[0].channel_id;

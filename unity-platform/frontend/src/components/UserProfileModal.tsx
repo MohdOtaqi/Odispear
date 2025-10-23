@@ -105,35 +105,136 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   const fetchUserProfile = async () => {
     try {
-      const [profileRes, friendRes, blockedRes] = await Promise.all([
-        api.get(`/users/${userId}/profile`),
-        api.get('/friends'),
-        api.get('/friends/blocked')
-      ]);
+      // Fetch user basic info
+      const userRes = await api.get(`/users/${userId}`);
+      const userData = userRes.data;
       
-      setProfile(profileRes.data);
-      setIsFriend(friendRes.data.some((f: any) => f.id === userId));
-      setIsBlocked(blockedRes.data.some((b: any) => b.id === userId));
-      setUserNote(profileRes.data.note || '');
+      // Fetch friends list to check if they're friends
+      let friendsList = [];
+      try {
+        const friendRes = await api.get('/friends');
+        friendsList = friendRes.data;
+        setIsFriend(friendsList.some((f: any) => f.id === userId));
+      } catch (err) {
+        console.log('Could not fetch friends list');
+      }
+      
+      // Fetch mutual servers
+      let mutualServers = [];
+      try {
+        const guildsRes = await api.get('/guilds');
+        const userGuildsRes = await api.get(`/users/${userId}/guilds`);
+        const myGuilds = guildsRes.data;
+        const theirGuilds = userGuildsRes.data || [];
+        mutualServers = myGuilds.filter((g: any) => 
+          theirGuilds.some((tg: any) => tg.id === g.id)
+        );
+      } catch (err) {
+        console.log('Could not fetch guilds');
+      }
+      
+      // Build profile object
+      const profile: UserProfile = {
+        id: userData.id,
+        username: userData.username,
+        discriminator: userData.discriminator || '0001',
+        displayName: userData.display_name || userData.username,
+        avatar: userData.avatar_url || `https://ui-avatars.com/api/?name=${userData.username}&background=6366f1&color=fff`,
+        banner: userData.banner_url || 'https://source.unsplash.com/600x200/?abstract,gradient',
+        bio: userData.bio || 'No bio yet.',
+        pronouns: userData.pronouns || '',
+        status: userData.status || 'offline',
+        customStatus: userData.custom_status || userData.status_text || '',
+        activities: [],
+        badges: [],
+        connections: [],
+        mutualServers,
+        mutualFriends: [],
+        roles: [],
+        memberSince: userData.created_at || new Date().toISOString(),
+        note: userData.note || ''
+      };
+      
+      setProfile(profile);
+      setUserNote(profile.note || '');
     } catch (error) {
-      // Mock data for demo
-      setProfile(generateMockProfile());
+      console.error('Failed to fetch user profile:', error);
+      // Use minimal fallback data
+      setProfile({
+        id: userId,
+        username: 'Unknown User',
+        discriminator: '0000',
+        displayName: 'Unknown User',
+        avatar: `https://ui-avatars.com/api/?name=U&background=6366f1&color=fff`,
+        banner: '',
+        bio: 'Could not load profile.',
+        pronouns: '',
+        status: 'offline',
+        customStatus: '',
+        activities: [],
+        badges: [],
+        connections: [],
+        mutualServers: [],
+        mutualFriends: [],
+        roles: [],
+        memberSince: new Date().toISOString(),
+        note: ''
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleAddFriend = async () => {
+    try {
+      await api.post('/friends/request', { username: profile?.username });
+      toast.success('Friend request sent!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to send friend request');
+    }
+  };
+
+  const handleRemoveFriend = async () => {
+    try {
+      await api.delete(`/friends/${userId}`);
+      setIsFriend(false);
+      toast.success('Friend removed');
+    } catch (error) {
+      toast.error('Failed to remove friend');
+    }
+  };
+
+  const handleBlock = async () => {
+    try {
+      await api.post(`/friends/block/${userId}`);
+      setIsBlocked(true);
+      toast.success('User blocked');
+    } catch (error) {
+      toast.error('Failed to block user');
+    }
+  };
+
+  const handleUnblock = async () => {
+    try {
+      await api.delete(`/friends/block/${userId}`);
+      setIsBlocked(false);
+      toast.success('User unblocked');
+    } catch (error) {
+      toast.error('Failed to unblock user');
+    }
+  };
+
   const generateMockProfile = (): UserProfile => ({
     id: userId,
-    username: 'AlexGamer',
-    discriminator: '1337',
-    displayName: 'Alex',
-    avatar: `https://ui-avatars.com/api/?name=Alex&background=6366f1&color=fff`,
-    banner: 'https://source.unsplash.com/600x200/?gaming,abstract',
-    bio: '🎮 Passionate gamer | 💻 Developer | 🎨 Creative mind\n\nLove playing FPS and RPG games. Always up for a good raid!',
-    pronouns: 'they/them',
-    status: 'online',
-    customStatus: '🎮 Playing Valorant',
+    username: 'Unknown',
+    discriminator: '0000',
+    displayName: 'Unknown User',
+    avatar: `https://ui-avatars.com/api/?name=U&background=6366f1&color=fff`,
+    banner: '',
+    bio: 'Profile not available',
+    pronouns: '',
+    status: 'offline',
+    customStatus: '',
     activities: [
       {
         type: 'playing',
