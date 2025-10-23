@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Users, Clock, X } from 'lucide-react';
+import { UserPlus, Users, Clock, X, MessageSquare, Eye } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { useFriendsStore } from '../store/friendsStore';
+import { UserProfileModal } from '../components/UserProfileModal';
+import { useNavigate } from 'react-router-dom';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
 
 const tabs = [
   { id: 'online', label: 'Online', icon: Users },
@@ -16,6 +20,8 @@ const tabs = [
 export const FriendsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('online');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
   
   const { friends, pendingRequests, fetchFriends, fetchPendingRequests, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriend } = useFriendsStore();
 
@@ -36,6 +42,19 @@ export const FriendsPage: React.FC = () => {
     } catch (error) {
       // Error handled in store
     }
+  };
+
+  const handleMessage = async (friendId: string) => {
+    try {
+      const { data } = await api.post('/dm/create', { user_id: friendId });
+      navigate(`/app/dms/${data.id}`);
+    } catch (error: any) {
+      toast.error('Failed to create DM');
+    }
+  };
+
+  const handleViewProfile = (userId: string) => {
+    setSelectedUserId(userId);
   };
 
   return (
@@ -107,6 +126,14 @@ export const FriendsPage: React.FC = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewProfile(request.id)}
+                      title="View Profile"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
                       variant="success"
                       size="sm"
                       onClick={() => acceptFriendRequest(request.request_id)}
@@ -135,25 +162,35 @@ export const FriendsPage: React.FC = () => {
             ) : (
               (activeTab === 'online' ? onlineFriends : friends).map((friend) => (
                 <div key={friend.id} className="flex items-center gap-4 p-4 bg-[#2b2d31] rounded-lg hover:bg-white/5 transition-colors group">
-                  <Avatar
-                    src={friend.avatar_url}
-                    alt={friend.username}
-                    size="md"
-                    status={friend.status}
-                    fallback={friend.username.charAt(0)}
-                  />
-                  <div className="flex-1">
-                    <div className="font-semibold text-white">{friend.display_name || friend.username}</div>
-                    <div className="text-sm text-gray-400">
-                      {friend.status === 'online' && '🟢 Online'}
-                      {friend.status === 'idle' && '🟡 Idle'}
-                      {friend.status === 'dnd' && '🔴 Do Not Disturb'}
-                      {friend.status === 'offline' && '⚫ Offline'}
+                  <button
+                    onClick={() => handleViewProfile(friend.id)}
+                    className="flex items-center gap-4 flex-1"
+                  >
+                    <Avatar
+                      src={friend.avatar_url}
+                      alt={friend.username}
+                      size="md"
+                      status={friend.status}
+                      fallback={friend.username.charAt(0)}
+                    />
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-white">{friend.display_name || friend.username}</div>
+                      <div className="text-sm text-gray-400">
+                        {friend.status === 'online' && '🟢 Online'}
+                        {friend.status === 'idle' && '🟡 Idle'}
+                        {friend.status === 'dnd' && '🔴 Do Not Disturb'}
+                        {friend.status === 'offline' && '⚫ Offline'}
+                      </div>
                     </div>
-                  </div>
+                  </button>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm">
-                      Message
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleMessage(friend.id)}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span className="ml-1">Message</span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -170,6 +207,14 @@ export const FriendsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
     </div>
   );
 };

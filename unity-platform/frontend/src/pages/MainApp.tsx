@@ -22,6 +22,7 @@ import { useGuildStore } from '../store/guildStore';
 import { useMessageStore } from '../store/messageStore';
 import { useDMStore } from '../store/dmStore';
 import { socketManager } from '../lib/socket';
+import api from '../lib/api';
 import { Hash, Users, Settings, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -39,6 +40,7 @@ export const MainApp: React.FC = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
 
   const { user, isAuthenticated } = useAuthStore();
   const { guilds, currentGuild, channels, fetchGuilds, selectGuild } = useGuildStore();
@@ -106,6 +108,21 @@ export const MainApp: React.FC = () => {
       socketManager.off('dm.message.delete', handleDMMessageDelete);
     };
   }, [isAuthenticated]);
+
+  // Fetch members when guild changes
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (currentGuild?.id) {
+        try {
+          const { data } = await api.get(`/guilds/${currentGuild.id}/members`);
+          setMembers(data);
+        } catch (error) {
+          console.error('Failed to fetch members:', error);
+        }
+      }
+    };
+    fetchMembers();
+  }, [currentGuild?.id]);
 
   const handleGuildSelect = async (guildId: string) => {
     await selectGuild(guildId);
@@ -288,7 +305,7 @@ export const MainApp: React.FC = () => {
                   )}
                 </div>
 
-                <MemberList members={[]} ownerId={currentGuild.owner_id} />
+                <MemberList members={members} ownerId={currentGuild.owner_id} guildId={currentGuild.id} />
               </>
             ) : guilds.length === 0 ? (
               <div className="flex-1 flex items-center justify-center relative">

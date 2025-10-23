@@ -1,7 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Avatar } from '../ui/Avatar';
 import { Crown, MessageSquare } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
+import { UserProfileModal } from '../UserProfileModal';
+import { useNavigate } from 'react-router-dom';
+import api from '../../lib/api';
+import toast from 'react-hot-toast';
 
 interface Member {
   id: string;
@@ -15,17 +19,23 @@ interface Member {
 interface MemberListProps {
   members: Member[];
   ownerId?: string;
+  guildId?: string;
 }
 
 const MemberItem = React.memo<{
   member: Member;
   isOwner: boolean;
-}>(({ member, isOwner }) => {
+  onProfileClick: (userId: string) => void;
+  onMessageClick: (userId: string) => void;
+}>(({ member, isOwner, onProfileClick, onMessageClick }) => {
   const displayName = member.nickname || member.display_name || member.username;
   
   return (
-    <Tooltip content={`Message ${displayName}`} position="left">
-      <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/10 group transition-all duration-150">
+    <div className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/10 group transition-all duration-150">
+      <button
+        onClick={() => onProfileClick(member.id)}
+        className="flex items-center gap-2 flex-1 min-w-0"
+      >
         <Avatar
           src={member.avatar_url}
           alt={member.username}
@@ -43,19 +53,42 @@ const MemberItem = React.memo<{
             )}
           </div>
         </div>
-        <MessageSquare className="h-4 w-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
       </button>
-    </Tooltip>
+      <Tooltip content={`Message ${displayName}`} position="left">
+        <button
+          onClick={() => onMessageClick(member.id)}
+          className="p-1 hover:bg-white/10 rounded"
+        >
+          <MessageSquare className="h-4 w-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+      </Tooltip>
+    </div>
   );
 });
 
 MemberItem.displayName = 'MemberItem';
 
-export const MemberList = React.memo<MemberListProps>(({ members, ownerId }) => {
+export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guildId }) => {
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  
   const { onlineMembers, offlineMembers } = useMemo(() => ({
     onlineMembers: members.filter((m) => m.status !== 'offline'),
     offlineMembers: members.filter((m) => m.status === 'offline'),
   }), [members]);
+
+  const handleProfileClick = (userId: string) => {
+    setSelectedUserId(userId);
+  };
+
+  const handleMessageClick = async (userId: string) => {
+    try {
+      const { data } = await api.post('/dm/create', { user_id: userId });
+      navigate(`/app/dms/${data.id}`);
+    } catch (error: any) {
+      toast.error('Failed to create DM');
+    }
+  };
 
   return (
     <div className="w-60 bg-[#2b2d31] flex flex-col overflow-y-auto custom-scrollbar border-l border-white/5">
@@ -71,6 +104,8 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId }) => 
                   key={member.id}
                   member={member}
                   isOwner={member.id === ownerId}
+                  onProfileClick={handleProfileClick}
+                  onMessageClick={handleMessageClick}
                 />
               ))}
             </div>
@@ -88,6 +123,8 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId }) => 
                   key={member.id}
                   member={member}
                   isOwner={member.id === ownerId}
+                  onProfileClick={handleProfileClick}
+                  onMessageClick={handleMessageClick}
                 />
               ))}
             </div>
@@ -100,6 +137,15 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId }) => 
           </div>
         )}
       </div>
+      
+      {/* Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+          guildId={guildId}
+        />
+      )}
     </div>
   );
 });
