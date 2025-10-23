@@ -33,7 +33,7 @@ async function getUserGuilds(userId: string): Promise<string[]> {
     'SELECT guild_id FROM guild_members WHERE user_id = $1',
     [userId]
   );
-  const guildIds = result.rows.map((row: any) => row.guild_id);
+  const guildIds = result.rows.map((row) => row.guild_id);
 
   // Cache in Redis and memory
   await redisClient.set(
@@ -49,7 +49,7 @@ async function getUserGuilds(userId: string): Promise<string[]> {
 export const setupWebSocketHandlers = (io: Server) => {
   // Optimized: Enable compression
   io.engine.on('connection', (rawSocket) => {
-    rawSocket.on('upgradeError', (err: Error) => {
+    rawSocket.on('upgradeError', (err) => {
       logger.error('WebSocket upgrade error:', err);
     });
   });
@@ -96,7 +96,6 @@ export const setupWebSocketHandlers = (io: Server) => {
       }
 
       // Optimized: Update presence in Redis (non-blocking)
-      // Get user's preferred status from database first
       const userResult = await query('SELECT status FROM users WHERE id = $1', [userId]);
       const preferredStatus = userResult.rows[0]?.status || 'online';
       

@@ -17,6 +17,7 @@ router.use(authenticateToken);
 router.get('/online', getOnlineUsers);
 router.get('/user/:userId', getUserStatus);
 router.patch('/update', updateUserStatus);
+router.patch('/me', updateUserStatus);  // Add alternative endpoint
 router.post('/custom', setCustomStatus);
 router.delete('/custom', clearCustomStatus);
 

@@ -40,9 +40,10 @@ export const createDM = async (
       [userId, targetUserId]
     );
 
-    if (relationshipCheck.rows.length === 0) {
-      throw new AppError('You can only message friends or users in the same server', 403);
-    }
+    // Temporarily disabled - allow all DMs
+    // if (relationshipCheck.rows.length === 0) {
+    //   throw new AppError('You can only message friends or users in the same server', 403);
+    // }
 
     // Use database function to get or create DM channel
     const result = await query(
