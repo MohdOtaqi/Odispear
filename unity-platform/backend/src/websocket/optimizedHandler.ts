@@ -96,19 +96,20 @@ export const setupWebSocketHandlers = (io: Server) => {
       }
 
       // Optimized: Update presence in Redis (non-blocking)
+      // Get user's preferred status from database first
+      const userResult = await query('SELECT status FROM users WHERE id = $1', [userId]);
+      const preferredStatus = userResult.rows[0]?.status || 'online';
+      
       Promise.all([
-        redisClient.set(`presence:${userId}`, 'online', { EX: 300 }),
-        query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
-          'online',
-          userId,
-        ]),
+        redisClient.set(`presence:${userId}`, preferredStatus, { EX: 300 }),
+        query('UPDATE users SET last_seen = NOW() WHERE id = $1', [userId]),
       ]).catch((err) => logger.error('Error updating presence:', err));
 
       // Optimized: Broadcast presence only to relevant guilds (batched)
       const presenceData = {
         user_id: userId,
         username,
-        status: 'online',
+        status: preferredStatus,
         timestamp: Date.now(),
       };
 

@@ -72,7 +72,7 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
     }
     
     // Validate status
-    const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
+    const validStatuses = ['online', 'idle', 'dnd', 'offline'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
@@ -90,8 +90,8 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Update in Redis if not invisible
-    if (status !== 'invisible') {
+    // Update in Redis if not offline
+    if (status !== 'offline') {
       await redis.sAdd('online_users', userId);
       await redis.setEx(`user_status:${userId}`, 3600, status);
     } else {

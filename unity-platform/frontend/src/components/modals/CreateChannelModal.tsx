@@ -38,7 +38,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
         payload.user_limit = userLimit || null;
       }
 
-      await api.post(`/api/v1/channels`, payload);
+      await api.post(`/channels/guilds/${currentGuild.id}/channels`, payload);
 
       toast.success(`Created ${channelType} channel: ${channelName}`);
       
