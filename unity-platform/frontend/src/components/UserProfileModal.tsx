@@ -3,6 +3,7 @@ import { X, Mail, Phone, Calendar, MapPin, Link, Github, Twitter, Twitch, Youtub
 import { format } from 'date-fns';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import toast from 'react-hot-toast';
 
 interface UserProfile {
   id: string;
@@ -288,32 +289,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     }
   };
 
-  const handleRemoveFriend = async () => {
-    try {
-      await api.delete(`/friends/${userId}`);
-      setIsFriend(false);
-    } catch (error) {
-      console.error('Failed to remove friend:', error);
-    }
-  };
-
-  const handleBlock = async () => {
-    try {
-      await api.post(`/friends/block/${userId}`);
-      setIsBlocked(true);
-    } catch (error) {
-      console.error('Failed to block user:', error);
-    }
-  };
-
-  const handleUnblock = async () => {
-    try {
-      await api.post(`/friends/unblock/${userId}`);
-      setIsBlocked(false);
-    } catch (error) {
-      console.error('Failed to unblock user:', error);
-    }
-  };
 
   const handleSaveNote = async () => {
     try {
