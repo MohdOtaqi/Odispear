@@ -223,9 +223,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     }
   };
 
-  const handleSendMessage = () => {
-    // Navigate to DM with this user
-    window.location.href = `/app/dms/${userId}`;
+  const handleSendMessage = async () => {
+    try {
+      // Create DM channel with this user
+      const { data } = await api.post('/dm/create', { user_id: userId });
+      // Close modal and navigate to DM
+      onClose();
+      window.location.href = `/app/dms/${data.id}`;
+    } catch (error) {
+      console.error('Failed to create DM:', error);
+    }
   };
 
   const copyUsername = () => {

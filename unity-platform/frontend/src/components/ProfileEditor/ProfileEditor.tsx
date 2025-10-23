@@ -168,8 +168,8 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-3xl bg-[#313338] rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in overflow-auto">
+      <div className="w-full max-w-3xl bg-[#313338] rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-auto">
         {/* Banner */}
         <div className="relative h-32 bg-gradient-to-r from-purple-600 to-blue-600 overflow-hidden">
           {(bannerPreview || profileData.banner_url) && (
