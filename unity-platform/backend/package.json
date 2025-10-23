@@ -32,7 +32,8 @@
     "joi": "^17.9.2",
     "winston": "^3.9.0",
     "uuid": "^9.0.0",
-    "date-fns": "^2.30.0"
+    "date-fns": "^2.30.0",
+    "sharp": "^0.32.6"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Mail, Phone, Calendar, MapPin, Link, Github, Twitter, Twitch, Youtube, Instagram, Globe, Shield, Crown, Zap, Star, Hash, AtSign, Copy, UserPlus, Ban, VolumeX, UserX, Flag, Settings, Gamepad, Music, Code, Book, Heart } from 'lucide-react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -91,6 +93,7 @@ interface UserProfileModalProps {
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onClose, guildId }) => {
   const { user: currentUser } = useAuthStore();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'about' | 'activity' | 'mutual' | 'roles'>('about');
   const [loading, setLoading] = useState(true);
@@ -98,6 +101,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
   const [isBlocked, setIsBlocked] = useState(false);
   const [userNote, setUserNote] = useState('');
   const [editingNote, setEditingNote] = useState(false);
+  const [creatingDM, setCreatingDM] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -223,9 +227,30 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     }
   };
 
-  const handleSendMessage = () => {
-    // Navigate to DM with this user
-    window.location.href = `/app/dms/${userId}`;
+  const handleSendMessage = async () => {
+    if (creatingDM) return;
+    
+    try {
+      setCreatingDM(true);
+      toast.loading('Opening DM...', { id: 'dm-create' });
+      
+      // Call API to create or get existing DM channel
+      const response = await api.post('/dm/create', { recipientId: userId });
+      const dmChannel = response.data;
+      
+      toast.success('DM opened!', { id: 'dm-create' });
+      
+      // Close modal and navigate to DM
+      onClose();
+      navigate(`/app/dms/${dmChannel.id}`);
+      
+    } catch (error: any) {
+      console.error('Failed to create DM:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to open DM';
+      toast.error(errorMessage, { id: 'dm-create' });
+    } finally {
+      setCreatingDM(false);
+    }
   };
 
   const copyUsername = () => {
