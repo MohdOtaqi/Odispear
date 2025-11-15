@@ -1,26 +1,29 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
+// Use relative URLs so it works on both HTTP and HTTPS
 const api = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor - skip auth for login/register/refresh
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const isAuthEndpoint = config.url?.includes('/auth/login') || 
+                          config.url?.includes('/auth/register') ||
+                          config.url?.includes('/auth/refresh');
+    
+    if (!isAuthEndpoint) {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor to handle token refresh
@@ -34,7 +37,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${API_URL}/api/v1/auth/refresh`, {
+        const response = await axios.post('/api/v1/auth/refresh', {
           refreshToken,
         });
 
@@ -45,8 +48,7 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        localStorage.clear();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -89,7 +91,7 @@ export const guildAPI = {
   createInvite: (id: string, data?: any) =>
     api.post(`/guilds/${id}/invites`, data),
   joinByInvite: (code: string) =>
-    api.post(`/guilds/invites/${code}/join`),
+    api.post(`/invites/${code}/use`),
   leaveGuild: (id: string) =>
     api.delete(`/guilds/${id}/leave`),
 };

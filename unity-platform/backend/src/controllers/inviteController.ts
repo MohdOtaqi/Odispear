@@ -129,6 +129,19 @@ export const useInvite = async (
       [invite.guild_id, userId]
     );
 
+    // Assign @everyone role
+    const everyoneRoleResult = await query(
+      'SELECT id FROM roles WHERE guild_id = $1 AND name = $2',
+      [invite.guild_id, '@everyone']
+    );
+
+    if (everyoneRoleResult.rows.length > 0) {
+      await query(
+        'INSERT INTO role_assignments (guild_id, user_id, role_id) VALUES ($1, $2, $3)',
+        [invite.guild_id, userId, everyoneRoleResult.rows[0].id]
+      );
+    }
+
     // Increment invite uses
     await query(
       'UPDATE guild_invites SET uses = uses + 1 WHERE id = $1',

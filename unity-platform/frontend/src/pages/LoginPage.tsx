@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 import { Mail, Lock, Eye, EyeOff, Zap } from 'lucide-react';
@@ -12,13 +12,17 @@ export const LoginPage: React.FC = () => {
   
   const { login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get('redirect');
 
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/app', { replace: true });
+      navigate(redirectTo || '/app', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +31,7 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       toast.success('Welcome back!');
-      navigate('/app', { replace: true });
+      navigate(redirectTo || '/app', { replace: true });
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Invalid email or password');
     } finally {
