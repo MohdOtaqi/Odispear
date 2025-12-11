@@ -1,4 +1,5 @@
 # Multi-stage build for production
+# Updated: Use npm install instead of npm ci (no package-lock.json)
 
 # Backend stage
 FROM node:18-alpine AS backend-build
