@@ -5,8 +5,7 @@ services:
     plan: free
     rootDir: unity-platform
     buildCommand: cd frontend && npm install --production=false && npm run build && cd ../backend && npm install --production=false && npm run build
-    preDeployCommand: cd backend && npm run migrate:prod
-    startCommand: cd backend && npm start
+    startCommand: cd backend && npm run migrate:prod && npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
