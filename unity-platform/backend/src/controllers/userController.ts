@@ -227,9 +227,10 @@ export const getUserProfile = async (
   try {
     const { userId } = req.params;
 
+    // Query only essential columns that definitely exist
     const result = await query(
-      `SELECT id, username, display_name, avatar_url, banner_url, bio, 
-              status, status_text, custom_status, created_at
+      `SELECT id, username, email, avatar_url, status, created_at,
+              COALESCE(display_name, username) as display_name
        FROM users WHERE id = $1`,
       [userId]
     );
@@ -238,7 +239,16 @@ export const getUserProfile = async (
       throw new AppError('User not found', 404);
     }
 
-    res.json(result.rows[0]);
+    // Return user data with defaults for optional fields
+    const user = result.rows[0];
+    res.json({
+      ...user,
+      bio: '',
+      banner_url: null,
+      status_text: null,
+      custom_status: null,
+      discriminator: '0000',
+    });
   } catch (error) {
     next(error);
   }

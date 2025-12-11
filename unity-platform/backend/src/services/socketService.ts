@@ -1,6 +1,12 @@
 import { Server as SocketServer } from 'socket.io';
 import logger from '../config/logger';
-import redisClient from '../config/redis';
+import redisClient, { isRedisEnabled } from '../config/redis';
+
+// Safe Redis helper
+const safeRedis = async (operation: () => Promise<any>) => {
+  if (!isRedisEnabled() || !redisClient) return;
+  try { await operation(); } catch (e) { /* ignore */ }
+};
 
 class SocketService {
   private io: SocketServer | null = null;
@@ -18,11 +24,9 @@ class SocketService {
     this.userSocketMap.set(userId, socketId);
     this.socketUserMap.set(socketId, userId);
     
-    // Add to Redis online users
-    await redisClient.sAdd('online_users', userId);
-    
-    // Set user status in Redis
-    await redisClient.setEx(`user_status:${userId}`, 3600, 'online');
+    // Add to Redis online users (if available)
+    await safeRedis(() => redisClient!.sAdd('online_users', userId));
+    await safeRedis(() => redisClient!.setEx(`user_status:${userId}`, 3600, 'online'));
     
     logger.info(`User ${userId} connected with socket ${socketId}`);
   }
@@ -35,11 +39,9 @@ class SocketService {
       this.userSocketMap.delete(userId);
       this.socketUserMap.delete(socketId);
       
-      // Remove from Redis online users
-      await redisClient.sRem('online_users', userId);
-      
-      // Clear user status in Redis
-      await redisClient.del(`user_status:${userId}`);
+      // Remove from Redis online users (if available)
+      await safeRedis(() => redisClient!.sRem('online_users', userId));
+      await safeRedis(() => redisClient!.del(`user_status:${userId}`));
       
       logger.info(`User ${userId} disconnected`);
     }
@@ -105,25 +107,33 @@ class SocketService {
 
   // Get online users count
   async getOnlineUsersCount(): Promise<number> {
-    const onlineUsers = await redisClient.sMembers('online_users');
-    return onlineUsers.length;
+    if (!isRedisEnabled() || !redisClient) return this.userSocketMap.size;
+    try {
+      const onlineUsers = await redisClient.sMembers('online_users');
+      return onlineUsers.length;
+    } catch (e) { return this.userSocketMap.size; }
   }
 
   // Get user status
   async getUserStatus(userId: string): Promise<string | null> {
-    const status = await redisClient.get(`user_status:${userId}`);
-    return status;
+    if (!isRedisEnabled() || !redisClient) return null;
+    try {
+      const status = await redisClient.get(`user_status:${userId}`);
+      return status;
+    } catch (e) { return null; }
   }
 
   // Update user status
   async updateUserStatus(userId: string, status: string) {
-    if (status === 'invisible') {
-      await redisClient.sRem('online_users', userId);
-      await redisClient.del(`user_status:${userId}`);
-    } else {
-      await redisClient.sAdd('online_users', userId);
-      await redisClient.setEx(`user_status:${userId}`, 3600, status);
-    }
+    await safeRedis(async () => {
+      if (status === 'invisible') {
+        await redisClient!.sRem('online_users', userId);
+        await redisClient!.del(`user_status:${userId}`);
+      } else {
+        await redisClient!.sAdd('online_users', userId);
+        await redisClient!.setEx(`user_status:${userId}`, 3600, status);
+      }
+    });
     
     // Emit status update to all users
     if (this.io) {
@@ -135,12 +145,14 @@ class SocketService {
   async setUserTyping(userId: string, channelId: string, isTyping: boolean) {
     const key = `typing:${channelId}`;
     
-    if (isTyping) {
-      await redisClient.sAdd(key, userId);
-      await redisClient.expire(key, 10); // Auto-expire after 10 seconds
-    } else {
-      await redisClient.sRem(key, userId);
-    }
+    await safeRedis(async () => {
+      if (isTyping) {
+        await redisClient!.sAdd(key, userId);
+        await redisClient!.expire(key, 10); // Auto-expire after 10 seconds
+      } else {
+        await redisClient!.sRem(key, userId);
+      }
+    });
     
     // Emit typing update to channel members
     this.emitToChannel(channelId, 'typing.update', {
@@ -152,8 +164,11 @@ class SocketService {
 
   // Get typing users in a channel
   async getTypingUsers(channelId: string): Promise<string[]> {
-    const users = await redisClient.sMembers(`typing:${channelId}`);
-    return users;
+    if (!isRedisEnabled() || !redisClient) return [];
+    try {
+      const users = await redisClient.sMembers(`typing:${channelId}`);
+      return users;
+    } catch (e) { return []; }
   }
 }
 

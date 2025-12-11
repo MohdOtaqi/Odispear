@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Users, Clock, X } from 'lucide-react';
+import { UserPlus, Users, Clock, X, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { useFriendsStore } from '../store/friendsStore';
+import { useDMStore } from '../store/dmStore';
+import { UserProfileModal } from '../components/UserProfileModal';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
 
 const tabs = [
   { id: 'online', label: 'Online', icon: Users },
@@ -14,10 +19,29 @@ const tabs = [
 ];
 
 export const FriendsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('online');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   
   const { friends, pendingRequests, fetchFriends, fetchPendingRequests, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriend } = useFriendsStore();
+  const { fetchDMChannels } = useDMStore();
+
+  const handleOpenDM = async (friendId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      toast.loading('Opening DM...', { id: 'dm-open' });
+      const response = await api.post('/dm/create', { recipientId: friendId });
+      toast.success('DM opened!', { id: 'dm-open' });
+      // Refresh DM list and navigate to the DM
+      await fetchDMChannels();
+      const dmChannel = response.data;
+      navigate(`/app/dms/${dmChannel.id}`);
+    } catch (error: any) {
+      console.error('Failed to create DM:', error);
+      toast.error(error.response?.data?.message || 'Failed to open DM', { id: 'dm-open' });
+    }
+  };
 
   useEffect(() => {
     fetchFriends();
@@ -39,9 +63,9 @@ export const FriendsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#313338]">
+    <div className="flex-1 flex flex-col bg-mot-surface-subtle">
       {/* Header */}
-      <div className="h-12 px-4 flex items-center gap-4 border-b border-white/10 shadow-sm">
+      <div className="h-12 px-4 flex items-center gap-4 border-b border-mot-border shadow-sm">
         <Users className="w-6 h-6 text-gray-400" />
         <h1 className="font-semibold text-white">Friends</h1>
         
@@ -52,8 +76,8 @@ export const FriendsPage: React.FC = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
+                  ? 'bg-mot-gold/20 text-mot-gold'
+                  : 'text-gray-400 hover:bg-mot-gold/10 hover:text-gray-300'
               }`}
             >
               {tab.label}
@@ -70,7 +94,7 @@ export const FriendsPage: React.FC = () => {
         {activeTab === 'add' ? (
           <div className="max-w-2xl mx-auto p-8">
             <h2 className="text-xl font-bold text-white mb-2">Add Friend</h2>
-            <p className="text-gray-400 mb-6">You can add friends with their Unity username.</p>
+            <p className="text-gray-400 mb-6">You can add friends with their MOT username.</p>
             
             <form onSubmit={handleAddFriend} className="flex gap-2">
               <Input
@@ -93,7 +117,11 @@ export const FriendsPage: React.FC = () => {
               </div>
             ) : (
               pendingRequests.map((request) => (
-                <div key={request.request_id} className="flex items-center gap-4 p-4 bg-[#2b2d31] rounded-lg hover:bg-white/5 transition-colors">
+                <div 
+                  key={request.request_id} 
+                  className="flex items-center gap-4 p-4 bg-mot-surface rounded-lg hover:bg-mot-gold/5 transition-colors cursor-pointer"
+                  onClick={() => setSelectedUserId(request.id)}
+                >
                   <Avatar
                     src={request.avatar_url}
                     alt={request.username}
@@ -134,7 +162,11 @@ export const FriendsPage: React.FC = () => {
               </div>
             ) : (
               (activeTab === 'online' ? onlineFriends : friends).map((friend) => (
-                <div key={friend.id} className="flex items-center gap-4 p-4 bg-[#2b2d31] rounded-lg hover:bg-white/5 transition-colors group">
+                <div 
+                  key={friend.id} 
+                  className="flex items-center gap-4 p-4 bg-mot-surface rounded-lg hover:bg-mot-gold/5 transition-colors group cursor-pointer"
+                  onClick={() => setSelectedUserId(friend.id)}
+                >
                   <Avatar
                     src={friend.avatar_url}
                     alt={friend.username}
@@ -152,7 +184,8 @@ export const FriendsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={(e) => handleOpenDM(friend.id, e)}>
+                      <MessageSquare className="w-4 h-4 mr-1" />
                       Message
                     </Button>
                     <Button
@@ -170,6 +203,14 @@ export const FriendsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
     </div>
   );
 };

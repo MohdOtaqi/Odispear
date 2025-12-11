@@ -2,15 +2,41 @@ import { Request, Response } from 'express';
 import pool from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import logger from '../config/logger';
-import redisClient from '../config/redis';
+import redisClient, { isRedisEnabled } from '../config/redis';
 
-const redis = redisClient;
+// Helper to safely call Redis methods
+const safeRedis = {
+  async sMembers(key: string): Promise<string[]> {
+    if (!isRedisEnabled() || !redisClient) return [];
+    try { return await redisClient.sMembers(key); } catch (e) { return []; }
+  },
+  async sIsMember(key: string, member: string): Promise<boolean> {
+    if (!isRedisEnabled() || !redisClient) return false;
+    try { return await redisClient.sIsMember(key, member); } catch (e) { return false; }
+  },
+  async sAdd(key: string, member: string): Promise<void> {
+    if (!isRedisEnabled() || !redisClient) return;
+    try { await redisClient.sAdd(key, member); } catch (e) { /* ignore */ }
+  },
+  async sRem(key: string, member: string): Promise<void> {
+    if (!isRedisEnabled() || !redisClient) return;
+    try { await redisClient.sRem(key, member); } catch (e) { /* ignore */ }
+  },
+  async setEx(key: string, seconds: number, value: string): Promise<void> {
+    if (!isRedisEnabled() || !redisClient) return;
+    try { await redisClient.setEx(key, seconds, value); } catch (e) { /* ignore */ }
+  },
+  async del(key: string): Promise<void> {
+    if (!isRedisEnabled() || !redisClient) return;
+    try { await redisClient.del(key); } catch (e) { /* ignore */ }
+  },
+};
 
 // Get all online users
 export const getOnlineUsers = async (req: Request, res: Response) => {
   try {
     // Get online users from Redis
-    const onlineUserIds = await redis.sMembers('online_users');
+    const onlineUserIds = await safeRedis.sMembers('online_users');
     
     if (onlineUserIds.length === 0) {
       return res.json([]);
@@ -37,7 +63,7 @@ export const getUserStatus = async (req: Request, res: Response) => {
     const { userId } = req.params;
     
     // Check if user is online in Redis
-    const isOnline = await redis.sIsMember('online_users', userId);
+    const isOnline = await safeRedis.sIsMember('online_users', userId);
     
     // Get user details from database
     const result = await pool.query(
@@ -92,11 +118,11 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
     
     // Update in Redis if not invisible
     if (status !== 'invisible') {
-      await redis.sAdd('online_users', userId);
-      await redis.setEx(`user_status:${userId}`, 3600, status);
+      await safeRedis.sAdd('online_users', userId);
+      await safeRedis.setEx(`user_status:${userId}`, 3600, status);
     } else {
-      await redis.sRem('online_users', userId);
-      await redis.del(`user_status:${userId}`);
+      await safeRedis.sRem('online_users', userId);
+      await safeRedis.del(`user_status:${userId}`);
     }
     
     res.json(result.rows[0]);
@@ -135,7 +161,7 @@ export const setCustomStatus = async (req: AuthRequest, res: Response) => {
     }
     
     // Store in Redis for quick access
-    await redis.setEx(`custom_status:${userId}`, 3600, customStatus);
+    await safeRedis.setEx(`custom_status:${userId}`, 3600, customStatus);
     
     res.json(result.rows[0]);
   } catch (error) {
@@ -167,7 +193,7 @@ export const clearCustomStatus = async (req: AuthRequest, res: Response) => {
     }
     
     // Clear in Redis
-    await redis.del(`custom_status:${userId}`);
+    await safeRedis.del(`custom_status:${userId}`);
     
     res.json(result.rows[0]);
   } catch (error) {

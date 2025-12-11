@@ -9,7 +9,7 @@ const router = Router();
 
 const createChannelSchema = Joi.object({
   name: Joi.string().min(1).max(100).required(),
-  type: Joi.string().valid('text', 'voice', 'stage', 'docs').required(),
+  type: Joi.string().valid('text', 'voice', 'stage', 'docs', 'category').required(),
   topic: Joi.string().max(500).allow(''),
   parent_id: Joi.string().uuid().allow(null),
   nsfw: Joi.boolean(),

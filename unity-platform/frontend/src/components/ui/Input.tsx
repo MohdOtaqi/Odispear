@@ -28,11 +28,11 @@ export const Input = React.memo(
             <input
               type={type}
               className={cn(
-                'flex h-11 w-full rounded-lg border border-white/10 bg-[#1e1f22] px-4 py-2 text-white',
+                'flex h-11 w-full rounded-lg border border-mot-border bg-mot-surface-subtle px-4 py-2 text-white',
                 'text-sm placeholder:text-gray-500 transition-all duration-200',
-                'focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20',
+                'focus:outline-none focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20',
                 'disabled:cursor-not-allowed disabled:opacity-50',
-                'hover:border-white/20',
+                'hover:border-mot-border-glow',
                 leftIcon && 'pl-10',
                 rightIcon && 'pr-10',
                 error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',

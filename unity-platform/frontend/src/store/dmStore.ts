@@ -167,7 +167,14 @@ export const useDMStore = create<DMStore>((set, get) => ({
   sendDMMessage: async (dmChannelId: string, content: string, attachments?: any[]) => {
     try {
       const response = await dmAPI.sendDMMessage(dmChannelId, { content, attachments });
-      // Message will be added via WebSocket event
+      const newMessage = response.data;
+      // Add message to store immediately
+      set((state) => ({
+        messages: {
+          ...state.messages,
+          [dmChannelId]: [...(state.messages[dmChannelId] || []), newMessage],
+        },
+      }));
     } catch (error: any) {
       toast.error('Failed to send message');
     }
@@ -225,6 +232,10 @@ export const useDMStore = create<DMStore>((set, get) => ({
   handleNewDMMessage: (message: DMMessage) => {
     set((state) => {
       const channelMessages = state.messages[message.dm_channel_id] || [];
+      // Avoid duplicates (sender already added their message)
+      if (channelMessages.some((m) => m.id === message.id)) {
+        return state;
+      }
       return {
         messages: {
           ...state.messages,

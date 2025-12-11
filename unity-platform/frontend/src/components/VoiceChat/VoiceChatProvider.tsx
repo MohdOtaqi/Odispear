@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import Daily, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
 import { voiceAPI } from '../../lib/voiceAPI';
+import { socketManager } from '../../lib/socket';
+import { createNoiseSuppressedStream, destroyRNNoise } from '../../lib/audioProcessor';
 import toast from 'react-hot-toast';
 
 // Voice Chat Context State
@@ -11,6 +13,7 @@ interface VoiceChatState {
   participants: DailyParticipant[];
   localParticipant: DailyParticipant | null;
   isDeafened: boolean;
+  speakingParticipants: Set<string>; // session_ids of currently speaking participants
   
   // Actions
   joinChannel: (channelId: string, channelName: string) => Promise<void>;
@@ -45,6 +48,7 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [participants, setParticipants] = useState<DailyParticipant[]>([]);
   const [localParticipant, setLocalParticipant] = useState<DailyParticipant | null>(null);
   const [isDeafened, setIsDeafened] = useState(false);
+  const [speakingParticipants, setSpeakingParticipants] = useState<Set<string>>(new Set());
 
   const [settings, setSettings] = useState({ inputVolume: 1, outputVolume: 1 });
 
@@ -85,12 +89,13 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // 2. Get token from our backend
       const { data } = await voiceAPI.getVoiceToken(channelIdParam);
       const { token, roomUrl } = data;
+      console.log('[Voice] Got token, room URL:', roomUrl);
 
-      // 3. Create Daily call object with error handling
+      // 3. Create Daily call object
       let co;
       try {
         co = Daily.createCallObject({
-          strictMode: false, // Allow operation even if browser doesn't support all features
+          strictMode: false,
           subscribeToTracksAutomatically: true,
           showLeaveButton: false,
           showFullscreenButton: false,
@@ -104,12 +109,45 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // 4. Set up event listeners
-      co.on('joined-meeting', (e) => {
+      co.on('joined-meeting', async (e) => {
+        console.log('[Voice] Joined meeting:', e);
+        console.log('[Voice] Local participant:', e.participants.local);
+        console.log('[Voice] Local audio enabled:', e.participants.local?.audio);
         setIsConnected(true);
         setIsConnecting(false);
         setParticipants(Object.values(e.participants));
         setLocalParticipant(e.participants.local);
         toast.success(`Joined ${channelName}`);
+        
+        // Apply noise suppression after joining
+        try {
+          // Get microphone with noise suppression
+          const rawStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              channelCount: 1,
+              sampleRate: 48000,
+            },
+            video: false,
+          });
+          
+          // Apply our custom noise gate
+          const processedStream = await createNoiseSuppressedStream(rawStream);
+          const audioTrack = processedStream.getAudioTracks()[0];
+          
+          if (audioTrack && callObjectRef.current) {
+            // Set the custom audio track
+            await callObjectRef.current.setInputDevicesAsync({
+              audioSource: audioTrack,
+            });
+            console.log('[Voice] ✅ Noise suppression enabled!');
+            toast.success('Noise suppression enabled', { duration: 2000 });
+          }
+        } catch (err) {
+          console.warn('[Voice] Could not enable noise suppression:', err);
+        }
       });
 
       co.on('left-meeting', () => {
@@ -124,11 +162,16 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
 
       co.on('participant-joined', (e) => {
+        console.log('[Voice] Participant joined:', e.participant);
         setParticipants((prev) => [...prev, e.participant]);
       });
 
       co.on('participant-left', (e) => {
+        console.log('[Voice] Participant left:', e.participant);
         setParticipants((prev) => prev.filter(p => p.session_id !== e.participant.session_id));
+        // Remove audio element when participant leaves
+        const audioEl = document.getElementById(`audio-${e.participant.session_id}`);
+        if (audioEl) audioEl.remove();
       });
 
       co.on('participant-updated', (e) => {
@@ -138,10 +181,77 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       });
 
+      // Handle audio tracks - create audio elements for remote participants ONLY
+      co.on('track-started', (e) => {
+        const isLocal = e.participant?.local === true;
+        console.log('[Voice] Track started:', e.track?.kind, 'from', e.participant?.session_id, 'local:', isLocal);
+        
+        // IMPORTANT: Only handle remote audio tracks to prevent loopback/echo
+        if (e.track?.kind === 'audio' && !isLocal && e.participant?.session_id) {
+          const existingAudio = document.getElementById(`audio-${e.participant.session_id}`);
+          if (existingAudio) existingAudio.remove();
+          
+          // Create audio element for this participant
+          const audioEl = document.createElement('audio');
+          audioEl.id = `audio-${e.participant.session_id}`;
+          audioEl.autoplay = true;
+          audioEl.setAttribute('playsinline', 'true');
+          audioEl.srcObject = new MediaStream([e.track]);
+          audioEl.style.display = 'none';
+          document.body.appendChild(audioEl);
+          
+          console.log('[Voice] Created audio element for participant:', e.participant.session_id);
+          
+          // Try to play (may need user interaction)
+          audioEl.play().catch(err => {
+            console.warn('[Voice] Audio autoplay blocked:', err);
+          });
+        }
+      });
+
+      co.on('track-stopped', (e) => {
+        console.log('[Voice] Track stopped:', e.track?.kind, 'from', e.participant?.session_id);
+        if (e.track?.kind === 'audio' && e.participant?.session_id) {
+          const audioEl = document.getElementById(`audio-${e.participant.session_id}`);
+          if (audioEl) audioEl.remove();
+        }
+      });
+
       co.on('error', (e) => {
         console.error("Daily.co error:", e);
         toast.error(e.errorMsg || 'Voice chat error');
         setIsConnecting(false);
+      });
+
+      // Speaking detection via active-speaker-change event
+      const speakingTimeouts: Record<string, ReturnType<typeof setTimeout>> = {};
+      
+      co.on('active-speaker-change', (e) => {
+        console.log('[Voice] Active speaker changed:', e.activeSpeaker);
+        const peerId = e.activeSpeaker?.peerId;
+        if (peerId) {
+          // Clear any existing timeout for this peer
+          if (speakingTimeouts[peerId]) {
+            clearTimeout(speakingTimeouts[peerId]);
+          }
+          
+          // Add to speaking set
+          setSpeakingParticipants(prev => {
+            const next = new Set(prev);
+            next.add(peerId);
+            return next;
+          });
+          
+          // Clear after 1.5 seconds of no activity
+          speakingTimeouts[peerId] = setTimeout(() => {
+            setSpeakingParticipants(p => {
+              const updated = new Set(p);
+              updated.delete(peerId);
+              return updated;
+            });
+            delete speakingTimeouts[peerId];
+          }, 1500);
+        }
       });
 
       // 5. Join the meeting
@@ -149,10 +259,28 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         url: roomUrl,
         token: token,
         startAudioOff: false,
-        startVideoOff: true
+        startVideoOff: true,
       });
       
+      // 6. Enable noise cancellation (Krisp-powered, same as Discord)
+      try {
+        await co.updateInputSettings({
+          audio: {
+            processor: {
+              type: 'noise-cancellation',
+            },
+          },
+        });
+        console.log('[Voice] Noise cancellation enabled');
+      } catch (ncError) {
+        console.warn('[Voice] Noise cancellation not available:', ncError);
+        // Fall back to browser's built-in noise suppression
+      }
+      
       setChannelId(channelIdParam);
+      
+      // Notify server via WebSocket so other users see us in voice channel
+      socketManager.joinVoice(channelIdParam);
 
     } catch (error: any) {
       console.error('Failed to join voice channel:', error);
@@ -172,6 +300,8 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [isConnecting, isConnected]);
 
   const leaveChannel = useCallback(async () => {
+    const currentChannelId = channelId;
+    
     if (callObjectRef.current) {
       try {
         await callObjectRef.current.leave();
@@ -189,7 +319,15 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setChannelId(null);
       }
     }
-  }, []);
+    
+    // Cleanup RNNoise
+    destroyRNNoise();
+    
+    // Notify server via WebSocket
+    if (currentChannelId) {
+      socketManager.leaveVoice(currentChannelId);
+    }
+  }, [channelId]);
 
   const toggleMute = useCallback(() => {
     if (callObjectRef.current) {
@@ -218,18 +356,44 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [isDeafened, participants]);
 
   const setInputVolume = useCallback((volume: number) => {
-    if (callObjectRef.current) {
-      callObjectRef.current.setInputDevicesAsync({ audioGain: volume / 100 });
-      setSettings(s => ({...s, inputVolume: volume}));
-    }
+    // Volume control not directly supported by Daily.co API
+    // Just store the preference
+    setSettings(s => ({...s, inputVolume: volume}));
   }, []);
 
   const setOutputVolume = useCallback((volume: number) => {
-    if (callObjectRef.current) {
-      callObjectRef.current.setOutputDeviceAsync({ outputGain: volume / 100 });
-      setSettings(s => ({...s, outputVolume: volume}));
-    }
+    // Volume control not directly supported by Daily.co API
+    // Just store the preference  
+    setSettings(s => ({...s, outputVolume: volume}));
   }, []);
+
+  // Listen for global keybind events
+  useEffect(() => {
+    const handleToggleMute = () => toggleMute();
+    const handleToggleDeafen = () => toggleDeafen();
+    const handlePTTStart = () => {
+      if (callObjectRef.current && !callObjectRef.current.localAudio()) {
+        callObjectRef.current.setLocalAudio(true);
+      }
+    };
+    const handlePTTEnd = () => {
+      if (callObjectRef.current && callObjectRef.current.localAudio()) {
+        callObjectRef.current.setLocalAudio(false);
+      }
+    };
+
+    window.addEventListener('voice:toggle-mute', handleToggleMute);
+    window.addEventListener('voice:toggle-deafen', handleToggleDeafen);
+    window.addEventListener('voice:ptt-start', handlePTTStart);
+    window.addEventListener('voice:ptt-end', handlePTTEnd);
+
+    return () => {
+      window.removeEventListener('voice:toggle-mute', handleToggleMute);
+      window.removeEventListener('voice:toggle-deafen', handleToggleDeafen);
+      window.removeEventListener('voice:ptt-start', handlePTTStart);
+      window.removeEventListener('voice:ptt-end', handlePTTEnd);
+    };
+  }, [toggleMute, toggleDeafen]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -248,6 +412,7 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     participants,
     localParticipant,
     isDeafened,
+    speakingParticipants,
     joinChannel,
     leaveChannel,
     toggleMute,
@@ -256,7 +421,6 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ...settings,
       inputVolume: settings.inputVolume,
       outputVolume: settings.outputVolume,
-      // Add other settings from your modal if you keep it
     },
     setInputVolume,
     setOutputVolume,

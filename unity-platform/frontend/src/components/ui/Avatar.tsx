@@ -55,7 +55,7 @@ export const Avatar = React.memo<AvatarProps>(({
     <div className={cn('relative inline-block flex-shrink-0', className)}>
       <div
         className={cn(
-          'rounded-full overflow-hidden bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center font-semibold text-white transition-transform duration-200',
+          'rounded-full overflow-hidden bg-gradient-to-br from-mot-gold-light to-mot-gold flex items-center justify-center font-semibold text-mot-black transition-transform duration-200',
           sizeClasses[size],
           onClick && 'cursor-pointer hover:scale-105'
         )}
@@ -76,7 +76,7 @@ export const Avatar = React.memo<AvatarProps>(({
       {status && (
         <div
           className={cn(
-            'absolute bottom-0 right-0 rounded-full border-[#1e1f22] ring-2 ring-[#1e1f22]',
+            'absolute bottom-0 right-0 rounded-full border-mot-surface ring-2 ring-mot-surface',
             statusSize[size],
             statusColors[status]
           )}

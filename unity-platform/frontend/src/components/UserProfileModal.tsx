@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Mail, Phone, Calendar, MapPin, Link, Github, Twitter, Twitch, Youtube, Instagram, Globe, Shield, Crown, Zap, Star, Hash, AtSign, Copy, UserPlus, Ban, VolumeX, UserX, Flag, Settings, Gamepad, Music, Code, Book, Heart } from 'lucide-react';
+import { X, Mail, Phone, Calendar, MapPin, Link, Github, Twitter, Twitch, Youtube, Instagram, Globe, Shield, Crown, Zap, Star, Hash, AtSign, Copy, UserPlus, Ban, VolumeX, UserX, Flag, Settings, Gamepad, Music, Code, Book, Heart, Send, Users, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { useGuildStore } from '../store/guildStore';
+import { useDMStore } from '../store/dmStore';
 
 interface UserProfile {
   id: string;
@@ -102,6 +104,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
   const [userNote, setUserNote] = useState('');
   const [editingNote, setEditingNote] = useState(false);
   const [creatingDM, setCreatingDM] = useState(false);
+  const [showInviteMenu, setShowInviteMenu] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  
+  const { guilds, fetchGuilds } = useGuildStore();
+  const { fetchDMChannels } = useDMStore();
+  
+  useEffect(() => {
+    if (guilds.length === 0) {
+      fetchGuilds();
+    }
+  }, []);
 
   useEffect(() => {
     fetchUserProfile();
@@ -109,19 +122,78 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   const fetchUserProfile = async () => {
     try {
-      const [profileRes, friendRes, blockedRes] = await Promise.all([
-        api.get(`/users/${userId}/profile`),
-        api.get('/friends'),
-        api.get('/friends/blocked')
-      ]);
+      // Fetch user profile from correct endpoint
+      const profileRes = await api.get(`/users/${userId}`);
+      const userData = profileRes.data;
       
-      setProfile(profileRes.data);
-      setIsFriend(friendRes.data.some((f: any) => f.id === userId));
-      setIsBlocked(blockedRes.data.some((b: any) => b.id === userId));
-      setUserNote(profileRes.data.note || '');
+      // Find mutual guilds (guilds where both current user and target user are members)
+      const mutualGuilds = guilds.filter((g: any) => {
+        // We'll need to check if target user is in these guilds
+        // For now, show the current guild if viewing from a guild context
+        return guildId && g.id === guildId;
+      }).map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(g.name)}&background=6366f1&color=fff`
+      }));
+      
+      // Transform backend response to match UserProfile interface
+      setProfile({
+        id: userData.id,
+        username: userData.username,
+        discriminator: userData.discriminator || '0000',
+        displayName: userData.display_name || userData.username,
+        avatar: userData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.username)}&background=6366f1&color=fff`,
+        banner: userData.banner_url || undefined,
+        bio: userData.bio || '',
+        status: userData.status || 'offline',
+        customStatus: userData.status_text || userData.custom_status || '',
+        createdAt: new Date(userData.created_at),
+        activities: [],
+        roles: [],
+        badges: [],
+        connections: [],
+        mutualGuilds: mutualGuilds,
+        mutualFriends: [],
+        isBot: false,
+        isPremium: false,
+      });
+      
+      // Try to fetch friends status
+      try {
+        const friendRes = await api.get('/friends');
+        const friendsList = friendRes.data || [];
+        setIsFriend(friendsList.some((f: any) => f.id === userId || f.friend_id === userId || f.user_id === userId));
+        
+        // Get mutual friends from friends list
+        // (friends that are also friends with the target user - would need server support)
+      } catch (e) {
+        setIsFriend(false);
+      }
+      
+      setIsBlocked(false);
+      setUserNote('');
     } catch (error) {
-      // Mock data for demo
-      setProfile(generateMockProfile());
+      console.error('Failed to fetch user profile:', error);
+      // Show basic info if API fails - don't use fake mock data
+      setProfile({
+        id: userId,
+        username: 'Unknown User',
+        discriminator: '0000',
+        displayName: 'Unknown User',
+        avatar: `https://ui-avatars.com/api/?name=?&background=6366f1&color=fff`,
+        bio: '',
+        status: 'invisible',
+        createdAt: new Date(),
+        activities: [],
+        roles: [],
+        badges: [],
+        connections: [],
+        mutualGuilds: [],
+        mutualFriends: [],
+        isBot: false,
+        isPremium: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -184,10 +256,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   const handleSendFriendRequest = async () => {
     try {
-      await api.post('/friends/request', { userId });
+      // Send friend request using username
+      await api.post('/friends/request', { username: profile?.username });
       setIsFriend(true);
-    } catch (error) {
+      toast.success('Friend request sent!');
+    } catch (error: any) {
       console.error('Failed to send friend request:', error);
+      toast.error(error.response?.data?.message || 'Failed to send friend request');
     }
   };
 
@@ -240,7 +315,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
       
       toast.success('DM opened!', { id: 'dm-create' });
       
-      // Close modal and navigate to DM
+      // Refresh DM list, close modal and navigate to DM
+      await fetchDMChannels();
       onClose();
       navigate(`/app/dms/${dmChannel.id}`);
       
@@ -255,6 +331,43 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   const copyUsername = () => {
     navigator.clipboard.writeText(`${profile?.username}#${profile?.discriminator}`);
+  };
+
+  const handleSendServerInvite = async (guildToInvite: { id: string; name: string }) => {
+    if (sendingInvite) return;
+    
+    try {
+      setSendingInvite(true);
+      toast.loading(`Creating invite for ${guildToInvite.name}...`, { id: 'server-invite' });
+      
+      // Create an invite for the selected server
+      const inviteResponse = await api.post(`/guilds/${guildToInvite.id}/invites`, {
+        maxUses: 1,
+        maxAge: 86400, // 24 hours
+        temporary: false
+      });
+      
+      const inviteUrl = inviteResponse.data.url || `${window.location.origin}/invite/${inviteResponse.data.code}`;
+      
+      // Create or get DM channel with the user
+      const dmResponse = await api.post('/dm/create', { recipientId: userId });
+      const dmChannel = dmResponse.data;
+      
+      // Send the invite link as a message
+      await api.post(`/channels/${dmChannel.id}/messages`, {
+        content: `Hey! I'd like to invite you to join **${guildToInvite.name}**! 🎉\n\n${inviteUrl}`
+      });
+      
+      toast.success(`Invite sent to ${profile?.username}!`, { id: 'server-invite' });
+      setShowInviteMenu(false);
+      
+    } catch (error: any) {
+      console.error('Failed to send invite:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to send invite';
+      toast.error(errorMessage, { id: 'server-invite' });
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -292,7 +405,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
         <div className="bg-gray-900 rounded-lg p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mot-gold"></div>
         </div>
       </div>
     );
@@ -304,7 +417,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
         {/* Banner */}
-        <div className="relative h-32 bg-gradient-to-br from-purple-600 to-blue-600">
+        <div className="relative h-32 bg-gradient-to-r from-mot-gold-deep via-mot-gold to-mot-gold-light">
           {profile.banner && (
             <img src={profile.banner} alt="" className="w-full h-full object-cover" />
           )}
@@ -360,6 +473,57 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 >
                   <Mail className="w-5 h-5 text-gray-400" />
                 </button>
+                
+                {/* Send Server Invite Button */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowInviteMenu(!showInviteMenu)}
+                    className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                    title="Invite to Server"
+                  >
+                    <Send className="w-5 h-5 text-mot-gold" />
+                  </button>
+                  
+                  {/* Server Selection Dropdown */}
+                  {showInviteMenu && (
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden animate-scale-in">
+                      <div className="p-3 border-b border-gray-800">
+                        <h4 className="text-sm font-semibold text-white">Invite to Server</h4>
+                        <p className="text-xs text-gray-400 mt-1">Select a server to invite {profile?.username} to</p>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {guilds.length > 0 ? (
+                          guilds.map((guild) => (
+                            <button
+                              key={guild.id}
+                              onClick={() => handleSendServerInvite(guild)}
+                              disabled={sendingInvite}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-gray-800 transition-colors disabled:opacity-50"
+                            >
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-mot-gold-light to-mot-gold flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                {guild.icon_url ? (
+                                  <img src={guild.icon_url} alt={guild.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Users className="w-5 h-5 text-white" />
+                                )}
+                              </div>
+                              <div className="flex-1 text-left min-w-0">
+                                <p className="text-sm font-medium text-white truncate">{guild.name}</p>
+                                <p className="text-xs text-gray-500">Click to send invite</p>
+                              </div>
+                              <ChevronDown className="w-4 h-4 text-gray-500 rotate-[-90deg]" />
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-gray-500 text-sm">
+                            No servers available
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 {!isFriend && !isBlocked && (
                   <button
                     onClick={handleSendFriendRequest}
@@ -412,7 +576,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
               onClick={() => setActiveTab('about')}
               className={`pb-3 px-1 text-sm font-medium transition-colors ${
                 activeTab === 'about'
-                  ? 'text-purple-400 border-b-2 border-purple-400'
+                  ? 'text-mot-gold border-b-2 border-mot-gold'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -423,7 +587,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 onClick={() => setActiveTab('activity')}
                 className={`pb-3 px-1 text-sm font-medium transition-colors ${
                   activeTab === 'activity'
-                    ? 'text-purple-400 border-b-2 border-purple-400'
+                    ? 'text-mot-gold border-b-2 border-mot-gold'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -434,7 +598,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
               onClick={() => setActiveTab('mutual')}
               className={`pb-3 px-1 text-sm font-medium transition-colors ${
                 activeTab === 'mutual'
-                  ? 'text-purple-400 border-b-2 border-purple-400'
+                  ? 'text-mot-gold border-b-2 border-mot-gold'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -445,7 +609,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 onClick={() => setActiveTab('roles')}
                 className={`pb-3 px-1 text-sm font-medium transition-colors ${
                   activeTab === 'roles'
-                    ? 'text-purple-400 border-b-2 border-purple-400'
+                    ? 'text-mot-gold border-b-2 border-mot-gold'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -508,12 +672,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                           type="text"
                           value={userNote}
                           onChange={(e) => setUserNote(e.target.value)}
-                          className="flex-1 px-3 py-1 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          className="flex-1 px-3 py-1 bg-mot-surface border border-mot-border rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-mot-gold/30"
                           placeholder="Add a note..."
                         />
                         <button
                           onClick={handleSaveNote}
-                          className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors"
+                          className="px-3 py-1 bg-mot-gold text-mot-black text-sm rounded font-medium hover:bg-mot-gold-light transition-colors"
                         >
                           Save
                         </button>

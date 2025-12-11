@@ -4,6 +4,8 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useGuildStore } from '../../store/guildStore';
+import { RolesManager } from '../ServerSettings/RolesManager';
+import { MembersManager } from '../ServerSettings/MembersManager';
 import toast from 'react-hot-toast';
 
 interface ServerSettingsModalProps {
@@ -59,9 +61,9 @@ export const ServerSettingsModal = React.memo<ServerSettingsModalProps>(({ isOpe
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-4xl h-[600px] bg-[#313338] rounded-2xl shadow-2xl flex overflow-hidden animate-scale-in">
+      <div className="w-full max-w-4xl h-[600px] bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border flex overflow-hidden animate-scale-in">
         {/* Sidebar */}
-        <div className="w-60 bg-[#2b2d31] p-4 flex flex-col">
+        <div className="w-60 bg-mot-surface p-4 flex flex-col">
           <div className="mb-6">
             <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2">Server Settings</h2>
           </div>
@@ -75,8 +77,8 @@ export const ServerSettingsModal = React.memo<ServerSettingsModalProps>(({ isOpe
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
+                      ? 'bg-mot-gold/20 text-mot-gold'
+                      : 'text-gray-400 hover:bg-mot-gold/10 hover:text-gray-300'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -86,7 +88,7 @@ export const ServerSettingsModal = React.memo<ServerSettingsModalProps>(({ isOpe
             })}
           </nav>
 
-          <div className="mt-auto pt-4 border-t border-white/10">
+          <div className="mt-auto pt-4 border-t border-mot-border">
             <button
               onClick={handleDelete}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/20 transition-colors"
@@ -101,13 +103,13 @@ export const ServerSettingsModal = React.memo<ServerSettingsModalProps>(({ isOpe
         {/* Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center justify-between p-6 border-b border-mot-border">
             <h1 className="text-xl font-bold text-white">
               {tabs.find(t => t.id === activeTab)?.label}
             </h1>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -135,11 +137,11 @@ export const ServerSettingsModal = React.memo<ServerSettingsModalProps>(({ isOpe
                     placeholder="What's your server about?"
                     rows={4}
                     maxLength={500}
-                    className="w-full px-4 py-3 bg-[#1e1f22] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all resize-none"
+                    className="w-full px-4 py-3 bg-mot-surface border border-mot-border rounded-lg text-white placeholder-gray-500 focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all resize-none"
                   />
                 </div>
 
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-mot-border">
                   <h3 className="text-sm font-semibold text-white mb-3">Server Info</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -156,17 +158,11 @@ export const ServerSettingsModal = React.memo<ServerSettingsModalProps>(({ isOpe
             )}
 
             {activeTab === 'roles' && (
-              <div>
-                <p className="text-gray-400 mb-4">Manage server roles and permissions</p>
-                <Badge variant="info">Coming soon - Role management UI</Badge>
-              </div>
+              <RolesManager guildId={guildId} />
             )}
 
             {activeTab === 'members' && (
-              <div>
-                <p className="text-gray-400 mb-4">View and manage server members</p>
-                <Badge variant="info">Coming soon - Member management UI</Badge>
-              </div>
+              <MembersManager guildId={guildId} />
             )}
 
             {activeTab === 'channels' && (
@@ -179,7 +175,7 @@ export const ServerSettingsModal = React.memo<ServerSettingsModalProps>(({ isOpe
 
           {/* Footer */}
           {activeTab === 'overview' && (
-            <div className="flex justify-end gap-3 p-6 border-t border-white/10">
+            <div className="flex justify-end gap-3 p-6 border-t border-mot-border">
               <Button variant="secondary" onClick={onClose}>
                 Cancel
               </Button>

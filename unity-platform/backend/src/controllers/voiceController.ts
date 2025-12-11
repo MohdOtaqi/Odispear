@@ -13,6 +13,9 @@ const dailyApi = axios.create({
   }
 });
 
+// Note: Daily.co region selection requires paid plan
+// Free tier uses automatic region selection
+
 // Creates or gets a Daily.co room for the channel
 export const getVoiceToken = async (
   req: AuthRequest,
@@ -22,13 +25,16 @@ export const getVoiceToken = async (
   try {
     const { channelId } = req.params;
     const userId = req.user!.id;
+    
+    // Note: Daily.co free tier doesn't support geo selection, so we use default
+    // Region selection would require paid plan
+    console.log(`[Voice] Getting token for channel ${channelId}, user ${userId}`);
 
     if (!DAILY_API_KEY || !DAILY_DOMAIN) {
       throw new AppError('Voice service not configured', 500);
     }
 
-    // Create a simple room name from channel ID (Daily.co prefers simple names)
-    // Convert UUID to a simpler format: take first 8 chars
+    // Simple room name without region (geo requires paid plan)
     const roomName = `channel-${channelId.substring(0, 8)}`;
     
     // 1. Try to get the existing room
@@ -47,7 +53,9 @@ export const getVoiceToken = async (
             enable_chat: true,
             start_video_off: true,
             start_audio_off: false,
-            exp: Math.floor(Date.now() / 1000) + 3600 // Room expires in 1 hour
+            enable_advanced_chat: false,
+            // Room expires in 24 hours
+            exp: Math.floor(Date.now() / 1000) + 86400
           }
         });
         room = createResponse.data;
@@ -60,9 +68,9 @@ export const getVoiceToken = async (
     // 2. Generate a meeting token for the user
     const tokenResponse = await dailyApi.post('/meeting-tokens', {
       properties: {
-        room_name: roomName, // Use the same room name we created!
+        room_name: roomName,
         user_id: userId,
-        user_name: req.user?.username || 'Guest'
+        user_name: req.user?.username || 'Guest',
       }
     });
 

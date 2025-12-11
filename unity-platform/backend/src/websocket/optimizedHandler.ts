@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database';
-import redisClient from '../config/redis';
+import redisClient, { isRedisEnabled } from '../config/redis';
 import logger from '../config/logger';
 
 interface AuthSocket extends Socket {
@@ -20,12 +20,18 @@ async function getUserGuilds(userId: string): Promise<string[]> {
     return userGuildsCache.get(userId)!;
   }
 
-  // Check Redis cache
-  const cachedGuilds = await redisClient.get(`user:${userId}:guilds`);
-  if (cachedGuilds) {
-    const guilds = JSON.parse(cachedGuilds);
-    userGuildsCache.set(userId, guilds);
-    return guilds;
+  // Check Redis cache (only if Redis is available)
+  if (isRedisEnabled() && redisClient) {
+    try {
+      const cachedGuilds = await redisClient.get(`user:${userId}:guilds`);
+      if (cachedGuilds) {
+        const guilds = JSON.parse(cachedGuilds);
+        userGuildsCache.set(userId, guilds);
+        return guilds;
+      }
+    } catch (e) {
+      // Redis error - continue without cache
+    }
   }
 
   // Query database
@@ -35,12 +41,18 @@ async function getUserGuilds(userId: string): Promise<string[]> {
   );
   const guildIds = result.rows.map((row: any) => row.guild_id);
 
-  // Cache in Redis and memory
-  await redisClient.set(
-    `user:${userId}:guilds`,
-    JSON.stringify(guildIds),
-    { EX: CACHE_TTL }
-  );
+  // Cache in Redis and memory (only if Redis is available)
+  if (isRedisEnabled() && redisClient) {
+    try {
+      await redisClient.set(
+        `user:${userId}:guilds`,
+        JSON.stringify(guildIds),
+        { EX: CACHE_TTL }
+      );
+    } catch (e) {
+      // Redis error - continue without cache
+    }
+  }
   userGuildsCache.set(userId, guildIds);
 
   return guildIds;
@@ -96,13 +108,13 @@ export const setupWebSocketHandlers = (io: Server) => {
       }
 
       // Optimized: Update presence in Redis (non-blocking)
-      Promise.all([
-        redisClient.set(`presence:${userId}`, 'online', { EX: 300 }),
-        query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
-          'online',
-          userId,
-        ]),
-      ]).catch((err) => logger.error('Error updating presence:', err));
+      const presencePromises: Promise<any>[] = [
+        query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', ['online', userId]),
+      ];
+      if (isRedisEnabled() && redisClient) {
+        presencePromises.push(redisClient.set(`presence:${userId}`, 'online', { EX: 300 }));
+      }
+      Promise.all(presencePromises).catch((err) => logger.error('Error updating presence:', err));
 
       // Optimized: Broadcast presence only to relevant guilds (batched)
       const presenceData = {
@@ -170,7 +182,13 @@ export const setupWebSocketHandlers = (io: Server) => {
 
         // Optimized: Check Redis cache for permissions
         const cacheKey = `access:${userId}:${channelId}`;
-        const cachedAccess = await redisClient.get(cacheKey);
+        let cachedAccess: string | null = null;
+        
+        if (isRedisEnabled() && redisClient) {
+          try {
+            cachedAccess = await redisClient.get(cacheKey);
+          } catch (e) { /* Redis error */ }
+        }
 
         let hasAccess = false;
 
@@ -188,7 +206,11 @@ export const setupWebSocketHandlers = (io: Server) => {
           hasAccess = result.rows.length > 0;
 
           // Cache result for 5 minutes
-          await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+          if (isRedisEnabled() && redisClient) {
+            try {
+              await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+            } catch (e) { /* Redis error */ }
+          }
         }
 
         if (hasAccess) {
@@ -214,7 +236,13 @@ export const setupWebSocketHandlers = (io: Server) => {
         const cacheKey = `dm:access:${userId}:${dmChannelId}`;
 
         let hasAccess = false;
-        const cachedAccess = await redisClient.get(cacheKey);
+        let cachedAccess: string | null = null;
+        
+        if (isRedisEnabled() && redisClient) {
+          try {
+            cachedAccess = await redisClient.get(cacheKey);
+          } catch (e) { /* Redis error */ }
+        }
 
         if (cachedAccess !== null) {
           hasAccess = cachedAccess === '1';
@@ -225,7 +253,11 @@ export const setupWebSocketHandlers = (io: Server) => {
           );
 
           hasAccess = result.rows.length > 0;
-          await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+          if (isRedisEnabled() && redisClient) {
+            try {
+              await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+            } catch (e) { /* Redis error */ }
+          }
         }
 
         if (hasAccess) {
@@ -339,35 +371,66 @@ export const setupWebSocketHandlers = (io: Server) => {
       typingTimeouts.forEach((timeout) => clearTimeout(timeout));
       typingTimeouts.clear();
 
-      // Optimized: Delayed presence update (user might reconnect)
-      setTimeout(async () => {
+      // Only set offline if Redis is available (for production)
+      // For local dev without Redis, immediately set offline
+      if (!isRedisEnabled()) {
+        // Without Redis, immediately mark as offline
         try {
-          const isOnline = await redisClient.get(`presence:${userId}`);
+          await query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
+            'offline',
+            userId,
+          ]);
 
-          if (!isOnline) {
-            await query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
-              'offline',
-              userId,
-            ]);
+          const guildIds = await getUserGuilds(userId);
 
-            const guildIds = await getUserGuilds(userId);
-
-            for (const guildId of guildIds) {
-              io.to(`guild:${guildId}`).emit('presence.update', {
-                user_id: userId,
-                username,
-                status: 'offline',
-                timestamp: Date.now(),
-              });
-            }
-
-            // Clear cache
-            userGuildsCache.delete(userId);
+          for (const guildId of guildIds) {
+            io.to(`guild:${guildId}`).emit('presence.update', {
+              user_id: userId,
+              username,
+              status: 'offline',
+              timestamp: Date.now(),
+            });
           }
+
+          userGuildsCache.delete(userId);
         } catch (error) {
           logger.error('Error handling disconnect:', error);
         }
-      }, 5000); // 5 second grace period
+      } else {
+        // With Redis, use delayed check for reconnections
+        setTimeout(async () => {
+          try {
+            let isOnline: string | null = null;
+            if (redisClient) {
+              try {
+                isOnline = await redisClient.get(`presence:${userId}`);
+              } catch (e) { /* Redis error */ }
+            }
+
+            if (!isOnline) {
+              await query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
+                'offline',
+                userId,
+              ]);
+
+              const guildIds = await getUserGuilds(userId);
+
+              for (const guildId of guildIds) {
+                io.to(`guild:${guildId}`).emit('presence.update', {
+                  user_id: userId,
+                  username,
+                  status: 'offline',
+                  timestamp: Date.now(),
+                });
+              }
+
+              userGuildsCache.delete(userId);
+            }
+          } catch (error) {
+            logger.error('Error handling disconnect:', error);
+          }
+        }, 5000); // 5 second grace period
+      }
 
       // Close all active voice sessions immediately
       query(

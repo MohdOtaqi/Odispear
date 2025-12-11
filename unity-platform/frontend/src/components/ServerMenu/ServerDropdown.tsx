@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Settings, UserPlus, LogOut, Shield, Hash, Volume2, 
-  ChevronDown, Plus, Users, Palette, Bell 
+  Settings, UserPlus, LogOut, Shield, FolderPlus,
+  ChevronDown, Plus, Palette, Bell 
 } from 'lucide-react';
 import { useGuildStore } from '../../store/guildStore';
 import { useAuthStore } from '../../store/authStore';
@@ -10,6 +10,7 @@ interface ServerDropdownProps {
   onOpenServerSettings: () => void;
   onOpenInvite: () => void;
   onCreateChannel: () => void;
+  onCreateCategory: () => void;
   onLeaveServer?: () => void;
 }
 
@@ -17,6 +18,7 @@ export const ServerDropdown: React.FC<ServerDropdownProps> = ({
   onOpenServerSettings,
   onOpenInvite,
   onCreateChannel,
+  onCreateCategory,
   onLeaveServer
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,7 +63,7 @@ export const ServerDropdown: React.FC<ServerDropdownProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 bg-[#111214] border border-white/10 rounded-b-lg shadow-xl z-50 overflow-hidden animate-slide-down">
+        <div className="absolute top-full left-0 right-0 bg-mot-surface border border-mot-border rounded-b-lg shadow-xl z-50 overflow-hidden animate-slide-down">
           <div className="py-2">
             {/* Invite People */}
             <button
@@ -69,7 +71,7 @@ export const ServerDropdown: React.FC<ServerDropdownProps> = ({
                 onOpenInvite();
                 setIsOpen(false);
               }}
-              className="w-full px-3 py-2 flex items-center gap-3 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors"
+              className="w-full px-3 py-2 flex items-center gap-3 hover:bg-mot-gold/20 text-mot-gold hover:text-mot-gold-light transition-colors"
             >
               <UserPlus className="h-4 w-4" />
               <span className="text-sm font-medium">Invite People</span>
@@ -105,9 +107,10 @@ export const ServerDropdown: React.FC<ServerDropdownProps> = ({
 
             {/* Create Category */}
             <button
+              onClick={() => { onCreateCategory(); setIsOpen(false); }}
               className="w-full px-3 py-2 flex items-center gap-3 hover:bg-white/5 text-gray-300 hover:text-white transition-colors"
             >
-              <Hash className="h-4 w-4" />
+              <FolderPlus className="h-4 w-4" />
               <span className="text-sm font-medium">Create Category</span>
             </button>
 
@@ -151,13 +154,13 @@ export const ServerDropdown: React.FC<ServerDropdownProps> = ({
           </div>
 
           {/* Server Boost Status */}
-          <div className="px-3 py-2 border-t border-white/10 bg-purple-500/5">
+          <div className="px-3 py-2 border-t border-mot-border bg-mot-gold/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Palette className="h-4 w-4 text-purple-400" />
+                <Palette className="h-4 w-4 text-mot-gold" />
                 <span className="text-xs text-gray-400">Server Boost</span>
               </div>
-              <span className="text-xs text-purple-400 font-bold">Level 0</span>
+              <span className="text-xs text-mot-gold font-bold">Level 0</span>
             </div>
           </div>
         </div>

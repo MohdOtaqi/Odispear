@@ -24,8 +24,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
 
     setIsLoading(true);
     try {
-      await api.post(`/api/v1/channels`, {
-        guild_id: currentGuild.id,
+      await api.post(`/guilds/${currentGuild.id}/channels`, {
         name: channelName.toLowerCase().replace(/\s+/g, '-'),
         type: channelType
       });
@@ -54,7 +53,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
       
       {/* Modal */}
-      <div className="relative bg-[#313338] rounded-lg p-6 w-[440px] shadow-xl">
+      <div className="relative bg-mot-surface-subtle rounded-lg p-6 w-[440px] shadow-xl border border-mot-border">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Create Channel</h2>
@@ -75,12 +74,12 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
               onClick={() => setChannelType('text')}
               className={`w-full p-3 rounded-lg border transition-all flex items-center gap-3 ${
                 channelType === 'text'
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-white/10 hover:border-white/20'
+                  ? 'border-mot-gold bg-mot-gold/10'
+                  : 'border-mot-border hover:border-mot-gold/30'
               }`}
             >
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                channelType === 'text' ? 'bg-purple-500' : 'bg-gray-700'
+                channelType === 'text' ? 'bg-mot-gold' : 'bg-gray-700'
               }`}>
                 <Hash className="w-5 h-5 text-white" />
               </div>
@@ -95,12 +94,12 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
               onClick={() => setChannelType('voice')}
               className={`w-full p-3 rounded-lg border transition-all flex items-center gap-3 ${
                 channelType === 'voice'
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-white/10 hover:border-white/20'
+                  ? 'border-mot-gold bg-mot-gold/10'
+                  : 'border-mot-border hover:border-mot-gold/30'
               }`}
             >
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                channelType === 'voice' ? 'bg-purple-500' : 'bg-gray-700'
+                channelType === 'voice' ? 'bg-mot-gold' : 'bg-gray-700'
               }`}>
                 <Volume2 className="w-5 h-5 text-white" />
               </div>
@@ -136,7 +135,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ isOpen, 
             <Button
               type="submit"
               disabled={!channelName.trim() || isLoading}
-              className="bg-purple-600 hover:bg-purple-700"
+              variant="primary"
             >
               Create Channel
             </Button>

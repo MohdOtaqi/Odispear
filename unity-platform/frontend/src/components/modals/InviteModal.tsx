@@ -96,14 +96,14 @@ export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guil
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-[#313338] rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+      <div className="w-full max-w-md bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="p-6 border-b border-white/10">
+        <div className="p-6 border-b border-mot-border">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xl font-bold text-white">Invite friends to {guildName}</h2>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -123,7 +123,7 @@ export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guil
                 type="text"
                 value={inviteUrl}
                 readOnly
-                className="flex-1 h-11 px-4 py-2 bg-[#1e1f22] border border-white/10 rounded-lg text-white font-mono text-sm"
+                className="flex-1 h-11 px-4 py-2 bg-mot-surface border border-mot-border rounded-lg text-white font-mono text-sm"
               />
               <Tooltip content={copied ? 'Copied!' : 'Copy Link'}>
                 <Button
@@ -168,7 +168,7 @@ export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guil
               <select
                 value={maxUses}
                 onChange={(e) => setMaxUses(Number(e.target.value))}
-                className="w-full h-11 px-4 py-2 bg-[#1e1f22] border border-white/10 rounded-lg text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all"
+                className="w-full h-11 px-4 py-2 bg-mot-surface border border-mot-border rounded-lg text-white focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
               >
                 <option value={0}>No limit</option>
                 <option value={1}>1 use</option>
@@ -186,7 +186,7 @@ export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guil
             <div>
               <button
                 onClick={() => setShowExisting(!showExisting)}
-                className="flex items-center justify-between w-full text-sm font-semibold text-gray-300 mb-2 hover:text-white transition-colors"
+                className="flex items-center justify-between w-full text-sm font-semibold text-gray-300 mb-2 hover:text-mot-gold transition-colors"
               >
                 <span>
                   <Link2 className="w-4 h-4 inline mr-2" />
@@ -199,7 +199,7 @@ export const InviteModal = React.memo<InviteModalProps>(({ isOpen, onClose, guil
                   {invites.map(invite => (
                     <div
                       key={invite.id}
-                      className="flex items-center justify-between p-2 bg-[#1e1f22] rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                      className="flex items-center justify-between p-2 bg-mot-surface rounded-lg hover:bg-mot-gold/10 transition-colors cursor-pointer"
                       onClick={() => setCurrentInvite(invite)}
                     >
                       <div className="flex-1 text-xs">

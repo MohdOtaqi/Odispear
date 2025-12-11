@@ -5,6 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import { connectRedis } from './config/redis';
 import { setupWebSocketHandlers } from './websocket/optimizedHandler';
@@ -53,8 +54,10 @@ const io = new Server(httpServer, {
   },
 });
 
-// Middleware
-app.use(helmet());
+// Middleware - Disable helmet's CSP since we set our own in securityHeaders
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(securityHeaders);
 app.use(cors({
   origin: allowedOrigins,
@@ -147,6 +150,19 @@ app.get('/api/docs', (req, res) => {
       },
     },
   });
+});
+
+// Serve static frontend files in production/tunnel mode
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
+
+// Catch-all route for React Router (SPA)
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path === '/health') {
+    return next();
+  }
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // Error handlers (must be last)

@@ -5,30 +5,30 @@
 
 :root {
   /* === PRIMARY COLORS === */
-  /* Neon Cyan-Teal (Our signature color - NOT Discord's blurple!) */
-  --primary-50: #e0f9ff;
-  --primary-100: #b3f0ff;
-  --primary-200: #80e7ff;
-  --primary-300: #4ddeff;
-  --primary-400: #26d5ff;
-  --primary-500: #00ccff; /* Main brand color */
-  --primary-600: #00b8e6;
-  --primary-700: #009fcc;
-  --primary-800: #0086b3;
-  --primary-900: #006d99;
+  /* MOT Gold - Our signature color */
+  --primary-50: #fdf8e8;
+  --primary-100: #f9ecc5;
+  --primary-200: #f4df9e;
+  --primary-300: #efd277;
+  --primary-400: #e9c550;
+  --primary-500: #D4AF37; /* Main brand color - MOT Gold */
+  --primary-600: #c9a330;
+  --primary-700: #AA8C2C;
+  --primary-800: #8b7223;
+  --primary-900: #6c581b;
 
   /* === ACCENT COLORS === */
-  /* Electric Magenta for highlights */
-  --accent-50: #ffe0f7;
-  --accent-100: #ffb3eb;
-  --accent-200: #ff80df;
-  --accent-300: #ff4dd3;
-  --accent-400: #ff26cb;
-  --accent-500: #ff00c3; /* Accent color */
-  --accent-600: #e600b0;
-  --accent-700: #cc009d;
-  --accent-800: #b3008a;
-  --accent-900: #990077;
+  /* Deep Gold for accents */
+  --accent-50: #fdf8e8;
+  --accent-100: #f9ecc5;
+  --accent-200: #f4df9e;
+  --accent-300: #efd277;
+  --accent-400: #e9c550;
+  --accent-500: #D4AF37; /* Accent color - MOT Gold */
+  --accent-600: #c9a330;
+  --accent-700: #AA8C2C;
+  --accent-800: #8b7223;
+  --accent-900: #6c581b;
 
   /* === NEUTRAL COLORS === */
   /* Deep space dark theme */
@@ -67,8 +67,8 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 20px rgba(0, 204, 255, 0.4);
-  --shadow-glow-accent: 0 0 20px rgba(255, 0, 195, 0.4);
+  --shadow-glow: 0 0 20px rgba(212, 175, 55, 0.4);
+  --shadow-glow-accent: 0 0 20px rgba(170, 140, 44, 0.4);
 
   /* === TIMING FUNCTIONS === */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);

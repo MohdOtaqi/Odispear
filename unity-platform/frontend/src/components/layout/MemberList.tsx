@@ -15,17 +15,22 @@ interface Member {
 interface MemberListProps {
   members: Member[];
   ownerId?: string;
+  onMemberClick?: (member: Member) => void;
 }
 
 const MemberItem = React.memo<{
   member: Member;
   isOwner: boolean;
-}>(({ member, isOwner }) => {
+  onClick?: () => void;
+}>(({ member, isOwner, onClick }) => {
   const displayName = member.nickname || member.display_name || member.username;
   
   return (
-    <Tooltip content={`Message ${displayName}`} position="left">
-      <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/10 group transition-all duration-150">
+    <Tooltip content={`View ${displayName}'s profile`} position="left">
+      <button 
+        onClick={onClick}
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-mot-gold/10 group transition-all duration-150"
+      >
         <Avatar
           src={member.avatar_url}
           alt={member.username}
@@ -38,12 +43,12 @@ const MemberItem = React.memo<{
             {displayName}
             {isOwner && (
               <Tooltip content="Server Owner" position="top">
-                <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+                <Crown className="h-3 w-3 text-mot-gold flex-shrink-0" />
               </Tooltip>
             )}
           </div>
         </div>
-        <MessageSquare className="h-4 w-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <MessageSquare className="h-4 w-4 text-mot-gold opacity-0 group-hover:opacity-100 transition-opacity" />
       </button>
     </Tooltip>
   );
@@ -51,14 +56,14 @@ const MemberItem = React.memo<{
 
 MemberItem.displayName = 'MemberItem';
 
-export const MemberList = React.memo<MemberListProps>(({ members, ownerId }) => {
+export const MemberList = React.memo<MemberListProps>(({ members, ownerId, onMemberClick }) => {
   const { onlineMembers, offlineMembers } = useMemo(() => ({
     onlineMembers: members.filter((m) => m.status !== 'offline'),
     offlineMembers: members.filter((m) => m.status === 'offline'),
   }), [members]);
 
   return (
-    <div className="w-60 bg-[#2b2d31] flex flex-col overflow-y-auto custom-scrollbar border-l border-white/5">
+    <div className="w-60 bg-mot-surface flex flex-col overflow-y-auto custom-scrollbar border-l border-mot-border">
       <div className="p-3">
         {onlineMembers.length > 0 && (
           <div className="mb-4">
@@ -71,6 +76,7 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId }) => 
                   key={member.id}
                   member={member}
                   isOwner={member.id === ownerId}
+                  onClick={() => onMemberClick?.(member)}
                 />
               ))}
             </div>
@@ -88,6 +94,7 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId }) => 
                   key={member.id}
                   member={member}
                   isOwner={member.id === ownerId}
+                  onClick={() => onMemberClick?.(member)}
                 />
               ))}
             </div>

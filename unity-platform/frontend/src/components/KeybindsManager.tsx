@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Keyboard, Mic, MicOff, Volume2, VolumeX, Video, VideoOff, Settings, Search, Plus, Hash, Headphones, Monitor, Camera, Save, RotateCcw, Info, AlertCircle } from 'lucide-react';
+import { Keyboard, Mic, MicOff, Video, Settings, Search, Plus, Hash, Headphones, Monitor, RotateCcw, Info, AlertCircle } from 'lucide-react';
 
 interface Keybind {
   id: string;
@@ -45,101 +45,14 @@ const DEFAULT_KEYBINDS: Keybind[] = [
 ];
 
 export const KeybindsManager: React.FC = () => {
-  const [keybinds, setKeybinds] = useState<Keybind[]>([]);
+  const [keybinds, setKeybinds] = useState<Keybind[]>(DEFAULT_KEYBINDS);
   const [selectedCategory, setSelectedCategory] = useState('Voice & Video');
   const [recording, setRecording] = useState<string | null>(null);
   const [recordedKeys, setRecordedKeys] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showConflicts, setShowConflicts] = useState(false);
   const recordingRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    loadKeybinds();
-    return () => {
-      if (recording) {
-        document.removeEventListener('keydown', handleKeyDown);
-        document.removeEventListener('keyup', handleKeyUp);
-      }
-    };
-  }, [recording]);
-
-  const loadKeybinds = () => {
-    const saved = localStorage.getItem('keybinds');
-    if (saved) {
-      setKeybinds(JSON.parse(saved));
-    } else {
-      setKeybinds(DEFAULT_KEYBINDS);
-    }
-  };
-
-  const saveKeybinds = (newKeybinds: Keybind[]) => {
-    setKeybinds(newKeybinds);
-    localStorage.setItem('keybinds', JSON.stringify(newKeybinds));
-    
-    // Apply keybinds to the application
-    applyKeybinds(newKeybinds);
-  };
-
-  const applyKeybinds = (keybindList: Keybind[]) => {
-    // Create a global keybind event system
-    const keybindMap = new Map<string, Keybind>();
-    
-    keybindList.forEach(kb => {
-      if (kb.enabled && kb.keys.length > 0) {
-        const keyCombo = kb.keys.join('+');
-        keybindMap.set(keyCombo, kb);
-      }
-    });
-
-    // Store in global window object for access throughout the app
-    (window as any).__keybinds = keybindMap;
-    
-    // Dispatch custom event to notify app of keybind changes
-    window.dispatchEvent(new CustomEvent('keybinds-updated', { detail: keybindMap }));
-  };
-
-  const startRecording = (keybindId: string) => {
-    setRecording(keybindId);
-    setRecordedKeys([]);
-    recordingRef.current.clear();
-    
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-  };
-
-  const stopRecording = () => {
-    if (recording) {
-      const updatedKeybinds = keybinds.map(kb => 
-        kb.id === recording ? { ...kb, keys: recordedKeys } : kb
-      );
-      saveKeybinds(updatedKeybinds);
-    }
-    
-    setRecording(null);
-    setRecordedKeys([]);
-    recordingRef.current.clear();
-    document.removeEventListener('keydown', handleKeyDown);
-    document.removeEventListener('keyup', handleKeyUp);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    e.preventDefault();
-    
-    const key = getKeyName(e);
-    if (!recordingRef.current.has(key)) {
-      recordingRef.current.add(key);
-      setRecordedKeys(Array.from(recordingRef.current));
-    }
-  };
-
-  const handleKeyUp = (e: KeyboardEvent) => {
-    e.preventDefault();
-    
-    if (recordingRef.current.size > 0) {
-      // Finished recording this combination
-      setTimeout(stopRecording, 100);
-    }
-  };
+  const handlersRef = useRef<{ keydown: ((e: KeyboardEvent) => void) | null; keyup: ((e: KeyboardEvent) => void) | null }>({ keydown: null, keyup: null });
 
   const getKeyName = (e: KeyboardEvent): string => {
     const specialKeys: { [key: string]: string } = {
@@ -163,6 +76,121 @@ export const KeybindsManager: React.FC = () => {
     if (e.metaKey && e.key !== 'Meta') return 'Cmd';
 
     return specialKeys[e.key] || e.key.toUpperCase();
+  };
+
+  const applyKeybinds = (keybindList: Keybind[]) => {
+    const keybindMap = new Map<string, Keybind>();
+    
+    keybindList.forEach(kb => {
+      if (kb.enabled && kb.keys.length > 0) {
+        const keyCombo = kb.keys.join('+');
+        keybindMap.set(keyCombo, kb);
+      }
+    });
+
+    (window as any).__keybinds = keybindMap;
+    window.dispatchEvent(new CustomEvent('keybinds-updated', { detail: keybindMap }));
+  };
+
+  const saveKeybinds = (newKeybinds: Keybind[]) => {
+    setKeybinds(newKeybinds);
+    localStorage.setItem('keybinds', JSON.stringify(newKeybinds));
+    applyKeybinds(newKeybinds);
+  };
+
+  const loadKeybinds = () => {
+    try {
+      const saved = localStorage.getItem('keybinds');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge with defaults to ensure all keybinds exist
+          const merged = DEFAULT_KEYBINDS.map(defaultKb => {
+            const savedKb = parsed.find((kb: Keybind) => kb.id === defaultKb.id);
+            return savedKb ? { ...defaultKb, ...savedKb, icon: defaultKb.icon } : defaultKb;
+          });
+          setKeybinds(merged);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load keybinds, using defaults:', e);
+    }
+    setKeybinds(DEFAULT_KEYBINDS);
+  };
+
+  // Load keybinds on mount only
+  useEffect(() => {
+    loadKeybinds();
+  }, []);
+
+  // Cleanup recording handlers on unmount
+  useEffect(() => {
+    return () => {
+      if (handlersRef.current.keydown) {
+        document.removeEventListener('keydown', handlersRef.current.keydown);
+      }
+      if (handlersRef.current.keyup) {
+        document.removeEventListener('keyup', handlersRef.current.keyup);
+      }
+    };
+  }, []);
+
+  const startRecording = (keybindId: string) => {
+    setRecording(keybindId);
+    setRecordedKeys([]);
+    recordingRef.current.clear();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      const key = getKeyName(e);
+      if (!recordingRef.current.has(key)) {
+        recordingRef.current.add(key);
+        setRecordedKeys(Array.from(recordingRef.current));
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      e.preventDefault();
+      if (recordingRef.current.size > 0) {
+        setTimeout(() => stopRecordingInternal(keybindId), 100);
+      }
+    };
+
+    handlersRef.current = { keydown: handleKeyDown, keyup: handleKeyUp };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+  };
+
+  const stopRecordingInternal = (keybindId: string) => {
+    const currentKeys = Array.from(recordingRef.current);
+    
+    setKeybinds(prev => {
+      const updated = prev.map(kb => 
+        kb.id === keybindId ? { ...kb, keys: currentKeys } : kb
+      );
+      localStorage.setItem('keybinds', JSON.stringify(updated));
+      applyKeybinds(updated);
+      return updated;
+    });
+    
+    setRecording(null);
+    setRecordedKeys([]);
+    recordingRef.current.clear();
+    
+    if (handlersRef.current.keydown) {
+      document.removeEventListener('keydown', handlersRef.current.keydown);
+    }
+    if (handlersRef.current.keyup) {
+      document.removeEventListener('keyup', handlersRef.current.keyup);
+    }
+    handlersRef.current = { keydown: null, keyup: null };
+  };
+
+  const stopRecording = () => {
+    if (recording) {
+      stopRecordingInternal(recording);
+    }
   };
 
   const resetKeybind = (keybindId: string) => {
@@ -230,9 +258,9 @@ export const KeybindsManager: React.FC = () => {
   });
 
   return (
-    <div className="flex h-full bg-gray-900">
+    <div className="flex h-full bg-mot-surface-subtle">
       {/* Sidebar */}
-      <div className="w-64 border-r border-gray-800 p-4">
+      <div className="w-64 border-r border-mot-border p-4">
         <h2 className="text-xl font-bold text-white mb-4">Keybinds</h2>
         
         {/* Search */}
@@ -243,7 +271,7 @@ export const KeybindsManager: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search keybinds..."
-            className="w-full pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full pl-10 pr-3 py-2 bg-mot-surface border border-mot-border rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-mot-gold"
           />
         </div>
 
@@ -255,8 +283,8 @@ export const KeybindsManager: React.FC = () => {
               onClick={() => setSelectedCategory(category)}
               className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                 selectedCategory === category
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  ? 'bg-mot-gold/20 text-mot-gold'
+                  : 'text-gray-400 hover:text-white hover:bg-mot-gold/10'
               }`}
             >
               {category}
@@ -265,10 +293,10 @@ export const KeybindsManager: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="mt-6 pt-6 border-t border-gray-800">
+        <div className="mt-6 pt-6 border-t border-mot-border">
           <button
             onClick={resetAllKeybinds}
-            className="w-full px-3 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+            className="w-full px-3 py-2 bg-mot-surface text-gray-300 rounded-lg hover:bg-mot-gold/10 transition-colors flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Reset All
@@ -322,9 +350,9 @@ export const KeybindsManager: React.FC = () => {
               return (
                 <div
                   key={keybind.id}
-                  className={`p-4 bg-gray-800 rounded-lg border ${
-                    isRecording ? 'border-purple-500' : 
-                    hasConflict ? 'border-yellow-600' : 'border-gray-700'
+                  className={`p-4 bg-mot-surface rounded-lg border ${
+                    isRecording ? 'border-mot-gold' : 
+                    hasConflict ? 'border-yellow-600' : 'border-mot-border'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -337,7 +365,7 @@ export const KeybindsManager: React.FC = () => {
                             type="checkbox"
                             checked={keybind.enabled}
                             onChange={() => toggleKeybind(keybind.id)}
-                            className="w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                            className="w-4 h-4 rounded border-gray-600 text-mot-gold focus:ring-mot-gold"
                           />
                         </div>
                         <p className="text-sm text-gray-400 mt-1">{keybind.description}</p>
@@ -349,10 +377,10 @@ export const KeybindsManager: React.FC = () => {
                         onClick={() => isRecording ? stopRecording() : startRecording(keybind.id)}
                         className={`px-4 py-2 rounded-lg font-mono text-sm transition-colors ${
                           isRecording
-                            ? 'bg-purple-600 text-white animate-pulse'
+                            ? 'bg-mot-gold text-mot-black animate-pulse'
                             : keybind.keys.length > 0
-                              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                              : 'bg-gray-700 text-gray-500 hover:bg-gray-600'
+                              ? 'bg-mot-surface-subtle text-gray-200 hover:bg-mot-gold/20'
+                              : 'bg-mot-surface-subtle text-gray-500 hover:bg-mot-gold/20'
                         }`}
                       >
                         {isRecording ? recordedKeys.join(' + ') || 'Press keys...' : 
@@ -363,7 +391,7 @@ export const KeybindsManager: React.FC = () => {
                         <>
                           <button
                             onClick={() => clearKeybind(keybind.id)}
-                            className="p-2 bg-gray-700 text-gray-400 rounded-lg hover:bg-gray-600 hover:text-white transition-colors"
+                            className="p-2 bg-mot-surface-subtle text-gray-400 rounded-lg hover:bg-mot-gold/20 hover:text-white transition-colors"
                             title="Clear"
                           >
                             ×
@@ -371,7 +399,7 @@ export const KeybindsManager: React.FC = () => {
                           {keybind.default.length > 0 && JSON.stringify(keybind.keys) !== JSON.stringify(keybind.default) && (
                             <button
                               onClick={() => resetKeybind(keybind.id)}
-                              className="p-2 bg-gray-700 text-gray-400 rounded-lg hover:bg-gray-600 hover:text-white transition-colors"
+                              className="p-2 bg-mot-surface-subtle text-gray-400 rounded-lg hover:bg-mot-gold/20 hover:text-white transition-colors"
                               title="Reset to default"
                             >
                               <RotateCcw className="w-4 h-4" />

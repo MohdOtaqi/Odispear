@@ -11,6 +11,7 @@ import {
   addDMReaction,
   removeDMReaction,
   leaveDM,
+  startDMCall,
 } from '../controllers/dmController';
 
 const router = Router();
@@ -34,5 +35,8 @@ router.delete('/messages/:messageId', deleteDMMessage);
 // DM reactions
 router.post('/messages/:messageId/reactions', addDMReaction);
 router.delete('/messages/:messageId/reactions/:emoji', removeDMReaction);
+
+// DM voice/video calls
+router.post('/:channelId/call', startDMCall);
 
 export default router;

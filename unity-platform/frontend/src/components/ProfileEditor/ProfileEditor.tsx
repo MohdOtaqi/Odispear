@@ -169,9 +169,9 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-3xl bg-[#313338] rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+      <div className="w-full max-w-3xl bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border overflow-hidden animate-scale-in">
         {/* Banner */}
-        <div className="relative h-32 bg-gradient-to-r from-purple-600 to-blue-600 overflow-hidden">
+        <div className="relative h-32 bg-gradient-to-r from-mot-gold-deep via-mot-gold to-mot-gold-light overflow-hidden">
           {(bannerPreview || profileData.banner_url) && (
             <img 
               src={bannerPreview || profileData.banner_url} 
@@ -200,7 +200,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
           <div className="flex items-start justify-between -mt-20 mb-8">
             <div className="flex items-end gap-4">
               <div className="relative">
-                <div className="w-24 h-24 rounded-full bg-[#2b2d31] border-4 border-[#313338] overflow-hidden">
+                <div className="w-24 h-24 rounded-full bg-mot-surface border-4 border-mot-surface-subtle overflow-hidden">
                   {(avatarPreview || profileData.avatar_url) ? (
                     <img 
                       src={avatarPreview || profileData.avatar_url} 
@@ -208,7 +208,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-blue-600">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-mot-gold to-mot-gold-deep">
                       <User className="w-12 h-12 text-white" />
                     </div>
                   )}
@@ -222,7 +222,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
                 />
                 <button
                   onClick={() => avatarInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 p-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded-full transition-all"
+                  className="absolute bottom-0 right-0 p-1.5 bg-mot-gold text-mot-black hover:bg-mot-gold-light rounded-full transition-all"
                 >
                   <Camera className="w-4 h-4" />
                 </button>
@@ -234,7 +234,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all"
             >
               <X className="w-5 h-5" />
             </button>
@@ -289,7 +289,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
             </div>
 
             {/* Account Info */}
-            <div className="pt-6 border-t border-white/10 space-y-4">
+            <div className="pt-6 border-t border-mot-border space-y-4">
               <h3 className="text-lg font-semibold text-white">Account Information</h3>
               
               {/* Username (read-only) */}
@@ -336,7 +336,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
             </div>
 
             {/* Security */}
-            <div className="pt-6 border-t border-white/10">
+            <div className="pt-6 border-t border-mot-border">
               <h3 className="text-lg font-semibold text-white mb-4">Security</h3>
               
               {!showPasswordChange ? (
@@ -349,7 +349,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
                   Change Password
                 </Button>
               ) : (
-                <div className="space-y-4 p-4 bg-[#2b2d31] rounded-lg">
+                <div className="space-y-4 p-4 bg-mot-surface rounded-lg border border-mot-border">
                   <div>
                     <label className="block text-sm font-semibold text-gray-300 mb-2">
                       Current Password
@@ -408,7 +408,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-mot-border">
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <AlertCircle className="w-4 h-4" />
               <span>Changes are saved automatically</span>

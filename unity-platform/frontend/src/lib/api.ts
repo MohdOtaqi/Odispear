@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// Use relative URLs so it works on both HTTP and HTTPS
+// Use relative URL - works for both local dev and tunnel since frontend is served from backend
+const BACKEND_URL = '/api/v1';
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: BACKEND_URL,
   headers: {
     'Content-Type': 'application/json',
   },

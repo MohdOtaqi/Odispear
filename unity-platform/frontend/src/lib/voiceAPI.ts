@@ -6,7 +6,9 @@ interface DailyToken {
 }
 
 export const voiceAPI = {
-  // Get token to join Daily.co room
-  getVoiceToken: (channelId: string) =>
-    api.get<DailyToken>(`/voice/channels/${channelId}/token`),
+  // Get token to join Daily.co room with optimal region
+  getVoiceToken: (channelId: string, region?: string) =>
+    api.get<DailyToken>(`/voice/channels/${channelId}/token`, {
+      params: region ? { region } : undefined,
+    }),
 };

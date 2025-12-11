@@ -25,12 +25,12 @@ export const Button = React.memo(
       const baseStyles = 'inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus-ring disabled:opacity-50 disabled:cursor-not-allowed';
       
       const variants = {
-        primary: 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5',
-        secondary: 'bg-[#2b2d31] hover:bg-[#3f4147] text-white border border-white/10',
+        primary: 'bg-gradient-to-b from-mot-gold-light via-mot-gold to-mot-gold-deep text-mot-black font-bold shadow-gold-glow-sm hover:shadow-gold-glow hover:scale-[1.02] active:scale-[0.98]',
+        secondary: 'bg-mot-surface hover:bg-mot-surface-subtle text-white border border-mot-border hover:border-mot-gold/30',
         success: 'bg-green-600 hover:bg-green-700 text-white shadow-lg',
         danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg',
-        ghost: 'hover:bg-white/10 text-gray-300 hover:text-white',
-        link: 'text-blue-400 hover:text-blue-300 hover:underline',
+        ghost: 'hover:bg-mot-gold/10 text-gray-300 hover:text-mot-gold',
+        link: 'text-mot-gold hover:text-mot-gold-light hover:underline',
       };
 
       const sizes = {

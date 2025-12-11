@@ -6,22 +6,27 @@ import { DMList } from '../components/layout/DMList';
 import { MemberList } from '../components/layout/MemberList';
 import { MessageList } from '../components/chat/MessageList';
 import { MessageInput } from '../components/chat/MessageInput';
+import { DMHeader } from '../components/chat/DMHeader';
 import { CreateGuildModal } from '../components/modals/CreateGuildModal';
 import { UserSettingsModal } from '../components/modals/UserSettingsModal';
 import { FriendsPage } from './FriendsPage';
 import UserProfile from '../components/UserProfile';
+import { UserProfileModal } from '../components/UserProfileModal';
 import { ServerSettings } from '../components/ServerSettings/ServerSettings';
 import { InviteModal } from '../components/modals/InviteModal';
 import { ProfileEditor } from '../components/ProfileEditor/ProfileEditor';
 import { ServerDropdown } from '../components/ServerMenu/ServerDropdown';
 import { CreateChannelModal } from '../components/modals/CreateChannelModal';
+import { CreateCategoryModal } from '../components/modals/CreateCategoryModal';
 import { VoicePanelAdvanced } from '../components/VoiceChat/VoicePanelAdvanced';
+import { VoiceChannelView } from '../components/VoiceChat/VoiceChannelView';
 import { useVoiceChat } from '../components/VoiceChat/VoiceChatProvider';
 import { useAuthStore } from '../store/authStore';
 import { useGuildStore } from '../store/guildStore';
 import { useMessageStore } from '../store/messageStore';
 import { useDMStore } from '../store/dmStore';
 import { socketManager } from '../lib/socket';
+import { guildAPI } from '../lib/api';
 import { Hash, Users, Settings, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -39,6 +44,9 @@ export const MainApp: React.FC = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   const { user, isAuthenticated } = useAuthStore();
   const { guilds, currentGuild, channels, fetchGuilds, selectGuild } = useGuildStore();
@@ -53,6 +61,7 @@ export const MainApp: React.FC = () => {
     setCurrentChannel 
   } = useMessageStore();
   const {
+    dmChannels,
     currentDMChannel,
     fetchDMChannels,
     selectDMChannel,
@@ -63,6 +72,40 @@ export const MainApp: React.FC = () => {
 
   const isOnFriendsPage = location.pathname.includes('/friends');
   const isOnDMsPage = location.pathname.includes('/dms');
+
+  // Sync DM channel from URL
+  useEffect(() => {
+    const match = location.pathname.match(/\/app\/dms\/(.+)/);
+    if (match && dmChannels.length > 0) {
+      const dmId = match[1];
+      if (dmId && dmId !== currentDMChannelId) {
+        setCurrentDMChannelId(dmId);
+        selectDMChannel(dmId);
+      }
+    }
+  }, [location.pathname, dmChannels]);
+
+  // Fetch members when guild changes
+  const fetchMembers = async () => {
+    if (currentGuild?.id) {
+      try {
+        const res = await guildAPI.getMembers(currentGuild.id);
+        setMembers(res.data);
+      } catch (err) {
+        console.error('Failed to fetch members:', err);
+      }
+    } else {
+      setMembers([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembers();
+    
+    // Also refresh members every 30 seconds to catch any missed presence updates
+    const interval = setInterval(fetchMembers, 30000);
+    return () => clearInterval(interval);
+  }, [currentGuild?.id]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -95,6 +138,24 @@ export const MainApp: React.FC = () => {
       toast.success(`${data.username} accepted your friend request`);
     });
 
+    // Presence updates - update member status in real-time
+    const handlePresenceUpdate = (data: { user_id: string; status: string; username?: string }) => {
+      console.log('Presence update received:', data);
+      setMembers(prev => {
+        // Check if user exists in members list
+        const userExists = prev.some(m => m.id === data.user_id);
+        if (userExists) {
+          return prev.map(member => 
+            member.id === data.user_id 
+              ? { ...member, status: data.status }
+              : member
+          );
+        }
+        return prev;
+      });
+    };
+    socketManager.on('presence.update', handlePresenceUpdate);
+
     return () => {
       socketManager.off('message.create', handleNewMessage);
       socketManager.off('message.update', handleMessageUpdate);
@@ -104,6 +165,7 @@ export const MainApp: React.FC = () => {
       socketManager.off('dm.message.create', handleNewDMMessage);
       socketManager.off('dm.message.update', handleDMMessageUpdate);
       socketManager.off('dm.message.delete', handleDMMessageDelete);
+      socketManager.off('presence.update', handlePresenceUpdate);
     };
   }, [isAuthenticated]);
 
@@ -140,72 +202,73 @@ export const MainApp: React.FC = () => {
   const currentChannel = channels.find((c) => c.id === currentChannelId);
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/5 via-blue-900/5 to-purple-900/5 pointer-events-none" />
+    <div className="h-screen flex overflow-hidden bg-mot-black">
+      {/* Ambient Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-mot-gold/3 rounded-full blur-[200px]" />
+        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-mot-gold/2 rounded-full blur-[150px]" />
+      </div>
       
-      {/* Left Navigation */}
-      <div className="flex flex-col w-[72px] bg-[#1e1f22]">
-        {/* Friends/DM Button */}
+      {/* Left Navigation - Unified Sidebar */}
+      <div className="flex flex-col w-[80px] bg-mot-surface py-3 items-center gap-2 overflow-y-auto custom-scrollbar">
+        {/* MOT Logo */}
         <button
           onClick={() => navigate('/app/friends')}
-          className={`w-12 h-12 m-2 rounded-xl flex items-center justify-center transition-all ${
-            isOnFriendsPage || isOnDMsPage
-              ? 'bg-gradient-to-br from-purple-600 to-blue-600 text-white shadow-lg'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-          }`}
+          className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:scale-105"
           title="Friends & DMs"
         >
-          <Users className="w-6 h-6" />
+          <img 
+            src="/MOT.gif" 
+            alt="MOT" 
+            className={`w-16 h-16 rounded-xl transition-all ${
+              isOnFriendsPage || isOnDMsPage 
+                ? 'drop-shadow-[0_0_12px_rgba(245,166,35,0.6)]' 
+                : 'opacity-90 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(245,166,35,0.4)]'
+            }`}
+          />
         </button>
 
-        <div className="h-px bg-white/10 mx-2 mb-2" />
+        <div className="w-8 h-0.5 bg-mot-border rounded-full" />
 
-        {/* Guild List */}
-        <GuildList
-          currentGuildId={currentGuild?.id}
-          onGuildSelect={handleGuildSelect}
-          onCreateGuild={() => setShowCreateGuild(true)}
-        />
+        {/* Guild List - Inline */}
+        <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto custom-scrollbar">
+          {/* Guilds will be rendered here */}
+          <GuildList
+            currentGuildId={currentGuild?.id}
+            onGuildSelect={handleGuildSelect}
+            onCreateGuild={() => setShowCreateGuild(true)}
+          />
+        </div>
+
+        <div className="w-8 h-0.5 bg-mot-border rounded-full" />
 
         {/* Bottom Actions */}
-        <div className="mt-auto p-2 space-y-2">
-          <button
-            onClick={() => setShowProfileEditor(true)}
-            className="w-12 h-12 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all flex items-center justify-center"
-            title="Edit Profile"
-          >
-            <User className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setShowUserSettings(true)}
-            className="w-12 h-12 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all flex items-center justify-center"
-            title="User Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
+        <button
+          onClick={() => setShowProfileEditor(true)}
+          className="w-12 h-12 rounded-2xl bg-mot-surface-subtle hover:bg-mot-gold text-gray-400 hover:text-mot-black transition-all flex items-center justify-center hover:rounded-xl"
+          title="Edit Profile"
+        >
+          <User className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => setShowUserSettings(true)}
+          className="w-12 h-12 rounded-2xl bg-mot-surface-subtle hover:bg-mot-gold text-gray-400 hover:text-mot-black transition-all flex items-center justify-center hover:rounded-xl"
+          title="User Settings"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
       </div>
 
       <Routes>
-        <Route path="/friends" element={<><DMList currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} /><FriendsPage /></>} />
+        <Route path="/friends" element={<><DMList channels={dmChannels as any} currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} /><FriendsPage /></>} />
         
         <Route path="/dms/:dmId" element={
           <>
-            <DMList currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} />
+            <DMList channels={dmChannels as any} currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} />
             <div className="flex-1 flex flex-col relative">
               {currentDMChannel ? (
                 <>
-                  <div className="h-12 px-4 flex items-center justify-between border-b border-white/5 glass-effect backdrop-blur-sm shadow-sm">
-                    <div className="flex items-center flex-1 min-w-0">
-                      <Users className="h-5 w-5 text-purple-400 mr-2" />
-                      <h3 className="font-bold text-white">
-                        {currentDMChannel.type === 'group_dm'
-                          ? currentDMChannel.name || 'Group DM'
-                          : currentDMChannel.participants?.find((p: any) => p.user_id !== user?.id)?.username || 'DM'}
-                      </h3>
-                    </div>
-                  </div>
+                  <DMHeader channel={currentDMChannel as any} />
                   <MessageList channelId={currentDMChannel.id} isDM />
                   <MessageInput channelId={currentDMChannel.id} isDM />
                 </>
@@ -232,6 +295,7 @@ export const MainApp: React.FC = () => {
                     onOpenServerSettings={() => setShowServerSettings(true)}
                     onOpenInvite={() => setShowInviteModal(true)}
                     onCreateChannel={() => setShowCreateChannel(true)}
+                    onCreateCategory={() => setShowCreateCategory(true)}
                   />
                   
                   <Sidebar 
@@ -240,6 +304,7 @@ export const MainApp: React.FC = () => {
                     onVoiceChannelJoin={handleVoiceChannelJoin}
                     onOpenServerSettings={() => setShowServerSettings(true)}
                     onOpenInvite={() => setShowInviteModal(true)}
+                    onCreateChannel={() => setShowCreateChannel(true)}
                   />
                   
                   {/* Voice Panel */}
@@ -256,12 +321,25 @@ export const MainApp: React.FC = () => {
                 </div>
 
                 <div className="flex-1 flex flex-col relative">
-                  {currentChannel ? (
+                  {/* Show Voice Channel View when connected to voice */}
+                  {showVoiceChat && selectedVoiceChannelId ? (
+                    <VoiceChannelView
+                      channelId={selectedVoiceChannelId}
+                      channelName={channels.find(c => c.id === selectedVoiceChannelId)?.name || 'Voice Channel'}
+                      connectedUsers={[]}
+                      onJoinVoice={() => handleVoiceChannelJoin(selectedVoiceChannelId)}
+                      onLeave={async () => {
+                        await leaveVoiceChannel();
+                        setShowVoiceChat(false);
+                        setSelectedVoiceChannelId(null);
+                      }}
+                    />
+                  ) : currentChannel ? (
                     <>
-                      <div className="h-12 px-4 flex items-center justify-between border-b border-white/5 glass-effect backdrop-blur-sm shadow-sm">
+                      <div className="h-12 px-4 flex items-center justify-between border-b border-mot-border bg-mot-surface shadow-sm">
                         <div className="flex items-center flex-1 min-w-0">
-                          <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center mr-2 animate-glow">
-                            <Hash className="h-4 w-4 text-white" />
+                          <div className="w-6 h-6 rounded bg-mot-gold/20 flex items-center justify-center mr-2">
+                            <Hash className="h-4 w-4 text-mot-gold" />
                           </div>
                           <h3 className="font-bold text-white">{currentChannel.name}</h3>
                           {currentChannel.topic && (
@@ -278,8 +356,8 @@ export const MainApp: React.FC = () => {
                   ) : (
                     <div className="flex-1 flex items-center justify-center">
                       <div className="text-center animate-fade-in">
-                        <div className="w-20 h-20 bg-gradient-to-br from-purple-600/20 to-blue-600/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-float">
-                          <Hash className="w-10 h-10 text-purple-400" />
+                        <div className="w-20 h-20 bg-mot-gold/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-float">
+                          <Hash className="w-10 h-10 text-mot-gold" />
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">No Channel Selected</h3>
                         <p className="text-gray-400">Select a channel to start chatting</p>
@@ -288,22 +366,26 @@ export const MainApp: React.FC = () => {
                   )}
                 </div>
 
-                <MemberList members={[]} ownerId={currentGuild.owner_id} />
+                <MemberList 
+                  members={members} 
+                  ownerId={currentGuild.owner_id}
+                  onMemberClick={(member) => setSelectedMemberId(member.id)}
+                />
               </>
             ) : guilds.length === 0 ? (
               <div className="flex-1 flex items-center justify-center relative">
-                <div className="absolute top-20 left-20 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl animate-float" />
-                <div className="absolute bottom-20 right-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+                <div className="absolute top-20 left-20 w-64 h-64 bg-mot-gold/5 rounded-full blur-3xl animate-float" />
+                <div className="absolute bottom-20 right-20 w-80 h-80 bg-mot-gold/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
                 
                 <div className="text-center relative z-10 animate-scale-in">
-                  <div className="w-24 h-24 bg-gradient-to-br from-purple-600 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 animate-glow shadow-2xl">
-                    <Hash className="w-12 h-12 text-white" />
+                  <div className="mx-auto mb-6">
+                    <img src="/MOT.gif" alt="MOT" className="w-20 h-20 mx-auto" />
                   </div>
-                  <h2 className="text-3xl font-bold gradient-text mb-3">Welcome to Unity Platform!</h2>
+                  <h2 className="text-3xl font-bold text-white mb-3">Welcome to <span className="text-mot-gold">MOT</span>!</h2>
                   <p className="text-gray-400 mb-6 text-lg">Create or join a server to get started</p>
                   <button
                     onClick={() => setShowCreateGuild(true)}
-                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-all hover-lift shadow-lg"
+                    className="px-8 py-3 bg-gradient-to-b from-mot-gold-light via-mot-gold to-mot-gold-deep text-mot-black font-bold rounded-xl transition-all hover:scale-105 shadow-gold-glow"
                   >
                     Create Your First Server
                   </button>
@@ -334,6 +416,7 @@ export const MainApp: React.FC = () => {
       )}
       <ProfileEditor isOpen={showProfileEditor} onClose={() => setShowProfileEditor(false)} />
       <CreateChannelModal isOpen={showCreateChannel} onClose={() => setShowCreateChannel(false)} />
+      <CreateCategoryModal isOpen={showCreateCategory} onClose={() => setShowCreateCategory(false)} />
       
       {user && (
         <UserProfile
@@ -351,6 +434,15 @@ export const MainApp: React.FC = () => {
             level: 5,
             xp: 250,
           }}
+        />
+      )}
+
+      {/* User Profile Modal - opens when clicking on a member */}
+      {selectedMemberId && (
+        <UserProfileModal
+          userId={selectedMemberId}
+          onClose={() => setSelectedMemberId(null)}
+          guildId={currentGuild?.id}
         />
       )}
 

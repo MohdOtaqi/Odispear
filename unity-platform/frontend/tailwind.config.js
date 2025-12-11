@@ -8,14 +8,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Unity Platform - Unique Gaming Color System
+        // MOT Design System - Luxury Dark Mode
+        mot: {
+          black: '#0A0A0B',
+          surface: '#141416',
+          'surface-subtle': '#1C1C1F',
+          border: '#2A2A2E',
+          'border-glow': '#3D3D42',
+          gold: '#F5A623',
+          'gold-light': '#FFD93D',
+          'gold-deep': '#C4841D',
+        },
+        // Legacy Unity Platform colors
         primary: {
           50: '#e0f9ff',
           100: '#b3f0ff',
           200: '#80e7ff',
           300: '#4ddeff',
           400: '#26d5ff',
-          500: '#00ccff', // Main brand - Neon Cyan
+          500: '#00ccff',
           600: '#00b8e6',
           700: '#009fcc',
           800: '#0086b3',
@@ -27,7 +38,7 @@ export default {
           200: '#ff80df',
           300: '#ff4dd3',
           400: '#ff26cb',
-          500: '#ff00c3', // Electric Magenta
+          500: '#ff00c3',
           600: '#e600b0',
           700: '#cc009d',
           800: '#b3008a',
@@ -42,9 +53,9 @@ export default {
           500: '#5d6d85',
           600: '#485666',
           700: '#353f4d',
-          800: '#1f2630', // Main BG
-          850: '#181d26', // Panels
-          900: '#0f1319', // Darkest
+          800: '#1f2630',
+          850: '#181d26',
+          900: '#0f1319',
         },
         success: '#00ff88',
         warning: '#ffaa00',
@@ -57,12 +68,17 @@ export default {
         'gradient-success': 'linear-gradient(135deg, #00ff88 0%, #00cc99 100%)',
         'gradient-danger': 'linear-gradient(135deg, #ff3366 0%, #ff6699 100%)',
         'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',
+        'gradient-gold': 'linear-gradient(135deg, #FFD93D 0%, #F5A623 50%, #C4841D 100%)',
+        'gradient-gold-subtle': 'linear-gradient(135deg, rgba(245,166,35,0.1) 0%, rgba(255,217,61,0.05) 100%)',
       },
       boxShadow: {
         'glow': '0 0 20px rgba(0, 204, 255, 0.4)',
         'glow-accent': '0 0 20px rgba(255, 0, 195, 0.4)',
         'glow-success': '0 0 20px rgba(0, 255, 136, 0.4)',
         'glass': '0 8px 32px rgba(0, 0, 0, 0.37)',
+        'gold-glow': '0 0 30px rgba(245, 166, 35, 0.4)',
+        'gold-glow-lg': '0 0 50px rgba(245, 166, 35, 0.5)',
+        'gold-glow-sm': '0 4px 20px rgba(245, 166, 35, 0.3)',
       },
       animation: {
         'slide-in-up': 'slideInUp 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -73,6 +89,9 @@ export default {
         'float': 'float 3s cubic-bezier(0.4, 0, 0.2, 1) infinite',
         'shimmer': 'shimmer 2s linear infinite',
         'spin-slow': 'spin 3s linear infinite',
+        'gold-pulse': 'goldPulse 2s ease-in-out infinite',
+        'glow-float': 'glowFloat 6s ease-in-out infinite',
+        'border-glow': 'borderGlow 3s ease-in-out infinite',
       },
       keyframes: {
         slideInUp: {
@@ -102,6 +121,18 @@ export default {
         shimmer: {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
+        },
+        goldPulse: {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(245, 166, 35, 0.4)' },
+          '50%': { boxShadow: '0 0 40px rgba(245, 166, 35, 0.6)' },
+        },
+        glowFloat: {
+          '0%, 100%': { transform: 'translateY(0)', filter: 'brightness(1)' },
+          '50%': { transform: 'translateY(-10px)', filter: 'brightness(1.1)' },
+        },
+        borderGlow: {
+          '0%, 100%': { borderColor: 'rgba(245, 166, 35, 0.3)' },
+          '50%': { borderColor: 'rgba(245, 166, 35, 0.6)' },
         },
       },
       backdropBlur: {

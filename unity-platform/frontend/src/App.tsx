@@ -4,29 +4,41 @@ import { Toaster } from 'react-hot-toast';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { MainApp } from './pages/MainApp';
-import Home from './pages/Home';
+import Home from './pages/HomeMOT';
 import { InvitePage } from './pages/InvitePage';
 import { useAuthStore } from './store/authStore';
+import { useVoiceUsersStore } from './store/voiceUsersStore';
 import { VoiceChatProvider } from './components/VoiceChat/VoiceChatProvider';
+import { useGlobalKeybinds } from './hooks/useGlobalKeybinds';
 
 function App() {
   const { isAuthenticated, isInitialized, fetchCurrentUser } = useAuthStore();
+  const initializeVoiceListeners = useVoiceUsersStore(state => state.initializeListeners);
+  
+  // Initialize global keybinds for voice shortcuts
+  useGlobalKeybinds();
 
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
 
+  // Initialize voice channel user listeners
+  useEffect(() => {
+    initializeVoiceListeners();
+  }, [initializeVoiceListeners]);
+
   // Show loading screen while checking for existing session
   if (!isInitialized) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
+      <div className="h-screen flex items-center justify-center bg-mot-black">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400 text-lg">Loading Unity Platform...</p>
+          <img src="/MOT.gif" alt="MOT" className="h-28 w-auto mx-auto mb-6" />
+          <div className="w-12 h-12 border-4 border-mot-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400 text-lg">Loading MOT...</p>
         </div>
       </div>
     );
-  }
+  } 
 
   return (
     <BrowserRouter>
@@ -35,14 +47,14 @@ function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#2b2d31',
+            background: '#141416',
             color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)'
+            border: '1px solid #2A2A2E'
           },
           success: {
             iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
+              primary: '#F5A623',
+              secondary: '#0A0A0B',
             },
           },
           error: {
