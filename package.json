@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Unity Platform - Discord-like chat application",
   "scripts": {
-    "build:all": "cd unity-platform/frontend && npm install && npm run build && cd ../backend && npm install && npm run build",
+    "build:all": "cd unity-platform/frontend && npm ci --include=dev && npm run build && cd ../backend && npm ci --include=dev && npm run build",
     "start": "cd unity-platform/backend && npm start"
   },
   "engines": {
