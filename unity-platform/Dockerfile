@@ -5,7 +5,7 @@ FROM node:18-alpine AS backend-build
 WORKDIR /app/backend
 COPY backend/package*.json ./
 # Install all deps (including dev) to compile TypeScript
-RUN npm ci
+RUN npm install
 COPY backend ./
 RUN npm run build
 
@@ -13,7 +13,7 @@ RUN npm run build
 FROM node:18-alpine AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
 COPY frontend ./
 RUN npm run build
 
