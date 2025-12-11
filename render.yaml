@@ -1,11 +1,17 @@
 services:
-  # Main web service
+  # PostgreSQL database
+  - type: postgres
+    name: postgres
+    databaseName: odispear
+    user: odispear
+    
+  # Main web service  
   - type: web
     name: odispear
     env: node
     plan: free
-    buildCommand: cd unity-platform && npm run build:all
-    startCommand: cd unity-platform/backend && npm start
+    buildCommand: npm run build:all
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -20,15 +26,3 @@ services:
         fromDatabase:
           name: postgres
           property: connectionString
-    
-  # PostgreSQL database
-  - type: pgsql
-    name: postgres
-    plan: free
-    databaseName: odispear
-    user: odispear
-
-# Build settings
-buildCommand: |
-  cd unity-platform/frontend && npm install && npm run build &&
-  cd ../backend && npm install && npm run build
