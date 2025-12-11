@@ -34,9 +34,15 @@ async function runMigrations() {
     }
 
     console.log('✓ All migrations completed successfully');
-  } catch (error) {
-    console.error('✗ Migration failed:', error);
-    process.exit(1);
+  } catch (error: unknown) {
+    // Check if error is "relation already exists" (code 42P07)
+    const pgError = error as { code?: string };
+    if (pgError.code === '42P07') {
+      console.log('✓ Database tables already exist - skipping migration');
+    } else {
+      console.error('✗ Migration failed:', error);
+      process.exit(1);
+    }
   } finally {
     await pool.end();
   }
