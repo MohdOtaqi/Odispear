@@ -153,7 +153,13 @@ export const MessageList = React.memo<MessageListProps>(({ channelId, isDM = fal
   
   const channelMessages = useMessageStore((state) => state.messages[channelId] || []);
   const dmMessages = useDMStore((state) => state.messages[channelId] || []);
-  const messages: Message[] = isDM ? (dmMessages as any) : channelMessages;
+  const rawMessages: Message[] = isDM ? (dmMessages as any) : channelMessages;
+  
+  // ALWAYS sort messages by created_at to ensure chronological order (oldest -> newest)
+  const messages = [...rawMessages].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+  
   const currentUser = useAuthStore((state) => state.user);
 
   // Detect if user is at bottom of scroll
