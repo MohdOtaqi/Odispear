@@ -23,7 +23,7 @@ const tabs = [
 export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('account');
   const { user, logout } = useAuthStore();
-  
+
   const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState(user?.email || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -50,14 +50,20 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-4xl h-[600px] bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border flex overflow-hidden animate-scale-in">
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-4xl max-h-[85vh] bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border flex overflow-hidden animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Sidebar */}
-        <div className="w-60 bg-mot-surface p-4 flex flex-col">
+        <div className="w-60 bg-mot-surface p-4 flex flex-col flex-shrink-0">
           <div className="mb-6">
             <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2">User Settings</h2>
           </div>
-          
+
           <nav className="flex-1 space-y-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -65,11 +71,10 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    activeTab === tab.id
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${activeTab === tab.id
                       ? 'bg-mot-gold/20 text-mot-gold'
                       : 'text-gray-400 hover:bg-mot-gold/10 hover:text-gray-300'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}
