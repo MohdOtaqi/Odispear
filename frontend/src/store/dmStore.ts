@@ -55,7 +55,7 @@ interface DMStore {
   addDMReaction: (messageId: string, emoji: string) => Promise<void>;
   removeDMReaction: (messageId: string, emoji: string) => Promise<void>;
   leaveGroupDM: (dmChannelId: string) => Promise<void>;
-  
+
   // WebSocket handlers
   handleNewDMMessage: (message: DMMessage) => void;
   handleDMMessageUpdate: (message: DMMessage) => void;
@@ -88,16 +88,16 @@ export const useDMStore = create<DMStore>((set, get) => ({
     try {
       const response = await dmAPI.createDM(userId);
       const dmChannel = response.data;
-      
+
       set((state) => ({
         dmChannels: [dmChannel, ...state.dmChannels],
         currentDMChannel: dmChannel,
         loading: false,
       }));
-      
+
       // Join the DM channel via WebSocket
       socketManager.emit('dm.join', { dm_channel_id: dmChannel.id });
-      
+
       toast.success('DM channel created');
       return dmChannel;
     } catch (error: any) {
@@ -112,13 +112,13 @@ export const useDMStore = create<DMStore>((set, get) => ({
     try {
       const response = await dmAPI.createGroupDM(userIds, name);
       const dmChannel = response.data;
-      
+
       set((state) => ({
         dmChannels: [dmChannel, ...state.dmChannels],
         currentDMChannel: dmChannel,
         loading: false,
       }));
-      
+
       socketManager.emit('dm.join', { dm_channel_id: dmChannel.id });
       toast.success('Group DM created');
       return dmChannel;
@@ -136,10 +136,10 @@ export const useDMStore = create<DMStore>((set, get) => ({
       if (get().currentDMChannel) {
         socketManager.emit('dm.leave', { dm_channel_id: get().currentDMChannel!.id });
       }
-      
+
       set({ currentDMChannel: channel });
       socketManager.emit('dm.join', { dm_channel_id: dmChannelId });
-      
+
       // Load messages if not already loaded
       if (!get().messages[dmChannelId]) {
         get().loadDMMessages(dmChannelId);
@@ -166,15 +166,9 @@ export const useDMStore = create<DMStore>((set, get) => ({
 
   sendDMMessage: async (dmChannelId: string, content: string, attachments?: any[]) => {
     try {
-      const response = await dmAPI.sendDMMessage(dmChannelId, { content, attachments });
-      const newMessage = response.data;
-      // Add message to store immediately
-      set((state) => ({
-        messages: {
-          ...state.messages,
-          [dmChannelId]: [...(state.messages[dmChannelId] || []), newMessage],
-        },
-      }));
+      // Send message to API - the WebSocket event will add it to the store
+      // This prevents duplicates from both API response + WebSocket event
+      await dmAPI.sendDMMessage(dmChannelId, { content, attachments });
     } catch (error: any) {
       toast.error('Failed to send message');
     }
