@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Avatar } from '../ui/Avatar';
 import { Tooltip } from '../ui/Tooltip';
-import { formatTime } from '../../lib/utils';
+import { formatTime, formatMessageDate, isSameDay } from '../../lib/utils';
 import { useMessageStore } from '../../store/messageStore';
 import { useDMStore } from '../../store/dmStore';
 import { useAuthStore } from '../../store/authStore';
@@ -63,11 +63,13 @@ const MessageItem = React.memo<{
               <span className="font-semibold text-white hover:underline cursor-pointer">
                 {message.display_name || message.username}
               </span>
-              <span className="text-xs text-gray-500">
-                {formatTime(message.created_at)}
-              </span>
+              <Tooltip content={new Date(message.created_at).toLocaleString()} position="top">
+                <span className="text-xs text-gray-500 hover:text-gray-400 cursor-default">
+                  {formatTime(message.created_at)}
+                </span>
+              </Tooltip>
               {message.edited_at && (
-                <Tooltip content={`Edited ${formatTime(message.edited_at)}`}>
+                <Tooltip content={`Edited at ${new Date(message.edited_at).toLocaleString()}`}>
                   <span className="text-xs text-gray-500">(edited)</span>
                 </Tooltip>
               )}
@@ -191,14 +193,29 @@ export const MessageList = React.memo<MessageListProps>(({ channelId, isDM = fal
       onScroll={handleScroll}
     >
       <div className="py-4">
-        {messages.map((message, index) => (
-          <MessageItem
-            key={message.id}
-            message={message}
-            isOwn={message.author_id === currentUser?.id}
-            isGrouped={shouldGroupMessage(message, messages[index - 1])}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const prevMessage = messages[index - 1];
+          const showDateSeparator = !prevMessage || !isSameDay(message.created_at, prevMessage.created_at);
+          
+          return (
+            <React.Fragment key={message.id}>
+              {showDateSeparator && (
+                <div className="flex items-center justify-center my-4 px-4">
+                  <div className="flex-1 h-px bg-gray-700"></div>
+                  <div className="px-4 text-xs text-gray-400 font-semibold">
+                    {formatMessageDate(message.created_at)}
+                  </div>
+                  <div className="flex-1 h-px bg-gray-700"></div>
+                </div>
+              )}
+              <MessageItem
+                message={message}
+                isOwn={message.author_id === currentUser?.id}
+                isGrouped={shouldGroupMessage(message, prevMessage)}
+              />
+            </React.Fragment>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 

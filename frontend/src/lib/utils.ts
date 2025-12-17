@@ -34,3 +34,35 @@ export function formatTime(date: string | Date): string {
 export function formatDateTime(date: string | Date): string {
   return new Date(date).toLocaleString();
 }
+
+export function formatMessageDate(date: string | Date): string {
+  const d = new Date(date);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  // Reset time to compare dates only
+  const messageDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const yesterdayDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+  
+  if (messageDate.getTime() === todayDate.getTime()) {
+    return 'Today';
+  } else if (messageDate.getTime() === yesterdayDate.getTime()) {
+    return 'Yesterday';
+  } else if (messageDate.getTime() > todayDate.getTime() - 7 * 24 * 60 * 60 * 1000) {
+    // Within last 7 days - show day name
+    return d.toLocaleDateString('en-US', { weekday: 'long' });
+  } else {
+    // Show full date
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+}
+
+export function isSameDay(date1: string | Date, date2: string | Date): boolean {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
