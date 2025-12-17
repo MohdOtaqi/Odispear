@@ -155,12 +155,12 @@ export const getChannelMessages = async (
     }
 
     queryText += ` GROUP BY m.id, u.username, u.display_name, u.avatar_url`;
-    queryText += ` ORDER BY m.created_at DESC LIMIT $${paramCount + 1}`;
+    queryText += ` ORDER BY m.created_at ASC LIMIT $${paramCount + 1}`;
     params.push(limit);
 
     const result = await query(queryText, params);
 
-    res.json(result.rows.reverse());
+    res.json(result.rows);
   } catch (error) {
     next(error);
   }

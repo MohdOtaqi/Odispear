@@ -51,7 +51,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       set((state) => ({
         messages: {
           ...state.messages,
-          [channelId]: response.data.reverse(), // Reverse to show oldest first
+          [channelId]: response.data,
         },
         isLoading: false,
       }));
