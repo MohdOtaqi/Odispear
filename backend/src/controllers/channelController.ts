@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { query } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
+import { io } from '../index';
 
 export const createChannel = async (
   req: AuthRequest,
@@ -190,11 +191,16 @@ export const createMessage = async (
       [userId]
     );
 
-    res.status(201).json({
+    const fullMessage = {
       ...message,
       ...userResult.rows[0],
       attachments: [],
-    });
+    };
+
+    // Broadcast new message to all users in the channel via WebSocket
+    io.to(`channel:${id}`).emit('message.create', fullMessage);
+
+    res.status(201).json(fullMessage);
   } catch (error) {
     next(error);
   }
