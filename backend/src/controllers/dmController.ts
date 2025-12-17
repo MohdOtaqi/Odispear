@@ -234,12 +234,11 @@ export const getDMMessages = async (
     }
 
     let queryText = `
-      SELECT m.id, m.content, m.author_id, m.dm_channel_id, m.created_at, m.updated_at,
+      SELECT m.id, m.content, m.author_id, m.dm_channel_id, m.created_at,
              u.username, u.display_name, u.avatar_url
       FROM dm_messages m
       JOIN users u ON m.author_id = u.id
       WHERE m.dm_channel_id = $1
-      AND m.deleted_at IS NULL
     `;
 
     const params: any[] = [channelId];
