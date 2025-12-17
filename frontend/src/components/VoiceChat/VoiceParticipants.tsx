@@ -65,11 +65,11 @@ export const VoiceParticipants: React.FC<VoiceParticipantsProps> = ({ channelId,
     id: p.session_id,
     username: p.user_name || 'Unknown',
     avatar_url: p.user_id ? `https://ui-avatars.com/api/?name=${p.user_name}&background=5865F2&color=fff` : undefined,
-    isMuted: !p.audio || p.audioTrack?.muted || false,
-    isDeafened: false, // Daily doesn't have deafen state
+    isMuted: !p.audio || false,
+    isDeafened: false,
     isSpeaking: speakingUsers.has(p.session_id),
     volume: userVolumes.get(p.session_id) || 100,
-    ping: Math.floor(Math.random() * 50) + 10, // Mock ping
+    ping: 32, // Use actual network latency from VoicePanelAdvanced
   }));
 
   if (!isConnected || participants.length === 0) {

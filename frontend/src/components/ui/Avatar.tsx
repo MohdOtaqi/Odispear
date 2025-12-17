@@ -47,7 +47,12 @@ export const Avatar = React.memo<AvatarProps>(({
 
   const getFallbackText = () => {
     if (fallback) return fallback;
-    if (alt) return alt.charAt(0).toUpperCase();
+    if (alt) {
+      const firstChar = alt.charAt(0);
+      // If username starts with a number, show the number
+      if (/\d/.test(firstChar)) return firstChar;
+      return firstChar.toUpperCase();
+    }
     return '?';
   };
 

@@ -192,45 +192,36 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // 4. Set up event listeners
       co.on('joined-meeting', async (e) => {
-        console.log('[Voice] Joined meeting:', e);
-        console.log('[Voice] Local participant:', e.participants.local);
-        console.log('[Voice] Local audio enabled:', e.participants.local?.audio);
         setIsConnected(true);
         setIsConnecting(false);
         setParticipants(Object.values(e.participants));
         setLocalParticipant(e.participants.local);
         toast.success(`Joined ${channelName}`);
 
-        // Apply noise suppression in background (don't block join)
+        // Apply noise suppression quickly without blocking
         setTimeout(async () => {
           try {
-            // Get microphone with noise suppression
             const rawStream = await navigator.mediaDevices.getUserMedia({
               audio: {
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true,
-                channelCount: 1,
-                sampleRate: 48000,
               },
               video: false,
             });
 
-            // Apply our custom noise gate
             const processedStream = await createNoiseSuppressedStream(rawStream);
             const audioTrack = processedStream.getAudioTracks()[0];
 
             if (audioTrack && callObjectRef.current) {
-              // Set the custom audio track
               await callObjectRef.current.setInputDevicesAsync({
                 audioSource: audioTrack,
               });
-              console.log('[Voice] ✅ Noise suppression enabled!');
             }
           } catch (err) {
             console.warn('[Voice] Could not enable noise suppression:', err);
           }
-        }, 500);
+        }, 200);
       });
 
       co.on('left-meeting', () => {

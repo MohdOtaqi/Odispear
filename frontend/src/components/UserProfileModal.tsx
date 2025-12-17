@@ -415,7 +415,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto animate-scale-in relative" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-gray-900 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in relative" onClick={(e) => e.stopPropagation()}>
         {/* Banner */}
         <div className="relative h-32 bg-gradient-to-r from-mot-gold-deep via-mot-gold to-mot-gold-light">
           {profile.banner && (

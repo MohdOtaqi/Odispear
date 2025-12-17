@@ -133,12 +133,16 @@ export const MainApp: React.FC = () => {
         icon: '👋',
         duration: 5000,
       });
+      // Refresh pending requests immediately
+      useFriendsStore.getState().fetchPendingRequests();
     });
 
     socketManager.on('friend.accepted', (data: any) => {
       toast.success(`${data.username || 'Friend'} accepted your friend request`);
-      // Refresh friends list immediately
-      useFriendsStore.getState().fetchFriends();
+      // Refresh friends and requests lists immediately
+      const friendsStore = useFriendsStore.getState();
+      friendsStore.fetchFriends();
+      friendsStore.fetchSentRequests();
       useFriendsStore.getState().fetchPendingRequests();
     });
 
