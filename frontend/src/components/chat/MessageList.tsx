@@ -75,8 +75,15 @@ const MessageItem = React.memo<{
               )}
             </div>
           )}
-          <div className="text-sm text-gray-200 break-words leading-relaxed">
+          <div className="text-sm text-gray-200 break-words leading-relaxed group/content relative">
             {message.content}
+            {isGrouped && (
+              <Tooltip content={new Date(message.created_at).toLocaleString()} position="top">
+                <span className="ml-2 text-xs text-gray-600 opacity-0 group-hover/content:opacity-100 transition-opacity cursor-default">
+                  {formatTime(message.created_at)}
+                </span>
+              </Tooltip>
+            )}
           </div>
 
           {/* Reactions placeholder */}

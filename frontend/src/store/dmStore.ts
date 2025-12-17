@@ -154,7 +154,7 @@ export const useDMStore = create<DMStore>((set, get) => ({
       set((state) => ({
         messages: {
           ...state.messages,
-          [dmChannelId]: response.data.reverse(),
+          [dmChannelId]: response.data,
         },
         loading: false,
       }));

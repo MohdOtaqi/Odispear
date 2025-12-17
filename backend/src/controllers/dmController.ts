@@ -256,12 +256,12 @@ export const getDMMessages = async (
       params.push(after);
     }
 
-    queryText += ` ORDER BY m.created_at DESC LIMIT $${paramCount + 1}`;
+    queryText += ` ORDER BY m.created_at ASC LIMIT $${paramCount + 1}`;
     params.push(limit);
 
     const result = await query(queryText, params);
 
-    res.json(result.rows.reverse());
+    res.json(result.rows);
   } catch (error) {
     next(error);
   }
