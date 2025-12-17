@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { 
-  X, Camera, Save, User, Mail, Hash, Calendar, 
-  Shield, AlertCircle 
+import {
+  X, Camera, Save, User, Mail, Hash, Calendar,
+  Shield, AlertCircle
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -37,7 +37,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
     avatar_url: user?.avatar_url,
     banner_url: user?.banner_url,
   });
-  
+
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -96,7 +96,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
   // Save profile changes
   const handleSave = useCallback(async () => {
     setLoading(true);
-    
+
     try {
       const updates: any = {
         display_name: profileData.display_name,
@@ -119,7 +119,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
       // Update profile
       const { data } = await api.patch('/users/profile', updates);
       updateUser(data);
-      
+
       toast.success('Profile updated successfully');
       onClose();
     } catch (error: any) {
@@ -154,7 +154,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
         currentPassword: passwordData.current,
         newPassword: passwordData.new
       });
-      
+
       toast.success('Password changed successfully');
       setPasswordData({ current: '', new: '', confirm: '' });
       setShowPasswordChange(false);
@@ -168,13 +168,19 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-3xl bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border overflow-hidden animate-scale-in">
-        {/* Banner */}
-        <div className="relative h-32 bg-gradient-to-r from-mot-gold-deep via-mot-gold to-mot-gold-light overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl max-h-[90vh] bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border overflow-hidden animate-scale-in flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Banner - Fixed height, doesn't scroll */}
+        <div className="relative h-32 bg-gradient-to-r from-mot-gold-deep via-mot-gold to-mot-gold-light overflow-hidden flex-shrink-0">
           {(bannerPreview || profileData.banner_url) && (
-            <img 
-              src={bannerPreview || profileData.banner_url} 
+            <img
+              src={bannerPreview || profileData.banner_url}
               alt="Banner"
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -194,16 +200,16 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-8">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           {/* Header with Avatar */}
           <div className="flex items-start justify-between -mt-20 mb-8">
             <div className="flex items-end gap-4">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full bg-mot-surface border-4 border-mot-surface-subtle overflow-hidden">
                   {(avatarPreview || profileData.avatar_url) ? (
-                    <img 
-                      src={avatarPreview || profileData.avatar_url} 
+                    <img
+                      src={avatarPreview || profileData.avatar_url}
                       alt="Avatar"
                       className="w-full h-full object-cover"
                     />
@@ -291,7 +297,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
             {/* Account Info */}
             <div className="pt-6 border-t border-mot-border space-y-4">
               <h3 className="text-lg font-semibold text-white">Account Information</h3>
-              
+
               {/* Username (read-only) */}
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-2">
@@ -338,7 +344,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
             {/* Security */}
             <div className="pt-6 border-t border-mot-border">
               <h3 className="text-lg font-semibold text-white mb-4">Security</h3>
-              
+
               {!showPasswordChange ? (
                 <Button
                   variant="secondary"
