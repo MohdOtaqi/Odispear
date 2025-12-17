@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
-import { Mail, Lock, Eye, EyeOff, Zap } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,8 +10,19 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const login = useAuthStore((state) => state.login);
+  const { login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get('redirect');
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirectTo || '/app', { replace: true });
+    }
+  }, [isAuthenticated, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,33 +30,51 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      toast.success('Logged in successfully!');
-      navigate('/app');
+      toast.success('Welcome back!');
+      navigate(redirectTo || '/app', { replace: true });
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Login failed');
+      toast.error(error.response?.data?.error || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-purple-900/20 animate-shimmer" />
-      
-      {/* Floating Orbs */}
-      <div className="absolute top-20 left-20 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-mot-black">
+      {/* Premium Animated Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Gradient Mesh */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_rgba(245,166,35,0.15)_0%,_transparent_50%)]" />
+          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(245,166,35,0.1)_0%,_transparent_40%)]" />
+          <div className="absolute bottom-0 left-1/2 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_rgba(245,166,35,0.08)_0%,_transparent_50%)]" />
+        </div>
+        
+        {/* Animated Grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(245,166,35,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(245,166,35,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+        
+        {/* Floating Orbs */}
+        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-mot-gold/40 rounded-full animate-pulse" style={{ animationDuration: '3s' }} />
+        <div className="absolute top-1/3 right-1/3 w-1.5 h-1.5 bg-mot-gold/30 rounded-full animate-pulse" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+        <div className="absolute bottom-1/3 left-1/3 w-1 h-1 bg-mot-gold/50 rounded-full animate-pulse" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+        <div className="absolute top-2/3 right-1/4 w-1.5 h-1.5 bg-mot-gold/35 rounded-full animate-pulse" style={{ animationDuration: '3.5s', animationDelay: '2s' }} />
+        
+        {/* Subtle Glow Lines */}
+        <div className="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-transparent via-mot-gold/10 to-transparent" />
+        <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-mot-gold/10 to-transparent" />
+      </div>
 
       {/* Login Card */}
       <div className="relative w-full max-w-md animate-scale-in">
-        <div className="glass-effect rounded-2xl shadow-2xl p-8 border border-purple-600/20">
+        <div className="bg-mot-surface/90 backdrop-blur-xl rounded-2xl shadow-lg p-8 border border-mot-border">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl mb-4 animate-glow">
-              <Zap className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold gradient-text mb-2">Welcome Back!</h1>
+            <img 
+              src="/MOT.gif" 
+              alt="MOT" 
+              className="h-20 w-auto mx-auto mb-4 transition-all"
+            />
+            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back!</h1>
             <p className="text-gray-400">Login to continue your journey</p>
           </div>
 
@@ -57,12 +86,12 @@ export const LoginPage: React.FC = () => {
                 Email
               </label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-all hover-lift"
+                  className="w-full bg-mot-surface-subtle border border-mot-border rounded-xl pl-11 pr-4 py-3 text-white focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
                   placeholder="name@example.com"
                   required
                 />
@@ -75,19 +104,19 @@ export const LoginPage: React.FC = () => {
                 Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-11 py-3 text-white focus:border-purple-500 focus:outline-none transition-all hover-lift"
+                  className="w-full bg-mot-surface-subtle border border-mot-border rounded-xl pl-11 pr-11 py-3 text-white focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-400 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-mot-gold transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -97,10 +126,10 @@ export const LoginPage: React.FC = () => {
             {/* Remember & Forgot */}
             <div className="flex items-center justify-between text-sm animate-slide-in-up" style={{ animationDelay: '0.3s' }}>
               <label className="flex items-center cursor-pointer group">
-                <input type="checkbox" className="w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 bg-[#2b2d31] transition-all" />
+                <input type="checkbox" className="w-4 h-4 rounded border-mot-border text-mot-gold focus:ring-mot-gold focus:ring-offset-0 bg-mot-surface-subtle transition-all" />
                 <span className="ml-2 text-gray-400 group-hover:text-gray-300 transition-colors">Remember me</span>
               </label>
-              <Link to="/forgot-password" className="text-purple-400 hover:text-purple-300 transition-colors">
+              <Link to="/forgot-password" className="text-mot-gold hover:text-mot-gold-light transition-colors">
                 Forgot password?
               </Link>
             </div>
@@ -109,7 +138,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-xl transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed animate-slide-in-up"
+              className="w-full bg-gradient-to-b from-mot-gold-light via-mot-gold to-mot-gold-deep text-mot-black font-bold py-3 rounded-xl transition-all shadow-gold-glow-sm hover:shadow-gold-glow hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed animate-slide-in-up"
               style={{ animationDelay: '0.4s' }}
             >
               {isLoading ? (
@@ -152,7 +181,7 @@ export const LoginPage: React.FC = () => {
           {/* Sign Up Link */}
           <div className="mt-6 text-center text-sm text-gray-400 animate-fade-in" style={{ animationDelay: '0.7s' }}>
             Don't have an account?{' '}
-            <Link to="/register" className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
+            <Link to="/register" className="text-mot-gold hover:text-mot-gold-light font-semibold transition-colors">
               Sign up for free
             </Link>
           </div>

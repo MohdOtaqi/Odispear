@@ -1,0 +1,222 @@
+═══════════════════════════════════════════════════════════
+  🚀 UNITY PLATFORM - QUICK DEPLOYMENT COMMANDS
+═══════════════════════════════════════════════════════════
+
+📍 PART 1: LOCAL MACHINE (Windows PowerShell)
+─────────────────────────────────────────────────────────
+
+Location: PS C:\SandboxShare\Projects\Test 2\unity-platform>
+
+Commands:
+  git add .
+  git commit -m "Complete deployment"
+  git push origin main
+
+─────────────────────────────────────────────────────────
+
+📍 PART 2: AWS SERVER (SSH)
+─────────────────────────────────────────────────────────
+
+STEP 1: Connect to server
+──────────────────────────
+Location: Your local terminal
+
+Command:
+  ssh ubuntu@16.171.225.46
+
+Result: ubuntu@ip-172-31-22-52:~$
+
+─────────────────────────────────────────────────────────
+
+STEP 2: Navigate to project
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:~$
+
+Command:
+  cd /var/www/Odispear/unity-platform
+
+Result: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+─────────────────────────────────────────────────────────
+
+STEP 3: Pull latest code
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+Command:
+  git pull origin main
+
+─────────────────────────────────────────────────────────
+
+STEP 4: Backend - Install & Build
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+Commands:
+  cd backend
+  npm install multer @types/multer sharp @types/sharp bcrypt @types/bcrypt uuid @types/uuid
+  npm run build
+  cd ..
+
+Result: Should see "✨ Done" and dist/ folder created
+
+─────────────────────────────────────────────────────────
+
+STEP 5: Frontend - Install & Build
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+Commands:
+  cd frontend
+  npm install framer-motion
+  
+  # Update environment variables
+  cat > .env << 'EOF'
+VITE_API_URL=https://16.171.225.46
+VITE_WS_URL=wss://16.171.225.46
+VITE_DAILY_DOMAIN=https://odispear.daily.co
+EOF
+
+  cat > .env.production << 'EOF'
+VITE_API_URL=https://16.171.225.46
+VITE_WS_URL=wss://16.171.225.46
+VITE_DAILY_DOMAIN=https://odispear.daily.co
+EOF
+
+  npm run build
+  cd ..
+
+Result: Should see "✓ built in X.XXs" and dist/ folder created
+
+─────────────────────────────────────────────────────────
+
+STEP 6: Database Migrations
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+Command:
+  PGPASSWORD=Ayah2010 psql -h localhost -U unity_app -d unity_platform << 'EOF'
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS accent_color VARCHAR(7);
+
+CREATE TABLE IF NOT EXISTS guild_invites (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    uses INTEGER DEFAULT 0,
+    max_uses INTEGER,
+    max_age INTEGER,
+    temporary BOOLEAN DEFAULT FALSE,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_guild_invites_code ON guild_invites(code);
+CREATE INDEX IF NOT EXISTS idx_guild_invites_guild ON guild_invites(guild_id);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    keybinds JSONB DEFAULT '{}',
+    voice_settings JSONB DEFAULT '{}',
+    notification_settings JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS channel_permissions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    allow BIGINT DEFAULT 0,
+    deny BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_channel_permissions_channel ON channel_permissions(channel_id);
+COMMIT;
+EOF
+
+Result: Should see "ALTER TABLE", "CREATE TABLE", "COMMIT"
+
+─────────────────────────────────────────────────────────
+
+STEP 7: Create Upload Directories
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+Commands:
+  mkdir -p uploads/avatars uploads/banners uploads/attachments uploads/soundboard
+  sudo chown -R www-data:www-data uploads
+  sudo chmod -R 755 uploads
+
+─────────────────────────────────────────────────────────
+
+STEP 8: Restart Services
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+Commands:
+  pm2 stop all
+  pm2 start backend/dist/index.js --name unity-backend
+  cd frontend
+  pm2 start npm --name unity-frontend -- run preview -- --port 5173 --host
+  cd ..
+  pm2 save
+
+Result: Should see both services "online" in green
+
+─────────────────────────────────────────────────────────
+
+STEP 9: Verify Installation
+──────────────────────────
+Location: ubuntu@ip-172-31-22-52:/var/www/Odispear/unity-platform$
+
+Commands:
+  pm2 status
+  pm2 logs --lines 20
+  curl -k https://localhost/health
+
+Result: Should see {"status":"ok","timestamp":"..."}
+
+─────────────────────────────────────────────────────────
+
+📍 PART 3: TEST IN BROWSER
+─────────────────────────────────────────────────────────
+
+1. Open browser
+2. Go to: https://16.171.225.46
+3. Click "Advanced" → "Proceed to 16.171.225.46"
+4. Login with: test / test123
+
+✅ DONE! Platform is live!
+
+═══════════════════════════════════════════════════════════
+
+🔧 QUICK TROUBLESHOOTING
+═══════════════════════════════════════════════════════════
+
+View Logs:
+  pm2 logs
+  pm2 logs unity-backend --lines 50
+  pm2 logs unity-frontend --lines 50
+
+Restart Everything:
+  pm2 restart all
+  sudo systemctl reload nginx
+
+Check Status:
+  pm2 status
+  sudo systemctl status nginx
+  sudo systemctl status postgresql
+
+Rebuild After Changes:
+  cd /var/www/Odispear/unity-platform
+  git pull origin main
+  cd backend && npm run build && cd ..
+  cd frontend && npm run build && cd ..
+  pm2 restart all
+
+═══════════════════════════════════════════════════════════

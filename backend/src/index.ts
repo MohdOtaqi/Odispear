@@ -5,6 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import { connectRedis } from './config/redis';
 import { setupWebSocketHandlers } from './websocket/optimizedHandler';
@@ -26,6 +27,11 @@ import dmRoutes from './routes/dmRoutes';
 import rolesRoutes from './routes/rolesRoutes';
 import memberRoutes from './routes/memberRoutes';
 import voiceRoutes from './routes/voiceRoutes';
+import statusRoutes from './routes/statusRoutes';
+import reactionRoutes from './routes/reactionRoutes';
+import soundboardRoutes from './routes/soundboardRoutes';
+import inviteRoutes from './routes/inviteRoutes';
+import userRoutes from './routes/userRoutes';
 
 dotenv.config();
 validateEnvironment();
@@ -33,10 +39,15 @@ validateEnvironment();
 const app = express();
 const httpServer = createServer(app);
 
-// Allow multiple CORS origins for local development
+// Trust proxy - required for rate limiting behind Nginx
+app.set('trust proxy', 1);
+
+// Allow multiple CORS origins - in production, allow same-origin requests
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : ['http://localhost:5173', 'http://localhost:8080'];
+  : process.env.NODE_ENV === 'production'
+    ? true // Allow all origins in production (frontend is served from same origin)
+    : ['http://localhost:5173', 'http://localhost:8080'];
 
 const io = new Server(httpServer, {
   cors: {
@@ -45,8 +56,10 @@ const io = new Server(httpServer, {
   },
 });
 
-// Middleware
-app.use(helmet());
+// Middleware - Disable helmet's CSP since we set our own in securityHeaders
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(securityHeaders);
 app.use(cors({
   origin: allowedOrigins,
@@ -76,15 +89,20 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/guilds', guildRoutes);
-app.use('/api/v1/channels', channelRoutes);
-app.use('/api/v1/events', eventRoutes);
+app.use('/api/v1', channelRoutes); // Routes: /guilds/:guildId/channels, /channels/:id
+app.use('/api/v1', eventRoutes); // Routes: /guilds/:guildId/events, /events/:id
 app.use('/api/v1/moderation', moderationRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/friends', friendsRoutes);
 app.use('/api/v1/dm', dmRoutes);
-app.use('/api/v1/roles', rolesRoutes);
+app.use('/api/v1', rolesRoutes); // Routes: /guilds/:guildId/roles
 app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1/voice', voiceRoutes);
+app.use('/api/v1/status', statusRoutes);
+app.use('/api/v1/reactions', reactionRoutes);
+app.use('/api/v1/soundboard', soundboardRoutes);
+app.use('/api/v1', inviteRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // API documentation route
 app.get('/api/docs', (req, res) => {
@@ -112,8 +130,8 @@ app.get('/api/docs', (req, res) => {
         'POST /api/v1/guilds/invites/:code/join': 'Join guild by invite',
       },
       channels: {
-        'POST /api/v1/channels/guilds/:guildId/channels': 'Create channel',
-        'GET /api/v1/channels/guilds/:guildId/channels': 'Get guild channels',
+        'POST /api/v1/guilds/:guildId/channels': 'Create channel',
+        'GET /api/v1/guilds/:guildId/channels': 'Get guild channels',
         'GET /api/v1/channels/:id': 'Get channel',
         'PATCH /api/v1/channels/:id': 'Update channel',
         'DELETE /api/v1/channels/:id': 'Delete channel',
@@ -134,6 +152,19 @@ app.get('/api/docs', (req, res) => {
       },
     },
   });
+});
+
+// Serve static frontend files in production/tunnel mode
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
+
+// Catch-all route for React Router (SPA)
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path === '/health') {
+    return next();
+  }
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // Error handlers (must be last)

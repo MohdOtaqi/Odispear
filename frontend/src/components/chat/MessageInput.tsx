@@ -2,21 +2,24 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Plus, Smile, Gift } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import { useMessageStore } from '../../store/messageStore';
+import { useDMStore } from '../../store/dmStore';
 import { socketManager } from '../../lib/socket';
 import { useDebounce } from '../../hooks/usePerformance';
 
 interface MessageInputProps {
   channelId: string;
+  isDM?: boolean;
 }
 
-export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
+export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = false }) => {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   
-  const sendMessage = useMessageStore((state) => state.sendMessage);
+  const sendChannelMessage = useMessageStore((state) => state.sendMessage);
+  const sendDMMessage = useDMStore((state) => state.sendDMMessage);
 
   // Auto-resize textarea
   const adjustTextareaHeight = useCallback(() => {
@@ -66,7 +69,11 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
 
     setIsSending(true);
     try {
-      await sendMessage(channelId, message.trim());
+      if (isDM) {
+        await sendDMMessage(channelId, message.trim());
+      } else {
+        await sendChannelMessage(channelId, message.trim());
+      }
       setMessage('');
       setIsTyping(false);
       socketManager.stopTyping(channelId);
@@ -80,7 +87,7 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
     } finally {
       setIsSending(false);
     }
-  }, [message, channelId, sendMessage, isSending]);
+  }, [message, channelId, isDM, sendDMMessage, sendChannelMessage, isSending]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -90,13 +97,13 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
   }, [handleSubmit]);
 
   return (
-    <div className="border-t border-white/10 p-4 bg-[#2b2d31]">
+    <div className="border-t border-mot-border p-4 bg-mot-surface">
       <form onSubmit={handleSubmit} className="flex items-end gap-2">
         {/* Attachment Button */}
         <Tooltip content="Upload File" position="top">
           <button
             type="button"
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all"
             aria-label="Upload File"
           >
             <Plus className="h-5 w-5" />
@@ -104,7 +111,7 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
         </Tooltip>
 
         {/* Message Input */}
-        <div className="flex-1 bg-[#383a40] rounded-lg border border-white/5 focus-within:border-purple-500/50 transition-colors">
+        <div className="flex-1 bg-mot-surface-subtle rounded-lg border border-mot-border focus-within:border-mot-gold/50 transition-colors">
           <textarea
             ref={textareaRef}
             value={message}
@@ -130,7 +137,7 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
           <Tooltip content="Gift Nitro" position="top">
             <button
               type="button"
-              className="flex-shrink-0 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all"
               aria-label="Gift Nitro"
             >
               <Gift className="h-5 w-5" />
@@ -140,7 +147,7 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
           <Tooltip content="Add Emoji" position="top">
             <button
               type="button"
-              className="flex-shrink-0 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all"
               aria-label="Add Emoji"
             >
               <Smile className="h-5 w-5" />
@@ -154,8 +161,8 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId }) => {
               disabled={!message.trim() || isSending}
               className={`flex-shrink-0 p-2 rounded-lg transition-all ${
                 message.trim() && !isSending
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg'
-                  : 'bg-white/5 text-gray-500 cursor-not-allowed'
+                  ? 'bg-mot-gold hover:bg-mot-gold-light text-mot-black shadow-gold-glow-sm'
+                  : 'bg-mot-surface-subtle text-gray-500 cursor-not-allowed'
               }`}
               aria-label="Send Message"
             >

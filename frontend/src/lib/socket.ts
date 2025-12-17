@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+// Use current origin for WebSocket - works for both local dev and tunnel
+const WS_URL = typeof window !== 'undefined' ? window.location.origin : '';
 
 class SocketManager {
   private socket: Socket | null = null;
@@ -94,6 +95,14 @@ class SocketManager {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
     }
+  }
+
+  joinGuild(guildId: string) {
+    this.emit('guild.join', { guild_id: guildId });
+  }
+
+  leaveGuild(guildId: string) {
+    this.emit('guild.leave', { guild_id: guildId });
   }
 
   joinChannel(channelId: string) {

@@ -3,6 +3,7 @@ import { MessageSquare, Users, Plus } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { Tooltip } from '../ui/Tooltip';
 import { cn } from '../../lib/utils';
+import { useAuthStore } from '../../store/authStore';
 
 interface DMChannel {
   id: string;
@@ -22,28 +23,36 @@ interface DMChannel {
 }
 
 interface DMListProps {
-  channels: DMChannel[];
-  currentChannelId?: string;
-  onChannelSelect: (channelId: string) => void;
+  channels?: DMChannel[];
+  currentDMChannelId?: string;
+  currentChannelId?: string; // Backward compatibility
+  onDMSelect?: (dmChannelId: string) => void;
+  onChannelSelect?: (channelId: string) => void; // Backward compatibility
   onCreateDM?: () => void;
 }
 
 export const DMList = React.memo<DMListProps>(({
-  channels,
+  channels = [],
+  currentDMChannelId,
   currentChannelId,
+  onDMSelect,
   onChannelSelect,
   onCreateDM,
 }) => {
+  const { user } = useAuthStore();
+  const handleSelect = onDMSelect || onChannelSelect || (() => {});
+  const activeId = currentDMChannelId || currentChannelId;
+
   return (
-    <div className="w-60 bg-[#2b2d31] flex flex-col">
+    <div className="w-60 bg-mot-surface flex flex-col">
       {/* Header */}
-      <div className="h-12 px-4 flex items-center justify-between border-b border-white/10">
+      <div className="h-12 px-4 flex items-center justify-between border-b border-mot-border">
         <h2 className="font-semibold text-white">Direct Messages</h2>
         {onCreateDM && (
           <Tooltip content="Create DM" position="bottom">
             <button
               onClick={onCreateDM}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
+              className="p-1 text-gray-400 hover:text-mot-gold transition-colors"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -61,21 +70,24 @@ export const DMList = React.memo<DMListProps>(({
         ) : (
           <div className="space-y-0.5">
             {channels.map((channel) => {
-              const isActive = channel.id === currentChannelId;
-              const otherParticipant = channel.participants[0]; // For DMs
+              const isActive = channel.id === activeId;
+              // Find the other participant (not the current user)
+              const otherParticipant = channel.participants?.find(
+                (p: any) => p.id !== user?.id && p.user_id !== user?.id
+              ) || channel.participants?.[0];
 
               return (
                 <button
                   key={channel.id}
-                  onClick={() => onChannelSelect(channel.id)}
+                  onClick={() => handleSelect(channel.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-2 py-2 rounded-md transition-all',
-                    'hover:bg-white/10',
-                    isActive && 'bg-white/10'
+                    'hover:bg-mot-gold/10',
+                    isActive && 'bg-mot-gold/20 border-l-2 border-mot-gold'
                   )}
                 >
                   {/* Avatar */}
-                  {channel.type === 'dm' ? (
+                  {channel.participants?.length === 2 || channel.type === 'dm' ? (
                     <Avatar
                       src={otherParticipant?.avatar_url}
                       alt={otherParticipant?.username || 'User'}
@@ -92,8 +104,8 @@ export const DMList = React.memo<DMListProps>(({
                   {/* Info */}
                   <div className="flex-1 min-w-0 text-left">
                     <div className="font-medium text-white truncate">
-                      {channel.type === 'dm'
-                        ? otherParticipant?.username
+                      {channel.participants?.length === 2 || channel.type === 'dm'
+                        ? otherParticipant?.username || 'Unknown'
                         : channel.name || 'Group Chat'}
                     </div>
                     {channel.lastMessage && (

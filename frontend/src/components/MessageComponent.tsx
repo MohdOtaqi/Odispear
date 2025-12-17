@@ -4,6 +4,7 @@ import { Reply, MoreVertical, Smile, Edit, Trash, Pin, Flag } from 'lucide-react
 interface Message {
   id: string;
   author: {
+    id?: string;
     username: string;
     avatar?: string;
     color?: string;
@@ -33,6 +34,7 @@ interface MessageComponentProps {
   onEdit?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
+  onProfileClick?: (userId: string) => void;
 }
 
 const MessageComponent: React.FC<MessageComponentProps> = ({
@@ -41,6 +43,7 @@ const MessageComponent: React.FC<MessageComponentProps> = ({
   onEdit,
   onDelete,
   onReact,
+  onProfileClick,
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -66,7 +69,9 @@ const MessageComponent: React.FC<MessageComponentProps> = ({
         {/* Avatar */}
         <div className="relative flex-shrink-0 animate-scale-in">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm hover-scale cursor-pointer"
+            onClick={() => message.author.id && onProfileClick?.(message.author.id)}
+            title={`View ${message.author.username}'s profile`}
+            className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm hover-scale cursor-pointer transition-transform hover:scale-110"
             style={{
               background: message.author.color || 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
             }}
@@ -93,7 +98,9 @@ const MessageComponent: React.FC<MessageComponentProps> = ({
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
             <span
-              className="font-semibold text-sm hover:underline cursor-pointer"
+              onClick={() => message.author.id && onProfileClick?.(message.author.id)}
+              title={`View ${message.author.username}'s profile`}
+              className="font-semibold text-sm hover:underline cursor-pointer transition-all"
               style={{ color: message.author.color || '#fff' }}
             >
               {message.author.username}

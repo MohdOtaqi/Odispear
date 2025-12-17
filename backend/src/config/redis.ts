@@ -1,25 +1,46 @@
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-});
+let redisClient: RedisClientType | null = null;
+let redisEnabled = true;
 
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error:', err);
-});
+// Only create Redis client if REDIS_URL is set and we're not explicitly disabling it
+if (process.env.REDIS_URL && process.env.DISABLE_REDIS !== 'true') {
+  redisClient = createClient({
+    url: process.env.REDIS_URL,
+  });
 
-redisClient.on('connect', () => {
-  console.log('Redis client connected');
-});
+  redisClient.on('error', (err) => {
+    console.warn('Redis Client Error (Redis features disabled):', err.message);
+    redisEnabled = false;
+  });
+
+  redisClient.on('connect', () => {
+    console.log('Redis client connected');
+    redisEnabled = true;
+  });
+}
 
 export const connectRedis = async () => {
-  if (!redisClient.isOpen) {
-    await redisClient.connect();
+  if (!redisClient) {
+    console.log('Redis not configured - running without Redis (some features may be limited)');
+    return null;
   }
-  return redisClient;
+  
+  try {
+    if (!redisClient.isOpen) {
+      await redisClient.connect();
+    }
+    return redisClient;
+  } catch (error) {
+    console.warn('Failed to connect to Redis - running without Redis');
+    redisEnabled = false;
+    return null;
+  }
 };
+
+export const isRedisEnabled = () => redisEnabled && redisClient?.isOpen;
 
 export default redisClient;

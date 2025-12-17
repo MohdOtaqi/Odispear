@@ -9,7 +9,7 @@ const router = Router();
 
 const createChannelSchema = Joi.object({
   name: Joi.string().min(1).max(100).required(),
-  type: Joi.string().valid('text', 'voice', 'stage', 'docs').required(),
+  type: Joi.string().valid('text', 'voice', 'stage', 'docs', 'category').required(),
   topic: Joi.string().max(500).allow(''),
   parent_id: Joi.string().uuid().allow(null),
   nsfw: Joi.boolean(),
@@ -30,14 +30,14 @@ const createMessageSchema = Joi.object({
 
 router.post('/guilds/:guildId/channels', authenticateToken, checkGuildPermission(Permission.MANAGE_CHANNELS), validate(createChannelSchema), channelController.createChannel);
 router.get('/guilds/:guildId/channels', authenticateToken, channelController.getGuildChannels);
-router.get('/:id', authenticateToken, checkChannelPermission(Permission.VIEW_CHANNEL), channelController.getChannel);
-router.patch('/:id', authenticateToken, checkChannelPermission(Permission.MANAGE_CHANNELS), validate(updateChannelSchema), channelController.updateChannel);
-router.delete('/:id', authenticateToken, checkChannelPermission(Permission.MANAGE_CHANNELS), channelController.deleteChannel);
-router.get('/:id/messages', authenticateToken, checkChannelPermission(Permission.VIEW_CHANNEL), channelController.getChannelMessages);
-router.post('/:id/messages', authenticateToken, checkChannelPermission(Permission.SEND_MESSAGES), validate(createMessageSchema), channelController.createMessage);
-router.patch('/messages/:messageId', authenticateToken, channelController.updateMessage);
-router.delete('/messages/:messageId', authenticateToken, channelController.deleteMessage);
-router.post('/messages/:messageId/reactions', authenticateToken, channelController.addReaction);
-router.delete('/messages/:messageId/reactions/:emoji', authenticateToken, channelController.removeReaction);
+router.get('/channels/:id', authenticateToken, checkChannelPermission(Permission.VIEW_CHANNEL), channelController.getChannel);
+router.patch('/channels/:id', authenticateToken, checkChannelPermission(Permission.MANAGE_CHANNELS), validate(updateChannelSchema), channelController.updateChannel);
+router.delete('/channels/:id', authenticateToken, checkChannelPermission(Permission.MANAGE_CHANNELS), channelController.deleteChannel);
+router.get('/channels/:id/messages', authenticateToken, checkChannelPermission(Permission.VIEW_CHANNEL), channelController.getChannelMessages);
+router.post('/channels/:id/messages', authenticateToken, checkChannelPermission(Permission.SEND_MESSAGES), validate(createMessageSchema), channelController.createMessage);
+router.patch('/channels/messages/:messageId', authenticateToken, channelController.updateMessage);
+router.delete('/channels/messages/:messageId', authenticateToken, channelController.deleteMessage);
+router.post('/channels/messages/:messageId/reactions', authenticateToken, channelController.addReaction);
+router.delete('/channels/messages/:messageId/reactions/:emoji', authenticateToken, channelController.removeReaction);
 
 export default router;

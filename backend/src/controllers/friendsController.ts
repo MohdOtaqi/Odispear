@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { query, getClient } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
+import { io } from '../index';
 
 export const sendFriendRequest = async (
   req: AuthRequest,
@@ -55,6 +56,13 @@ export const sendFriendRequest = async (
       [userId, friendId]
     );
 
+    // Notify recipient about friend request via WebSocket
+    io.to(`user:${friendId}`).emit('friend.request', {
+      request_id: result.rows[0].id,
+      user_id: userId,
+      username: req.user?.username,
+    });
+
     res.status(201).json({
       ...result.rows[0],
       username: userResult.rows[0].username,
@@ -84,6 +92,16 @@ export const acceptFriendRequest = async (
     if (result.rows.length === 0) {
       throw new AppError('Friend request not found', 404);
     }
+
+    // Get the user who sent the request so we can notify them
+    const senderId = result.rows[0].user_id;
+
+    // Notify the sender that their friend request was accepted
+    io.to(`user:${senderId}`).emit('friend.accepted', {
+      user_id: userId,
+      username: req.user?.username,
+      friend_id: senderId,
+    });
 
     res.json(result.rows[0]);
   } catch (error) {

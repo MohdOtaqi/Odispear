@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Circle, Moon, MinusCircle, XCircle, Smile } from 'lucide-react';
+import api from '../lib/api';
+import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
 
 interface UserStatusSelectorProps {
   currentStatus: 'online' | 'idle' | 'dnd' | 'offline';
@@ -14,8 +17,38 @@ const UserStatusSelector: React.FC<UserStatusSelectorProps> = ({
   onStatusChange,
   onCustomStatusChange,
 }) => {
+  const { user } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [customText, setCustomText] = useState(customStatus || '');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleStatusChange = async (status: 'online' | 'idle' | 'dnd' | 'offline') => {
+    setIsUpdating(true);
+    try {
+      await api.patch('/status/me', { status });
+      onStatusChange(status);
+      setIsOpen(false);
+      toast.success(`Status changed to ${status}`);
+    } catch (error: any) {
+      console.error('Failed to update status:', error);
+      toast.error('Failed to update status');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCustomStatusChange = async (text: string) => {
+    if (text === customStatus) return;
+    
+    try {
+      await api.patch('/status/me', { statusText: text });
+      onCustomStatusChange(text);
+      toast.success('Custom status updated');
+    } catch (error) {
+      console.error('Failed to update custom status:', error);
+      toast.error('Failed to update custom status');
+    }
+  };
 
   const statuses = [
     {
@@ -68,7 +101,7 @@ const UserStatusSelector: React.FC<UserStatusSelectorProps> = ({
           <div className={`absolute bottom-0 right-0 w-3 h-3 ${currentStatusConfig?.bgColor} rounded-full border-2 border-[#1e1f22]`} />
         </div>
         <div className="flex-1 text-left min-w-0">
-          <div className="text-sm font-semibold text-white truncate">Username</div>
+          <div className="text-sm font-semibold text-white truncate">{user?.display_name || user?.username || 'User'}</div>
           {customStatus && (
             <div className="text-xs text-gray-400 truncate">{customStatus}</div>
           )}
@@ -94,7 +127,7 @@ const UserStatusSelector: React.FC<UserStatusSelectorProps> = ({
                   type="text"
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
-                  onBlur={() => onCustomStatusChange(customText)}
+                  onBlur={() => handleCustomStatusChange(customText)}
                   placeholder="What's on your mind?"
                   className="flex-1 bg-[#2b2d31] border border-white/5 rounded px-3 py-1 text-sm text-white focus:border-purple-500 focus:outline-none"
                   maxLength={128}
@@ -107,10 +140,8 @@ const UserStatusSelector: React.FC<UserStatusSelectorProps> = ({
               {statuses.map((status) => (
                 <button
                   key={status.id}
-                  onClick={() => {
-                    onStatusChange(status.id);
-                    setIsOpen(false);
-                  }}
+                  onClick={() => handleStatusChange(status.id)}
+                  disabled={isUpdating}
                   className={`
                     w-full flex items-center gap-3 px-3 py-2 rounded transition-all hover-lift
                     ${currentStatus === status.id ? 'bg-purple-600/20' : 'hover:bg-white/5'}

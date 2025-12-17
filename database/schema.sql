@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email VARCHAR(255) UNIQUE NOT NULL,
   username VARCHAR(50) UNIQUE NOT NULL,
@@ -14,17 +14,20 @@ CREATE TABLE users (
   avatar_url TEXT,
   status VARCHAR(20) DEFAULT 'offline' CHECK (status IN ('online', 'idle', 'dnd', 'offline')),
   status_text VARCHAR(200),
+  custom_status VARCHAR(200),
+  last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   email_verified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen);
 
 -- Guilds (Servers) table
-CREATE TABLE guilds (
+CREATE TABLE IF NOT EXISTS guilds (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(100) NOT NULL,
   description TEXT,
@@ -39,10 +42,10 @@ CREATE TABLE guilds (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_guilds_owner ON guilds(owner_id);
+CREATE INDEX IF NOT EXISTS idx_guilds_owner ON guilds(owner_id);
 
 -- Guild members table
-CREATE TABLE guild_members (
+CREATE TABLE IF NOT EXISTS guild_members (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -53,11 +56,11 @@ CREATE TABLE guild_members (
   UNIQUE(guild_id, user_id)
 );
 
-CREATE INDEX idx_guild_members_guild ON guild_members(guild_id);
-CREATE INDEX idx_guild_members_user ON guild_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_guild_members_guild ON guild_members(guild_id);
+CREATE INDEX IF NOT EXISTS idx_guild_members_user ON guild_members(user_id);
 
 -- Roles table
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
@@ -69,10 +72,10 @@ CREATE TABLE roles (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_roles_guild ON roles(guild_id);
+CREATE INDEX IF NOT EXISTS idx_roles_guild ON roles(guild_id);
 
 -- Role assignments table
-CREATE TABLE role_assignments (
+CREATE TABLE IF NOT EXISTS role_assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -81,11 +84,11 @@ CREATE TABLE role_assignments (
   UNIQUE(user_id, role_id)
 );
 
-CREATE INDEX idx_role_assignments_user ON role_assignments(user_id);
-CREATE INDEX idx_role_assignments_role ON role_assignments(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_assignments_user ON role_assignments(user_id);
+CREATE INDEX IF NOT EXISTS idx_role_assignments_role ON role_assignments(role_id);
 
 -- Channels table
-CREATE TABLE channels (
+CREATE TABLE IF NOT EXISTS channels (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
@@ -101,12 +104,12 @@ CREATE TABLE channels (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_channels_guild ON channels(guild_id);
-CREATE INDEX idx_channels_type ON channels(type);
-CREATE INDEX idx_channels_parent ON channels(parent_id);
+CREATE INDEX IF NOT EXISTS idx_channels_guild ON channels(guild_id);
+CREATE INDEX IF NOT EXISTS idx_channels_type ON channels(type);
+CREATE INDEX IF NOT EXISTS idx_channels_parent ON channels(parent_id);
 
 -- Channel permissions table
-CREATE TABLE channel_permissions (
+CREATE TABLE IF NOT EXISTS channel_permissions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
   role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
@@ -116,12 +119,12 @@ CREATE TABLE channel_permissions (
   CONSTRAINT check_role_or_user CHECK ((role_id IS NOT NULL AND user_id IS NULL) OR (role_id IS NULL AND user_id IS NOT NULL))
 );
 
-CREATE INDEX idx_channel_permissions_channel ON channel_permissions(channel_id);
-CREATE INDEX idx_channel_permissions_role ON channel_permissions(role_id);
-CREATE INDEX idx_channel_permissions_user ON channel_permissions(user_id);
+CREATE INDEX IF NOT EXISTS idx_channel_permissions_channel ON channel_permissions(channel_id);
+CREATE INDEX IF NOT EXISTS idx_channel_permissions_role ON channel_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_channel_permissions_user ON channel_permissions(user_id);
 
 -- Messages table
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
   author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -135,14 +138,14 @@ CREATE TABLE messages (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_messages_channel ON messages(channel_id);
-CREATE INDEX idx_messages_author ON messages(author_id);
-CREATE INDEX idx_messages_created ON messages(created_at DESC);
-CREATE INDEX idx_messages_reply ON messages(reply_to_id);
-CREATE INDEX idx_messages_thread ON messages(thread_id);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel_id);
+CREATE INDEX IF NOT EXISTS idx_messages_author ON messages(author_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_reply ON messages(reply_to_id);
+CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id);
 
 -- Message attachments table
-CREATE TABLE message_attachments (
+CREATE TABLE IF NOT EXISTS message_attachments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   filename VARCHAR(255) NOT NULL,
@@ -154,10 +157,10 @@ CREATE TABLE message_attachments (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_message_attachments_message ON message_attachments(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_attachments_message ON message_attachments(message_id);
 
 -- Message reactions table
-CREATE TABLE message_reactions (
+CREATE TABLE IF NOT EXISTS message_reactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -166,10 +169,10 @@ CREATE TABLE message_reactions (
   UNIQUE(message_id, user_id, emoji)
 );
 
-CREATE INDEX idx_message_reactions_message ON message_reactions(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_reactions_message ON message_reactions(message_id);
 
 -- Voice sessions table
-CREATE TABLE voice_sessions (
+CREATE TABLE IF NOT EXISTS voice_sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -181,12 +184,12 @@ CREATE TABLE voice_sessions (
   left_at TIMESTAMP
 );
 
-CREATE INDEX idx_voice_sessions_channel ON voice_sessions(channel_id);
-CREATE INDEX idx_voice_sessions_user ON voice_sessions(user_id);
-CREATE INDEX idx_voice_sessions_active ON voice_sessions(left_at) WHERE left_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_voice_sessions_channel ON voice_sessions(channel_id);
+CREATE INDEX IF NOT EXISTS idx_voice_sessions_user ON voice_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_voice_sessions_active ON voice_sessions(left_at) WHERE left_at IS NULL;
 
 -- Events table
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   channel_id UUID REFERENCES channels(id) ON DELETE SET NULL,
@@ -204,12 +207,12 @@ CREATE TABLE events (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_events_guild ON events(guild_id);
-CREATE INDEX idx_events_start_time ON events(start_time);
-CREATE INDEX idx_events_type ON events(event_type);
+CREATE INDEX IF NOT EXISTS idx_events_guild ON events(guild_id);
+CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
+CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
 
 -- Event RSVPs table
-CREATE TABLE event_rsvps (
+CREATE TABLE IF NOT EXISTS event_rsvps (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -219,11 +222,11 @@ CREATE TABLE event_rsvps (
   UNIQUE(event_id, user_id)
 );
 
-CREATE INDEX idx_event_rsvps_event ON event_rsvps(event_id);
-CREATE INDEX idx_event_rsvps_user ON event_rsvps(user_id);
+CREATE INDEX IF NOT EXISTS idx_event_rsvps_event ON event_rsvps(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_rsvps_user ON event_rsvps(user_id);
 
 -- Tournaments table
-CREATE TABLE tournaments (
+CREATE TABLE IF NOT EXISTS tournaments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
@@ -236,11 +239,11 @@ CREATE TABLE tournaments (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tournaments_guild ON tournaments(guild_id);
-CREATE INDEX idx_tournaments_event ON tournaments(event_id);
+CREATE INDEX IF NOT EXISTS idx_tournaments_guild ON tournaments(guild_id);
+CREATE INDEX IF NOT EXISTS idx_tournaments_event ON tournaments(event_id);
 
 -- Tournament teams table
-CREATE TABLE tournament_teams (
+CREATE TABLE IF NOT EXISTS tournament_teams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
   team_name VARCHAR(100) NOT NULL,
@@ -250,10 +253,10 @@ CREATE TABLE tournament_teams (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tournament_teams_tournament ON tournament_teams(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_teams_tournament ON tournament_teams(tournament_id);
 
 -- Tournament team members table
-CREATE TABLE tournament_team_members (
+CREATE TABLE IF NOT EXISTS tournament_team_members (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   team_id UUID NOT NULL REFERENCES tournament_teams(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -261,11 +264,11 @@ CREATE TABLE tournament_team_members (
   UNIQUE(team_id, user_id)
 );
 
-CREATE INDEX idx_tournament_team_members_team ON tournament_team_members(team_id);
-CREATE INDEX idx_tournament_team_members_user ON tournament_team_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_team_members_team ON tournament_team_members(team_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_team_members_user ON tournament_team_members(user_id);
 
 -- Tournament matches table
-CREATE TABLE tournament_matches (
+CREATE TABLE IF NOT EXISTS tournament_matches (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
   round INTEGER NOT NULL,
@@ -282,11 +285,11 @@ CREATE TABLE tournament_matches (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tournament_matches_tournament ON tournament_matches(tournament_id);
-CREATE INDEX idx_tournament_matches_teams ON tournament_matches(team1_id, team2_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament ON tournament_matches(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_matches_teams ON tournament_matches(team1_id, team2_id);
 
 -- Documents table
-CREATE TABLE documents (
+CREATE TABLE IF NOT EXISTS documents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   channel_id UUID REFERENCES channels(id) ON DELETE SET NULL,
@@ -298,11 +301,11 @@ CREATE TABLE documents (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_documents_guild ON documents(guild_id);
-CREATE INDEX idx_documents_channel ON documents(channel_id);
+CREATE INDEX IF NOT EXISTS idx_documents_guild ON documents(guild_id);
+CREATE INDEX IF NOT EXISTS idx_documents_channel ON documents(channel_id);
 
 -- Invites table
-CREATE TABLE invites (
+CREATE TABLE IF NOT EXISTS invites (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   channel_id UUID REFERENCES channels(id) ON DELETE SET NULL,
@@ -314,11 +317,11 @@ CREATE TABLE invites (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_invites_code ON invites(code);
-CREATE INDEX idx_invites_guild ON invites(guild_id);
+CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(code);
+CREATE INDEX IF NOT EXISTS idx_invites_guild ON invites(guild_id);
 
 -- Audit logs table
-CREATE TABLE audit_logs (
+CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -330,12 +333,12 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_audit_logs_guild ON audit_logs(guild_id);
-CREATE INDEX idx_audit_logs_action ON audit_logs(action_type);
-CREATE INDEX idx_audit_logs_created ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_guild ON audit_logs(guild_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action_type);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
 
 -- Moderation actions table
-CREATE TABLE moderation_actions (
+CREATE TABLE IF NOT EXISTS moderation_actions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -347,12 +350,12 @@ CREATE TABLE moderation_actions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_moderation_actions_guild ON moderation_actions(guild_id);
-CREATE INDEX idx_moderation_actions_user ON moderation_actions(user_id);
-CREATE INDEX idx_moderation_actions_active ON moderation_actions(active) WHERE active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_guild ON moderation_actions(guild_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_user ON moderation_actions(user_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_actions_active ON moderation_actions(active) WHERE active = TRUE;
 
 -- Banned users table
-CREATE TABLE banned_users (
+CREATE TABLE IF NOT EXISTS banned_users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -362,11 +365,11 @@ CREATE TABLE banned_users (
   UNIQUE(guild_id, user_id)
 );
 
-CREATE INDEX idx_banned_users_guild ON banned_users(guild_id);
-CREATE INDEX idx_banned_users_user ON banned_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_banned_users_guild ON banned_users(guild_id);
+CREATE INDEX IF NOT EXISTS idx_banned_users_user ON banned_users(user_id);
 
 -- Word filters table
-CREATE TABLE word_filters (
+CREATE TABLE IF NOT EXISTS word_filters (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   pattern TEXT NOT NULL,
@@ -374,10 +377,10 @@ CREATE TABLE word_filters (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_word_filters_guild ON word_filters(guild_id);
+CREATE INDEX IF NOT EXISTS idx_word_filters_guild ON word_filters(guild_id);
 
 -- Webhooks table
-CREATE TABLE webhooks (
+CREATE TABLE IF NOT EXISTS webhooks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
@@ -388,12 +391,12 @@ CREATE TABLE webhooks (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_webhooks_guild ON webhooks(guild_id);
-CREATE INDEX idx_webhooks_channel ON webhooks(channel_id);
-CREATE INDEX idx_webhooks_token ON webhooks(token);
+CREATE INDEX IF NOT EXISTS idx_webhooks_guild ON webhooks(guild_id);
+CREATE INDEX IF NOT EXISTS idx_webhooks_channel ON webhooks(channel_id);
+CREATE INDEX IF NOT EXISTS idx_webhooks_token ON webhooks(token);
 
 -- Bots table
-CREATE TABLE bots (
+CREATE TABLE IF NOT EXISTS bots (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -403,12 +406,12 @@ CREATE TABLE bots (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_bots_user ON bots(user_id);
-CREATE INDEX idx_bots_owner ON bots(owner_id);
-CREATE INDEX idx_bots_token ON bots(token);
+CREATE INDEX IF NOT EXISTS idx_bots_user ON bots(user_id);
+CREATE INDEX IF NOT EXISTS idx_bots_owner ON bots(owner_id);
+CREATE INDEX IF NOT EXISTS idx_bots_token ON bots(token);
 
 -- Integrations table
-CREATE TABLE integrations (
+CREATE TABLE IF NOT EXISTS integrations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   type VARCHAR(50) NOT NULL CHECK (type IN ('twitch', 'youtube', 'github', 'google_calendar', 'custom')),
@@ -419,11 +422,11 @@ CREATE TABLE integrations (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_integrations_guild ON integrations(guild_id);
-CREATE INDEX idx_integrations_type ON integrations(type);
+CREATE INDEX IF NOT EXISTS idx_integrations_guild ON integrations(guild_id);
+CREATE INDEX IF NOT EXISTS idx_integrations_type ON integrations(type);
 
 -- Notifications table
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type VARCHAR(50) NOT NULL,
@@ -434,12 +437,12 @@ CREATE TABLE notifications (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_notifications_user ON notifications(user_id);
-CREATE INDEX idx_notifications_read ON notifications(read) WHERE read = FALSE;
-CREATE INDEX idx_notifications_created ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read) WHERE read = FALSE;
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
 
 -- Sessions table (for JWT refresh tokens)
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   refresh_token VARCHAR(500) UNIQUE NOT NULL,
@@ -449,9 +452,9 @@ CREATE TABLE sessions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_sessions_user ON sessions(user_id);
-CREATE INDEX idx_sessions_token ON sessions(refresh_token);
-CREATE INDEX idx_sessions_expires ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(refresh_token);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -463,10 +466,10 @@ END;
 $$ language 'plpgsql';
 
 -- Apply updated_at triggers
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_guilds_updated_at BEFORE UPDATE ON guilds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_channels_updated_at BEFORE UPDATE ON channels FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_tournaments_updated_at BEFORE UPDATE ON tournaments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_integrations_updated_at BEFORE UPDATE ON integrations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_guilds_updated_at BEFORE UPDATE ON guilds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_channels_updated_at BEFORE UPDATE ON channels FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_events_updated_at BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_tournaments_updated_at BEFORE UPDATE ON tournaments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_integrations_updated_at BEFORE UPDATE ON integrations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

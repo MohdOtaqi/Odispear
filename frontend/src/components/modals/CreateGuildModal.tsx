@@ -63,7 +63,7 @@ export const CreateGuildModal: React.FC<CreateGuildModalProps> = ({
         description: description.trim() || undefined,
         template_type: templateType,
       });
-      toast.success('Server created successfully!');
+      // Toast already shown by guildStore.createGuild()
       onClose();
       setName('');
       setDescription('');
@@ -86,14 +86,14 @@ export const CreateGuildModal: React.FC<CreateGuildModalProps> = ({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-[#313338] rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+      <div className="relative w-full max-w-md bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="relative p-6 border-b border-white/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-blue-600/10" />
+        <div className="relative p-6 border-b border-mot-border">
+          <div className="absolute inset-0 bg-gradient-to-br from-mot-gold/10 to-mot-gold-deep/5" />
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center animate-glow">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-mot-gold-light to-mot-gold flex items-center justify-center shadow-gold-glow-sm">
+                <Sparkles className="w-5 h-5 text-mot-black" />
               </div>
               <h2 className="text-2xl font-bold text-white">Create Your Server</h2>
             </div>
@@ -121,8 +121,8 @@ export const CreateGuildModal: React.FC<CreateGuildModalProps> = ({
                   onClick={() => setTemplateType(template.type)}
                   className={`p-4 rounded-xl border-2 transition-all text-left ${
                     templateType === template.type
-                      ? 'border-purple-500 bg-purple-600/20'
-                      : 'border-white/10 bg-white/5 hover:border-white/20'
+                      ? 'border-mot-gold bg-mot-gold/10'
+                      : 'border-mot-border bg-mot-surface hover:border-mot-gold/30'
                   }`}
                 >
                   <div className="text-3xl mb-2">{template.icon}</div>
@@ -159,7 +159,7 @@ export const CreateGuildModal: React.FC<CreateGuildModalProps> = ({
               placeholder="What's your server about?"
               rows={3}
               maxLength={500}
-              className="w-full px-4 py-3 bg-[#1e1f22] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all resize-none hover:border-white/20"
+              className="w-full px-4 py-3 bg-mot-surface-subtle border border-mot-border rounded-lg text-white placeholder-gray-500 focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all resize-none hover:border-mot-border-glow"
               disabled={isLoading}
             />
           </div>

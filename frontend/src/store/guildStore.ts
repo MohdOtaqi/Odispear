@@ -90,6 +90,16 @@ export const useGuildStore = create<GuildState>((set, get) => ({
         channels: channelsResponse.data,
         isLoading: false,
       });
+
+      // Join guild room for real-time voice events
+      import('../lib/socket').then(({ socketManager }) => {
+        socketManager.joinGuild(guildId);
+      });
+      
+      // Fetch voice users for this guild (async, don't block)
+      import('../store/voiceUsersStore').then(({ useVoiceUsersStore }) => {
+        useVoiceUsersStore.getState().fetchGuildVoiceUsers(guildId);
+      });
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || 'Failed to load guild';
       set({ error: errorMsg, isLoading: false });

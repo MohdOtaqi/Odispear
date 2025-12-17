@@ -1,11 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
-import {
-  getVoiceToken,
-  getVoiceChannelUsers,
-  updateVoiceState,
-  getVoiceStats,
-} from '../controllers/voiceController';
+import { getVoiceToken, getGuildVoiceUsers } from '../controllers/voiceController';
 
 const router = Router();
 
@@ -15,13 +10,7 @@ router.use(authenticateToken);
 // Get voice token for joining a channel
 router.get('/channels/:channelId/token', getVoiceToken);
 
-// Get current users in voice channel
-router.get('/channels/:channelId/users', getVoiceChannelUsers);
-
-// Update voice state (mute/deafen)
-router.patch('/channels/:channelId/state', updateVoiceState);
-
-// Get voice channel statistics
-router.get('/channels/:channelId/stats', getVoiceStats);
+// Get all users currently in voice channels for a guild
+router.get('/guilds/:guildId/users', getGuildVoiceUsers);
 
 export default router;

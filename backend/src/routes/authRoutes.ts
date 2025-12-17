@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import * as authController from '../controllers/authController';
+import { register, login, logout, refreshToken, getCurrentUser, updateProfile } from '../controllers/authController';
 import { authenticateToken } from '../middleware/auth';
 import { validate } from '../middleware/validation';
 import Joi from 'joi';
@@ -24,11 +24,14 @@ const updateProfileSchema = Joi.object({
   avatar_url: Joi.string().uri().allow(''),
 });
 
-router.post('/register', validate(registerSchema), authController.register);
-router.post('/login', validate(loginSchema), authController.login);
-router.post('/logout', authenticateToken, authController.logout);
-router.post('/refresh', authController.refreshToken);
-router.get('/me', authenticateToken, authController.getCurrentUser);
-router.patch('/me', authenticateToken, validate(updateProfileSchema), authController.updateProfile);
+// PUBLIC routes - NO auth middleware
+router.post('/register', validate(registerSchema), register);
+router.post('/login', validate(loginSchema), login);
+router.post('/refresh', refreshToken);
+
+// PROTECTED routes - require auth
+router.post('/logout', authenticateToken, logout);
+router.get('/me', authenticateToken, getCurrentUser);
+router.patch('/me', authenticateToken, validate(updateProfileSchema), updateProfile);
 
 export default router;

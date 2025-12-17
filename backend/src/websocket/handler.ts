@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database';
-import redisClient from '../config/redis';
+import redisClient, { isRedisEnabled } from '../config/redis';
 import logger from '../config/logger';
 
 interface AuthSocket extends Socket {
@@ -36,6 +36,9 @@ export const setupWebSocketHandlers = (io: Server) => {
   io.on('connection', async (socket: AuthSocket) => {
     logger.info(`User connected: ${socket.username} (${socket.userId})`);
 
+    // Join user to their personal room for direct notifications (friend requests, DM calls, etc.)
+    socket.join(`user:${socket.userId}`);
+
     // Join user to their guilds
     try {
       const guildResult = await query(
@@ -53,7 +56,9 @@ export const setupWebSocketHandlers = (io: Server) => {
         ['online', socket.userId]
       );
 
-      await redisClient.set(`presence:${socket.userId}`, 'online', { EX: 300 });
+      if (isRedisEnabled() && redisClient) {
+        try { await redisClient.set(`presence:${socket.userId}`, 'online', { EX: 300 }); } catch (e) { /* ignore */ }
+      }
 
       // Broadcast presence update
       for (const row of guildResult.rows) {
@@ -131,24 +136,44 @@ export const setupWebSocketHandlers = (io: Server) => {
       });
     });
 
-    // Handle voice state updates
+    // Handle voice state updates - broadcast to entire guild so everyone sees who's in voice
     socket.on('voice.join', async (data: { channel_id: string }) => {
       try {
+        // Get user info and guild
+        const userResult = await query(
+          `SELECT u.id, u.username, u.avatar_url, c.guild_id 
+           FROM users u, channels c 
+           WHERE u.id = $1 AND c.id = $2`,
+          [socket.userId, data.channel_id]
+        );
+
+        if (userResult.rows.length === 0) return;
+
+        const user = userResult.rows[0];
+
         const result = await query(
           `INSERT INTO voice_sessions (channel_id, user_id)
            VALUES ($1, $2)
+           ON CONFLICT (channel_id, user_id) WHERE left_at IS NULL 
+           DO UPDATE SET joined_at = NOW()
            RETURNING *`,
           [data.channel_id, socket.userId]
         );
 
         socket.join(`voice:${data.channel_id}`);
-        
-        io.to(`channel:${data.channel_id}`).emit('voice.user_joined', {
+
+        // Broadcast to entire guild so everyone sees voice users
+        io.to(`guild:${user.guild_id}`).emit('voice.user_joined', {
           user_id: socket.userId,
-          username: socket.username,
+          username: user.username,
+          avatar_url: user.avatar_url,
           channel_id: data.channel_id,
-          session_id: result.rows[0].id,
+          session_id: result.rows[0]?.id,
+          muted: false,
+          deafened: false,
         });
+
+        logger.info(`User ${socket.username} joined voice channel ${data.channel_id}`);
       } catch (error) {
         logger.error('Error joining voice:', error);
       }
@@ -156,6 +181,16 @@ export const setupWebSocketHandlers = (io: Server) => {
 
     socket.on('voice.leave', async (data: { channel_id: string }) => {
       try {
+        // Get guild_id for the channel
+        const channelResult = await query(
+          `SELECT guild_id FROM channels WHERE id = $1`,
+          [data.channel_id]
+        );
+
+        if (channelResult.rows.length === 0) return;
+
+        const guildId = channelResult.rows[0].guild_id;
+
         await query(
           `UPDATE voice_sessions 
            SET left_at = NOW()
@@ -164,21 +199,39 @@ export const setupWebSocketHandlers = (io: Server) => {
         );
 
         socket.leave(`voice:${data.channel_id}`);
-        
-        io.to(`channel:${data.channel_id}`).emit('voice.user_left', {
+
+        // Broadcast to entire guild
+        io.to(`guild:${guildId}`).emit('voice.user_left', {
           user_id: socket.userId,
           channel_id: data.channel_id,
         });
+
+        logger.info(`User ${socket.username} left voice channel ${data.channel_id}`);
       } catch (error) {
         logger.error('Error leaving voice:', error);
       }
     });
 
-    socket.on('voice.state_update', (data: { channel_id: string; muted?: boolean; deafened?: boolean }) => {
-      io.to(`voice:${data.channel_id}`).emit('voice.state_update', {
-        user_id: socket.userId,
-        ...data,
-      });
+    socket.on('voice.state_update', async (data: { channel_id: string; muted?: boolean; deafened?: boolean }) => {
+      try {
+        // Get guild_id
+        const channelResult = await query(
+          `SELECT guild_id FROM channels WHERE id = $1`,
+          [data.channel_id]
+        );
+
+        if (channelResult.rows.length === 0) return;
+
+        // Broadcast to entire guild
+        io.to(`guild:${channelResult.rows[0].guild_id}`).emit('voice.state_update', {
+          user_id: socket.userId,
+          channel_id: data.channel_id,
+          muted: data.muted,
+          deafened: data.deafened,
+        });
+      } catch (error) {
+        logger.error('Error updating voice state:', error);
+      }
     });
 
     // Handle disconnect
@@ -188,8 +241,11 @@ export const setupWebSocketHandlers = (io: Server) => {
       try {
         // Update presence after delay (user might reconnect)
         setTimeout(async () => {
-          const stillConnected = await redisClient.get(`presence:${socket.userId}`);
-          
+          let stillConnected: string | null = null;
+          if (isRedisEnabled() && redisClient) {
+            try { stillConnected = await redisClient.get(`presence:${socket.userId}`); } catch (e) { /* ignore */ }
+          }
+
           if (!stillConnected) {
             await query(
               'UPDATE users SET status = $1 WHERE id = $2',
@@ -212,7 +268,23 @@ export const setupWebSocketHandlers = (io: Server) => {
           }
         }, 5000);
 
-        // Close any active voice sessions
+        // Close any active voice sessions and notify guild
+        const activeVoiceSessions = await query(
+          `SELECT vs.channel_id, c.guild_id 
+           FROM voice_sessions vs
+           JOIN channels c ON c.id = vs.channel_id
+           WHERE vs.user_id = $1 AND vs.left_at IS NULL`,
+          [socket.userId]
+        );
+
+        // Notify each guild about voice leave
+        for (const session of activeVoiceSessions.rows) {
+          io.to(`guild:${session.guild_id}`).emit('voice.user_left', {
+            user_id: socket.userId,
+            channel_id: session.channel_id,
+          });
+        }
+
         await query(
           `UPDATE voice_sessions 
            SET left_at = NOW()

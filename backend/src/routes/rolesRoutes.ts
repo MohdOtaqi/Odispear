@@ -42,9 +42,12 @@ const channelPermissionSchema = Joi.object({
 // Role CRUD
 router.post('/guilds/:guildId/roles', authenticateToken, checkGuildPermission(Permission.MANAGE_ROLES), validate(createRoleSchema), rolesController.createRole);
 router.get('/guilds/:guildId/roles', authenticateToken, isGuildMember, rolesController.getGuildRoles);
-router.patch('/roles/:roleId', authenticateToken, checkGuildPermission(Permission.MANAGE_ROLES), validate(updateRoleSchema), rolesController.updateRole);
-router.delete('/roles/:roleId', authenticateToken, checkGuildPermission(Permission.MANAGE_ROLES), rolesController.deleteRole);
+router.patch('/guilds/:guildId/roles/:roleId', authenticateToken, checkGuildPermission(Permission.MANAGE_ROLES), validate(updateRoleSchema), rolesController.updateRole);
+router.delete('/guilds/:guildId/roles/:roleId', authenticateToken, checkGuildPermission(Permission.MANAGE_ROLES), rolesController.deleteRole);
 router.patch('/guilds/:guildId/roles/positions', authenticateToken, checkGuildPermission(Permission.MANAGE_ROLES), validate(updatePositionsSchema), rolesController.updateRolePositions);
+// Also support short paths
+router.patch('/roles/:roleId', authenticateToken, rolesController.updateRole);
+router.delete('/roles/:roleId', authenticateToken, rolesController.deleteRole);
 
 // Role assignments
 router.post('/guilds/:guildId/members/:userId/roles/:roleId', authenticateToken, checkGuildPermission(Permission.MANAGE_ROLES), rolesController.assignRole);

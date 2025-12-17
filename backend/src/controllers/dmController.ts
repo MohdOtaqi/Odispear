@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { query, getClient } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
+import { io } from '../index';
 
 export const createDM = async (
   req: AuthRequest,
@@ -16,25 +17,52 @@ export const createDM = async (
       throw new AppError('Cannot create DM with yourself', 400);
     }
 
-    // Check if users are friends
-    const friendshipCheck = await query(
-      `SELECT id FROM friendships 
-       WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
-       AND status = 'accepted'`,
+    // Check if users are friends OR share a guild
+    const canMessageCheck = await query(
+      `SELECT 1 FROM (
+        -- Check if friends
+        SELECT 1 FROM friendships 
+        WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
+        AND status = 'accepted'
+        UNION
+        -- Check if in same guild
+        SELECT 1 FROM guild_members gm1
+        JOIN guild_members gm2 ON gm1.guild_id = gm2.guild_id
+        WHERE gm1.user_id = $1 AND gm2.user_id = $2
+      ) as can_message LIMIT 1`,
       [userId, recipientId]
     );
 
-    if (friendshipCheck.rows.length === 0) {
-      throw new AppError('Can only DM friends', 403);
+    if (canMessageCheck.rows.length === 0) {
+      throw new AppError('Can only DM friends or server members', 403);
     }
 
-    // Use database function to get or create DM channel
-    const result = await query(
-      'SELECT get_or_create_dm_channel($1, $2) as channel_id',
+    // Check if DM channel already exists (1-on-1 DM = exactly 2 participants)
+    const existingChannel = await query(
+      `SELECT dmc.id FROM dm_channels dmc
+       WHERE EXISTS (SELECT 1 FROM dm_participants dp1 WHERE dp1.dm_channel_id = dmc.id AND dp1.user_id = $1)
+       AND EXISTS (SELECT 1 FROM dm_participants dp2 WHERE dp2.dm_channel_id = dmc.id AND dp2.user_id = $2)
+       AND (SELECT COUNT(*) FROM dm_participants WHERE dm_channel_id = dmc.id) = 2`,
       [userId, recipientId]
     );
 
-    const channelId = result.rows[0].channel_id;
+    let channelId;
+
+    if (existingChannel.rows.length > 0) {
+      channelId = existingChannel.rows[0].id;
+    } else {
+      // Create new DM channel
+      const newChannel = await query(
+        `INSERT INTO dm_channels DEFAULT VALUES RETURNING id`
+      );
+      channelId = newChannel.rows[0].id;
+
+      // Add participants
+      await query(
+        `INSERT INTO dm_participants (dm_channel_id, user_id) VALUES ($1, $2), ($1, $3)`,
+        [channelId, userId, recipientId]
+      );
+    }
 
     // Get channel details with participant info
     const channelResult = await query(
@@ -69,7 +97,7 @@ export const createGroupDM = async (
   next: NextFunction
 ) => {
   const client = await getClient();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -206,18 +234,12 @@ export const getDMMessages = async (
     }
 
     let queryText = `
-      SELECT m.*, u.username, u.display_name, u.avatar_url,
-             json_agg(json_build_object(
-               'id', ma.id,
-               'filename', ma.filename,
-               'file_url', ma.file_url,
-               'file_size', ma.file_size,
-               'mime_type', ma.mime_type
-             )) FILTER (WHERE ma.id IS NOT NULL) as attachments
+      SELECT m.id, m.content, m.author_id, m.dm_channel_id, m.created_at, m.updated_at,
+             u.username, u.display_name, u.avatar_url
       FROM dm_messages m
       JOIN users u ON m.author_id = u.id
-      LEFT JOIN dm_message_attachments ma ON m.id = ma.message_id
-      WHERE m.dm_channel_id = $1 AND m.deleted_at IS NULL
+      WHERE m.dm_channel_id = $1
+      AND m.deleted_at IS NULL
     `;
 
     const params: any[] = [channelId];
@@ -235,7 +257,6 @@ export const getDMMessages = async (
       params.push(after);
     }
 
-    queryText += ` GROUP BY m.id, u.username, u.display_name, u.avatar_url`;
     queryText += ` ORDER BY m.created_at DESC LIMIT $${paramCount + 1}`;
     params.push(limit);
 
@@ -254,7 +275,7 @@ export const sendDMMessage = async (
 ) => {
   try {
     const { channelId } = req.params;
-    const { content, reply_to_id } = req.body;
+    const { content } = req.body;
     const userId = req.user!.id;
 
     // Verify user is participant
@@ -268,10 +289,10 @@ export const sendDMMessage = async (
     }
 
     const result = await query(
-      `INSERT INTO dm_messages (dm_channel_id, author_id, content, reply_to_id)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO dm_messages (dm_channel_id, author_id, content)
+       VALUES ($1, $2, $3)
        RETURNING *`,
-      [channelId, userId, content, reply_to_id]
+      [channelId, userId, content]
     );
 
     const message = result.rows[0];
@@ -288,11 +309,16 @@ export const sendDMMessage = async (
       [userId]
     );
 
-    res.status(201).json({
+    const fullMessage = {
       ...message,
       ...userResult.rows[0],
       attachments: [],
-    });
+    };
+
+    // Broadcast to all participants in the DM channel
+    io.to(`dm:${channelId}`).emit('dm.message.create', fullMessage);
+
+    res.status(201).json(fullMessage);
   } catch (error) {
     next(error);
   }
@@ -425,6 +451,108 @@ export const leaveDM = async (
     );
 
     res.json({ message: 'Left group DM successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Start a voice/video call in DM
+export const startDMCall = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { channelId } = req.params;
+    const { video } = req.body; // Whether to start with video enabled
+    const userId = req.user!.id;
+
+    // Check if user is a participant in this DM
+    const participantCheck = await query(
+      'SELECT 1 FROM dm_participants WHERE dm_channel_id = $1 AND user_id = $2',
+      [channelId, userId]
+    );
+
+    if (participantCheck.rows.length === 0) {
+      throw new AppError('Not a participant in this DM', 403);
+    }
+
+    // Get Daily.co API key from environment
+    const DAILY_API_KEY = process.env.DAILY_API_KEY;
+    const DAILY_DOMAIN = process.env.DAILY_DOMAIN;
+
+    if (!DAILY_API_KEY || !DAILY_DOMAIN) {
+      throw new AppError('Voice service not configured', 500);
+    }
+
+    const axios = require('axios');
+    const dailyApi = axios.create({
+      baseURL: 'https://api.daily.co/v1',
+      headers: {
+        'Authorization': `Bearer ${DAILY_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // Create room name from DM channel ID
+    const roomName = `dm-${channelId.substring(0, 8)}`;
+
+    // Try to get existing room or create new one
+    let room;
+    try {
+      const roomResponse = await dailyApi.get(`/rooms/${roomName}`);
+      room = roomResponse.data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        // Create new room
+        const createResponse = await dailyApi.post('/rooms', {
+          name: roomName,
+          privacy: 'public',
+          properties: {
+            enable_chat: true,
+            start_video_off: !video,
+            start_audio_off: false,
+            exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
+          }
+        });
+        room = createResponse.data;
+      } else {
+        throw error;
+      }
+    }
+
+    // Generate meeting token for the user
+    const tokenResponse = await dailyApi.post('/meeting-tokens', {
+      properties: {
+        room_name: roomName,
+        user_id: userId,
+        user_name: req.user?.username || 'Guest'
+      }
+    });
+
+    // Notify other participants about the call
+    const participants = await query(
+      `SELECT u.id, u.username FROM dm_participants dp
+       JOIN users u ON dp.user_id = u.id
+       WHERE dp.dm_channel_id = $1 AND dp.user_id != $2`,
+      [channelId, userId]
+    );
+
+    // Emit call event to other participants
+    participants.rows.forEach((participant: any) => {
+      io.to(`user:${participant.id}`).emit('dm:call-started', {
+        channelId,
+        callerId: userId,
+        callerName: req.user?.username,
+        roomUrl: room.url,
+        video
+      });
+    });
+
+    res.json({
+      token: tokenResponse.data.token,
+      roomUrl: room.url
+    });
   } catch (error) {
     next(error);
   }

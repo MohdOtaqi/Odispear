@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database';
-import redisClient from '../config/redis';
+import redisClient, { isRedisEnabled } from '../config/redis';
 import logger from '../config/logger';
 
 interface AuthSocket extends Socket {
@@ -20,12 +20,18 @@ async function getUserGuilds(userId: string): Promise<string[]> {
     return userGuildsCache.get(userId)!;
   }
 
-  // Check Redis cache
-  const cachedGuilds = await redisClient.get(`user:${userId}:guilds`);
-  if (cachedGuilds) {
-    const guilds = JSON.parse(cachedGuilds);
-    userGuildsCache.set(userId, guilds);
-    return guilds;
+  // Check Redis cache (only if Redis is available)
+  if (isRedisEnabled() && redisClient) {
+    try {
+      const cachedGuilds = await redisClient.get(`user:${userId}:guilds`);
+      if (cachedGuilds) {
+        const guilds = JSON.parse(cachedGuilds);
+        userGuildsCache.set(userId, guilds);
+        return guilds;
+      }
+    } catch (e) {
+      // Redis error - continue without cache
+    }
   }
 
   // Query database
@@ -33,14 +39,20 @@ async function getUserGuilds(userId: string): Promise<string[]> {
     'SELECT guild_id FROM guild_members WHERE user_id = $1',
     [userId]
   );
-  const guildIds = result.rows.map((row) => row.guild_id);
+  const guildIds = result.rows.map((row: any) => row.guild_id);
 
-  // Cache in Redis and memory
-  await redisClient.set(
-    `user:${userId}:guilds`,
-    JSON.stringify(guildIds),
-    { EX: CACHE_TTL }
-  );
+  // Cache in Redis and memory (only if Redis is available)
+  if (isRedisEnabled() && redisClient) {
+    try {
+      await redisClient.set(
+        `user:${userId}:guilds`,
+        JSON.stringify(guildIds),
+        { EX: CACHE_TTL }
+      );
+    } catch (e) {
+      // Redis error - continue without cache
+    }
+  }
   userGuildsCache.set(userId, guildIds);
 
   return guildIds;
@@ -49,7 +61,7 @@ async function getUserGuilds(userId: string): Promise<string[]> {
 export const setupWebSocketHandlers = (io: Server) => {
   // Optimized: Enable compression
   io.engine.on('connection', (rawSocket) => {
-    rawSocket.on('upgradeError', (err) => {
+    rawSocket.on('upgradeError', (err: Error) => {
       logger.error('WebSocket upgrade error:', err);
     });
   });
@@ -96,13 +108,13 @@ export const setupWebSocketHandlers = (io: Server) => {
       }
 
       // Optimized: Update presence in Redis (non-blocking)
-      Promise.all([
-        redisClient.set(`presence:${userId}`, 'online', { EX: 300 }),
-        query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
-          'online',
-          userId,
-        ]),
-      ]).catch((err) => logger.error('Error updating presence:', err));
+      const presencePromises: Promise<any>[] = [
+        query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', ['online', userId]),
+      ];
+      if (isRedisEnabled() && redisClient) {
+        presencePromises.push(redisClient.set(`presence:${userId}`, 'online', { EX: 300 }));
+      }
+      Promise.all(presencePromises).catch((err) => logger.error('Error updating presence:', err));
 
       // Optimized: Broadcast presence only to relevant guilds (batched)
       const presenceData = {
@@ -163,6 +175,30 @@ export const setupWebSocketHandlers = (io: Server) => {
       });
     });
 
+    // Guild join - join guild room to receive voice and other guild events
+    socket.on('guild.join', async (data: { guild_id: string }) => {
+      try {
+        const guildId = data.guild_id;
+        
+        // Check if user is a member of the guild
+        const result = await query(
+          'SELECT id FROM guild_members WHERE guild_id = $1 AND user_id = $2',
+          [guildId, userId]
+        );
+        
+        if (result.rows.length > 0) {
+          socket.join(`guild:${guildId}`);
+          logger.debug(`User ${userId} joined guild room: ${guildId}`);
+        }
+      } catch (error) {
+        logger.error('Error joining guild:', error);
+      }
+    });
+
+    socket.on('guild.leave', (data: { guild_id: string }) => {
+      socket.leave(`guild:${data.guild_id}`);
+    });
+
     // Optimized: Channel join with permission check
     socket.on('channel.join', async (data: { channel_id: string }) => {
       try {
@@ -170,7 +206,13 @@ export const setupWebSocketHandlers = (io: Server) => {
 
         // Optimized: Check Redis cache for permissions
         const cacheKey = `access:${userId}:${channelId}`;
-        const cachedAccess = await redisClient.get(cacheKey);
+        let cachedAccess: string | null = null;
+        
+        if (isRedisEnabled() && redisClient) {
+          try {
+            cachedAccess = await redisClient.get(cacheKey);
+          } catch (e) { /* Redis error */ }
+        }
 
         let hasAccess = false;
 
@@ -188,7 +230,11 @@ export const setupWebSocketHandlers = (io: Server) => {
           hasAccess = result.rows.length > 0;
 
           // Cache result for 5 minutes
-          await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+          if (isRedisEnabled() && redisClient) {
+            try {
+              await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+            } catch (e) { /* Redis error */ }
+          }
         }
 
         if (hasAccess) {
@@ -214,7 +260,13 @@ export const setupWebSocketHandlers = (io: Server) => {
         const cacheKey = `dm:access:${userId}:${dmChannelId}`;
 
         let hasAccess = false;
-        const cachedAccess = await redisClient.get(cacheKey);
+        let cachedAccess: string | null = null;
+        
+        if (isRedisEnabled() && redisClient) {
+          try {
+            cachedAccess = await redisClient.get(cacheKey);
+          } catch (e) { /* Redis error */ }
+        }
 
         if (cachedAccess !== null) {
           hasAccess = cachedAccess === '1';
@@ -225,7 +277,11 @@ export const setupWebSocketHandlers = (io: Server) => {
           );
 
           hasAccess = result.rows.length > 0;
-          await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+          if (isRedisEnabled() && redisClient) {
+            try {
+              await redisClient.set(cacheKey, hasAccess ? '1' : '0', { EX: CACHE_TTL });
+            } catch (e) { /* Redis error */ }
+          }
         }
 
         if (hasAccess) {
@@ -246,6 +302,20 @@ export const setupWebSocketHandlers = (io: Server) => {
       try {
         const channelId = data.channel_id;
 
+        // Get the guild_id for this channel to broadcast to all guild members
+        const channelResult = await query(
+          'SELECT guild_id FROM channels WHERE id = $1',
+          [channelId]
+        );
+        const guildId = channelResult.rows[0]?.guild_id;
+
+        // Get user's avatar for display
+        const userResult = await query(
+          'SELECT avatar_url FROM users WHERE id = $1',
+          [userId]
+        );
+        const avatarUrl = userResult.rows[0]?.avatar_url;
+
         // Insert voice session
         const result = await query(
           `INSERT INTO voice_sessions (channel_id, user_id)
@@ -259,17 +329,27 @@ export const setupWebSocketHandlers = (io: Server) => {
 
         socket.join(`voice:${channelId}`);
 
-        // Broadcast to channel (not to self)
-        socket.to(`channel:${channelId}`).emit('voice.user_joined', {
+        // Broadcast to ALL guild members so they can see who's in voice channels
+        const voiceJoinData = {
           user_id: userId,
           username,
+          avatar_url: avatarUrl,
           channel_id: channelId,
           session_id: result.rows[0].id,
-        });
+          muted: false,
+          deafened: false,
+        };
+
+        // Broadcast to guild (so everyone in sidebar sees the user)
+        if (guildId) {
+          socket.to(`guild:${guildId}`).emit('voice.user_joined', voiceJoinData);
+        }
+        // Also broadcast to channel room
+        socket.to(`channel:${channelId}`).emit('voice.user_joined', voiceJoinData);
 
         // Send current participants to the new joiner
         const participants = await query(
-          `SELECT vs.user_id, u.username, vs.muted, vs.deafened
+          `SELECT vs.user_id, u.username, u.avatar_url, vs.muted, vs.deafened
            FROM voice_sessions vs
            JOIN users u ON vs.user_id = u.id
            WHERE vs.channel_id = $1 AND vs.left_at IS NULL`,
@@ -289,6 +369,13 @@ export const setupWebSocketHandlers = (io: Server) => {
       try {
         const channelId = data.channel_id;
 
+        // Get the guild_id for this channel
+        const channelResult = await query(
+          'SELECT guild_id FROM channels WHERE id = $1',
+          [channelId]
+        );
+        const guildId = channelResult.rows[0]?.guild_id;
+
         await query(
           `UPDATE voice_sessions 
            SET left_at = NOW()
@@ -298,10 +385,17 @@ export const setupWebSocketHandlers = (io: Server) => {
 
         socket.leave(`voice:${channelId}`);
 
-        socket.to(`channel:${channelId}`).emit('voice.user_left', {
+        const voiceLeaveData = {
           user_id: userId,
           channel_id: channelId,
-        });
+        };
+
+        // Broadcast to guild (so everyone in sidebar sees the user left)
+        if (guildId) {
+          socket.to(`guild:${guildId}`).emit('voice.user_left', voiceLeaveData);
+        }
+        // Also broadcast to channel room
+        socket.to(`channel:${channelId}`).emit('voice.user_left', voiceLeaveData);
       } catch (error) {
         logger.error('Error leaving voice:', error);
       }
@@ -339,35 +433,66 @@ export const setupWebSocketHandlers = (io: Server) => {
       typingTimeouts.forEach((timeout) => clearTimeout(timeout));
       typingTimeouts.clear();
 
-      // Optimized: Delayed presence update (user might reconnect)
-      setTimeout(async () => {
+      // Only set offline if Redis is available (for production)
+      // For local dev without Redis, immediately set offline
+      if (!isRedisEnabled()) {
+        // Without Redis, immediately mark as offline
         try {
-          const isOnline = await redisClient.get(`presence:${userId}`);
+          await query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
+            'offline',
+            userId,
+          ]);
 
-          if (!isOnline) {
-            await query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
-              'offline',
-              userId,
-            ]);
+          const guildIds = await getUserGuilds(userId);
 
-            const guildIds = await getUserGuilds(userId);
-
-            for (const guildId of guildIds) {
-              io.to(`guild:${guildId}`).emit('presence.update', {
-                user_id: userId,
-                username,
-                status: 'offline',
-                timestamp: Date.now(),
-              });
-            }
-
-            // Clear cache
-            userGuildsCache.delete(userId);
+          for (const guildId of guildIds) {
+            io.to(`guild:${guildId}`).emit('presence.update', {
+              user_id: userId,
+              username,
+              status: 'offline',
+              timestamp: Date.now(),
+            });
           }
+
+          userGuildsCache.delete(userId);
         } catch (error) {
           logger.error('Error handling disconnect:', error);
         }
-      }, 5000); // 5 second grace period
+      } else {
+        // With Redis, use delayed check for reconnections
+        setTimeout(async () => {
+          try {
+            let isOnline: string | null = null;
+            if (redisClient) {
+              try {
+                isOnline = await redisClient.get(`presence:${userId}`);
+              } catch (e) { /* Redis error */ }
+            }
+
+            if (!isOnline) {
+              await query('UPDATE users SET status = $1, last_seen = NOW() WHERE id = $2', [
+                'offline',
+                userId,
+              ]);
+
+              const guildIds = await getUserGuilds(userId);
+
+              for (const guildId of guildIds) {
+                io.to(`guild:${guildId}`).emit('presence.update', {
+                  user_id: userId,
+                  username,
+                  status: 'offline',
+                  timestamp: Date.now(),
+                });
+              }
+
+              userGuildsCache.delete(userId);
+            }
+          } catch (error) {
+            logger.error('Error handling disconnect:', error);
+          }
+        }, 5000); // 5 second grace period
+      }
 
       // Close all active voice sessions immediately
       query(

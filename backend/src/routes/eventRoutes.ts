@@ -31,12 +31,12 @@ const createTournamentSchema = Joi.object({
 
 router.post('/guilds/:guildId/events', authenticateToken, checkGuildPermission(Permission.MANAGE_EVENTS), validate(createEventSchema), eventController.createEvent);
 router.get('/guilds/:guildId/events', authenticateToken, isGuildMember, eventController.getGuildEvents);
-router.get('/:id', authenticateToken, eventController.getEvent);
-router.patch('/:id', authenticateToken, checkGuildPermission(Permission.MANAGE_EVENTS), eventController.updateEvent);
-router.delete('/:id', authenticateToken, checkGuildPermission(Permission.MANAGE_EVENTS), eventController.deleteEvent);
-router.post('/:id/rsvp', authenticateToken, validate(rsvpSchema), eventController.rsvpEvent);
-router.get('/:id/rsvps', authenticateToken, eventController.getEventRSVPs);
-router.post('/:eventId/tournament', authenticateToken, checkGuildPermission(Permission.MANAGE_EVENTS), validate(createTournamentSchema), eventController.createTournament);
+router.get('/events/:id', authenticateToken, eventController.getEvent);
+router.patch('/events/:id', authenticateToken, checkGuildPermission(Permission.MANAGE_EVENTS), eventController.updateEvent);
+router.delete('/events/:id', authenticateToken, checkGuildPermission(Permission.MANAGE_EVENTS), eventController.deleteEvent);
+router.post('/events/:id/rsvp', authenticateToken, validate(rsvpSchema), eventController.rsvpEvent);
+router.get('/events/:id/rsvps', authenticateToken, eventController.getEventRSVPs);
+router.post('/events/:eventId/tournament', authenticateToken, checkGuildPermission(Permission.MANAGE_EVENTS), validate(createTournamentSchema), eventController.createTournament);
 router.get('/tournaments/:id', authenticateToken, eventController.getTournament);
 router.post('/tournaments/:id/join', authenticateToken, eventController.joinTournament);
 

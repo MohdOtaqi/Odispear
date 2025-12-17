@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
-import { Mail, Lock, User, Eye, EyeOff, Zap, Check } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Check } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,8 +13,15 @@ export const RegisterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
-  const register = useAuthStore((state) => state.register);
+  const { register, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/app', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const passwordStrength = (password: string) => {
     let strength = 0;
@@ -26,7 +33,7 @@ export const RegisterPage: React.FC = () => {
   };
 
   const strength = passwordStrength(password);
-  const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
+  const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-mot-gold', 'bg-green-500'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,8 +48,8 @@ export const RegisterPage: React.FC = () => {
 
     try {
       await register(email, username, password);
-      toast.success('Account created successfully!');
-      navigate('/app');
+      toast.success('Welcome to MOT! 🎉');
+      navigate('/app', { replace: true });
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Registration failed');
     } finally {
@@ -51,24 +58,47 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-pink-900/20 animate-shimmer" />
-      
-      {/* Floating Orbs */}
-      <div className="absolute top-10 right-20 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-10 left-20 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-mot-black">
+      {/* Premium Animated Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Gradient Mesh */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(245,166,35,0.15)_0%,_transparent_50%)]" />
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_rgba(245,166,35,0.1)_0%,_transparent_40%)]" />
+          <div className="absolute bottom-0 right-1/2 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_rgba(245,166,35,0.08)_0%,_transparent_50%)]" />
+        </div>
+        
+        {/* Animated Grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(245,166,35,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(245,166,35,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+        
+        {/* Floating Orbs */}
+        <div className="absolute top-1/4 right-1/4 w-2 h-2 bg-mot-gold/40 rounded-full animate-pulse" style={{ animationDuration: '3s' }} />
+        <div className="absolute top-1/3 left-1/3 w-1.5 h-1.5 bg-mot-gold/30 rounded-full animate-pulse" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+        <div className="absolute bottom-1/3 right-1/3 w-1 h-1 bg-mot-gold/50 rounded-full animate-pulse" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+        <div className="absolute top-2/3 left-1/4 w-1.5 h-1.5 bg-mot-gold/35 rounded-full animate-pulse" style={{ animationDuration: '3.5s', animationDelay: '2s' }} />
+        <div className="absolute bottom-1/4 right-1/2 w-1 h-1 bg-mot-gold/45 rounded-full animate-pulse" style={{ animationDuration: '2.8s', animationDelay: '1.5s' }} />
+        
+        {/* Subtle Glow Lines */}
+        <div className="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-transparent via-mot-gold/10 to-transparent" />
+        <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-mot-gold/10 to-transparent" />
+        
+        {/* Corner Accents */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-mot-gold/5 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-mot-gold/5 to-transparent" />
+      </div>
 
       {/* Register Card */}
       <div className="relative w-full max-w-md animate-scale-in">
-        <div className="glass-effect rounded-2xl shadow-2xl p-8 border border-purple-600/20">
+        <div className="bg-mot-surface/90 backdrop-blur-xl rounded-2xl shadow-lg p-8 border border-mot-border">
           {/* Logo */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-3 animate-glow">
-              <Zap className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold gradient-text mb-2">Create Account</h1>
-            <p className="text-gray-400">Join the Unity Gaming Community</p>
+            <img 
+              src="/MOT.gif" 
+              alt="MOT" 
+              className="h-20 w-auto mx-auto mb-4 transition-all"
+            />
+            <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
+            <p className="text-gray-400">Join the MOT Community</p>
           </div>
 
           {/* Form */}
@@ -79,13 +109,13 @@ export const RegisterPage: React.FC = () => {
                 Username
               </label>
               <div className="relative group">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-all hover-lift"
-                  placeholder="ProGamer123"
+                  className="w-full bg-mot-surface-subtle border border-mot-border rounded-xl pl-11 pr-4 py-3 text-white focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
+                  placeholder="YourUsername"
                   required
                   minLength={3}
                   maxLength={50}
@@ -99,12 +129,12 @@ export const RegisterPage: React.FC = () => {
                 Email
               </label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-all hover-lift"
+                  className="w-full bg-mot-surface-subtle border border-mot-border rounded-xl pl-11 pr-4 py-3 text-white focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
                   placeholder="name@example.com"
                   required
                 />
@@ -117,12 +147,12 @@ export const RegisterPage: React.FC = () => {
                 Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-11 py-3 text-white focus:border-purple-500 focus:outline-none transition-all hover-lift"
+                  className="w-full bg-mot-surface-subtle border border-mot-border rounded-xl pl-11 pr-11 py-3 text-white focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
                   placeholder="••••••••"
                   required
                   minLength={6}
@@ -130,7 +160,7 @@ export const RegisterPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-400 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-mot-gold transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -166,12 +196,12 @@ export const RegisterPage: React.FC = () => {
                 Confirm Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-all hover-lift"
+                  className="w-full bg-mot-surface-subtle border border-mot-border rounded-xl pl-11 pr-4 py-3 text-white focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
                   placeholder="••••••••"
                   required
                 />
@@ -191,14 +221,14 @@ export const RegisterPage: React.FC = () => {
                   type="checkbox"
                   checked={agreedToTerms}
                   onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 bg-[#2b2d31] transition-all"
+                  className="w-4 h-4 mt-0.5 rounded border-mot-border text-mot-gold focus:ring-mot-gold focus:ring-offset-0 bg-mot-surface-subtle transition-all"
                   required
                 />
                 <span className="ml-2 text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
                   I agree to the{' '}
-                  <Link to="/terms" className="text-purple-400 hover:text-purple-300">Terms of Service</Link>
+                  <Link to="/terms" className="text-mot-gold hover:text-mot-gold-light">Terms of Service</Link>
                   {' '}and{' '}
-                  <Link to="/privacy" className="text-purple-400 hover:text-purple-300">Privacy Policy</Link>
+                  <Link to="/privacy" className="text-mot-gold hover:text-mot-gold-light">Privacy Policy</Link>
                 </span>
               </label>
             </div>
@@ -207,7 +237,7 @@ export const RegisterPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading || !agreedToTerms || password !== confirmPassword}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed animate-slide-in-up"
+              className="w-full bg-gradient-to-b from-mot-gold-light via-mot-gold to-mot-gold-deep text-mot-black font-bold py-3 rounded-xl transition-all shadow-gold-glow-sm hover:shadow-gold-glow hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed animate-slide-in-up"
               style={{ animationDelay: '0.6s' }}
             >
               {isLoading ? (
@@ -224,7 +254,7 @@ export const RegisterPage: React.FC = () => {
           {/* Login Link */}
           <div className="mt-6 text-center text-sm text-gray-400 animate-fade-in" style={{ animationDelay: '0.7s' }}>
             Already have an account?{' '}
-            <Link to="/login" className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
+            <Link to="/login" className="text-mot-gold hover:text-mot-gold-light font-semibold transition-colors">
               Login here
             </Link>
           </div>

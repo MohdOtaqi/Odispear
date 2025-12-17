@@ -1,26 +1,31 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Use relative URL - works for both local dev and tunnel since frontend is served from backend
+const BACKEND_URL = '/api/v1';
 
 const api = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL: BACKEND_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor - skip auth for login/register/refresh
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const isAuthEndpoint = config.url?.includes('/auth/login') || 
+                          config.url?.includes('/auth/register') ||
+                          config.url?.includes('/auth/refresh');
+    
+    if (!isAuthEndpoint) {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor to handle token refresh
@@ -34,7 +39,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${API_URL}/api/v1/auth/refresh`, {
+        const response = await axios.post('/api/v1/auth/refresh', {
           refreshToken,
         });
 
@@ -45,8 +50,7 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        localStorage.clear();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -89,7 +93,7 @@ export const guildAPI = {
   createInvite: (id: string, data?: any) =>
     api.post(`/guilds/${id}/invites`, data),
   joinByInvite: (code: string) =>
-    api.post(`/guilds/invites/${code}/join`),
+    api.post(`/invites/${code}/use`),
   leaveGuild: (id: string) =>
     api.delete(`/guilds/${id}/leave`),
 };
@@ -97,9 +101,9 @@ export const guildAPI = {
 // Channel APIs
 export const channelAPI = {
   create: (guildId: string, data: any) =>
-    api.post(`/channels/guilds/${guildId}/channels`, data),
+    api.post(`/guilds/${guildId}/channels`, data),
   getGuildChannels: (guildId: string) =>
-    api.get(`/channels/guilds/${guildId}/channels`),
+    api.get(`/guilds/${guildId}/channels`),
   getChannel: (id: string) =>
     api.get(`/channels/${id}`),
   updateChannel: (id: string, data: any) =>
@@ -154,8 +158,8 @@ export const friendsAPI = {
     api.get('/friends/sent'),
   getBlocked: () =>
     api.get('/friends/blocked'),
-  sendRequest: (userId: string) =>
-    api.post('/friends/request', { friend_id: userId }),
+  sendRequest: (username: string) =>
+    api.post('/friends/request', { username }),
   acceptRequest: (friendshipId: string) =>
     api.post(`/friends/${friendshipId}/accept`),
   rejectRequest: (friendshipId: string) =>
@@ -185,9 +189,9 @@ export const voiceAPI = {
 // Event APIs
 export const eventAPI = {
   create: (guildId: string, data: any) =>
-    api.post(`/events/guilds/${guildId}/events`, data),
+    api.post(`/guilds/${guildId}/events`, data),
   getGuildEvents: (guildId: string, params?: any) =>
-    api.get(`/events/guilds/${guildId}/events`, { params }),
+    api.get(`/guilds/${guildId}/events`, { params }),
   getEvent: (id: string) =>
     api.get(`/events/${id}`),
   updateEvent: (id: string, data: any) =>

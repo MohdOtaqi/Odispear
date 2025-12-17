@@ -26,8 +26,6 @@ router.get('/:id', authenticateToken, isGuildMember, guildController.getGuild);
 router.patch('/:id', authenticateToken, checkGuildPermission(Permission.MANAGE_GUILD), validate(updateGuildSchema), guildController.updateGuild);
 router.delete('/:id', authenticateToken, checkGuildPermission(Permission.MANAGE_GUILD), guildController.deleteGuild);
 router.get('/:id/members', authenticateToken, isGuildMember, guildController.getGuildMembers);
-router.post('/:id/invites', authenticateToken, isGuildMember, guildController.createInvite);
-router.post('/invites/:code/join', authenticateToken, guildController.joinGuildByInvite);
 router.delete('/:id/leave', authenticateToken, guildController.leaveGuild);
 
 export default router;

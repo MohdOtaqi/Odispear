@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { X, User, Bell, Lock, Palette, LogOut } from 'lucide-react';
+import { X, User, Bell, Lock, Palette, LogOut, Keyboard } from 'lucide-react';
+import { KeybindsManager } from '../KeybindsManager';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
@@ -14,6 +15,7 @@ interface UserSettingsModalProps {
 const tabs = [
   { id: 'account', label: 'My Account', icon: User },
   { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'keybinds', label: 'Keybinds', icon: Keyboard },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'privacy', label: 'Privacy & Safety', icon: Lock },
 ];
@@ -49,9 +51,9 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-4xl h-[600px] bg-[#313338] rounded-2xl shadow-2xl flex overflow-hidden animate-scale-in">
+      <div className="w-full max-w-4xl h-[600px] bg-mot-surface-subtle rounded-2xl shadow-2xl border border-mot-border flex overflow-hidden animate-scale-in">
         {/* Sidebar */}
-        <div className="w-60 bg-[#2b2d31] p-4 flex flex-col">
+        <div className="w-60 bg-mot-surface p-4 flex flex-col">
           <div className="mb-6">
             <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2">User Settings</h2>
           </div>
@@ -65,8 +67,8 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-gray-300'
+                      ? 'bg-mot-gold/20 text-mot-gold'
+                      : 'text-gray-400 hover:bg-mot-gold/10 hover:text-gray-300'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -76,7 +78,7 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
             })}
           </nav>
 
-          <div className="mt-auto pt-4 border-t border-white/10">
+          <div className="mt-auto pt-4 border-t border-mot-border">
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/20 transition-colors"
@@ -90,13 +92,13 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
         {/* Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center justify-between p-6 border-b border-mot-border">
             <h1 className="text-xl font-bold text-white">
               {tabs.find(t => t.id === activeTab)?.label}
             </h1>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -106,7 +108,7 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
             {activeTab === 'account' && (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 p-4 bg-[#2b2d31] rounded-lg">
+                <div className="flex items-center gap-4 p-4 bg-mot-surface rounded-lg border border-mot-border">
                   <Avatar
                     src={user?.avatar_url}
                     alt={user?.username || ''}
@@ -147,7 +149,7 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
                     type="text"
                     placeholder="What's on your mind?"
                     maxLength={128}
-                    className="w-full h-11 px-4 py-2 bg-[#1e1f22] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all"
+                    className="w-full h-11 px-4 py-2 bg-mot-surface-subtle border border-mot-border rounded-lg text-white placeholder-gray-500 focus:border-mot-gold focus:ring-2 focus:ring-mot-gold/20 focus:outline-none transition-all"
                   />
                 </div>
               </div>
@@ -157,8 +159,8 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
               <div className="space-y-4">
                 <p className="text-gray-400">Customize how Unity looks on your device</p>
                 <div className="grid grid-cols-2 gap-4">
-                  <button className="p-4 bg-[#1e1f22] border-2 border-purple-500 rounded-lg">
-                    <div className="aspect-video bg-gradient-to-br from-purple-900 to-blue-900 rounded mb-2" />
+                  <button className="p-4 bg-mot-surface border-2 border-mot-gold rounded-lg">
+                    <div className="aspect-video bg-gradient-to-br from-mot-gold-deep to-mot-black rounded mb-2" />
                     <p className="text-sm font-medium text-white">Dark (Current)</p>
                   </button>
                   <button className="p-4 bg-white/5 border-2 border-white/10 rounded-lg opacity-50">
@@ -169,16 +171,22 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
               </div>
             )}
 
+            {activeTab === 'keybinds' && (
+              <div className="-m-6">
+                <KeybindsManager />
+              </div>
+            )}
+
             {activeTab === 'notifications' && (
               <div className="space-y-4">
                 <p className="text-gray-400">Manage your notification preferences</p>
                 {['Direct Messages', 'Server Messages', 'Friend Requests', 'Mentions'].map((item) => (
-                  <label key={item} className="flex items-center justify-between p-4 bg-[#2b2d31] rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+                  <label key={item} className="flex items-center justify-between p-4 bg-mot-surface rounded-lg cursor-pointer hover:bg-mot-gold/10 transition-colors border border-mot-border">
                     <span className="text-white">{item}</span>
                     <input
                       type="checkbox"
                       defaultChecked
-                      className="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                      className="w-5 h-5 rounded border-gray-600 text-mot-gold focus:ring-mot-gold"
                     />
                   </label>
                 ))}
@@ -189,12 +197,12 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
               <div className="space-y-4">
                 <p className="text-gray-400">Control your privacy and safety settings</p>
                 {['Allow DMs from server members', 'Show online status', 'Allow friend requests'].map((item) => (
-                  <label key={item} className="flex items-center justify-between p-4 bg-[#2b2d31] rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+                  <label key={item} className="flex items-center justify-between p-4 bg-mot-surface rounded-lg cursor-pointer hover:bg-mot-gold/10 transition-colors border border-mot-border">
                     <span className="text-white">{item}</span>
                     <input
                       type="checkbox"
                       defaultChecked
-                      className="w-5 h-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                      className="w-5 h-5 rounded border-gray-600 text-mot-gold focus:ring-mot-gold"
                     />
                   </label>
                 ))}

@@ -3,6 +3,7 @@ import { Avatar } from '../ui/Avatar';
 import { Tooltip } from '../ui/Tooltip';
 import { formatTime } from '../../lib/utils';
 import { useMessageStore } from '../../store/messageStore';
+import { useDMStore } from '../../store/dmStore';
 import { useAuthStore } from '../../store/authStore';
 import { Reply, Trash2, Edit, Smile, MoreHorizontal, Hash } from 'lucide-react';
 
@@ -20,6 +21,7 @@ interface Message {
 
 interface MessageListProps {
   channelId: string;
+  isDM?: boolean;
 }
 
 // Optimized Message Item with React.memo
@@ -35,7 +37,7 @@ const MessageItem = React.memo<{
 
   return (
     <div
-      className={`group relative px-4 py-1 hover:bg-white/5 transition-colors ${
+      className={`group relative px-4 py-1 hover:bg-mot-gold/5 transition-colors ${
         isGrouped ? 'mt-0.5' : 'mt-4'
       }`}
       onMouseEnter={() => setShowActions(true)}
@@ -81,7 +83,7 @@ const MessageItem = React.memo<{
               {quickReactions.map((emoji) => (
                 <button
                   key={emoji}
-                  className="px-2 py-0.5 bg-white/5 hover:bg-white/10 rounded-md text-sm transition-colors"
+                  className="px-2 py-0.5 bg-mot-surface hover:bg-mot-gold/20 rounded-md text-sm transition-colors"
                 >
                   {emoji} 0
                 </button>
@@ -92,24 +94,24 @@ const MessageItem = React.memo<{
 
         {/* Action Buttons */}
         {showActions && (
-          <div className="absolute -top-4 right-4 flex items-center gap-1 bg-[#1e1f22] border border-white/10 rounded-lg p-1 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute -top-4 right-4 flex items-center gap-1 bg-mot-surface border border-mot-border rounded-lg p-1 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity">
             <Tooltip content="Add Reaction" position="top">
               <button
                 onClick={() => setShowReactions(!showReactions)}
-                className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-mot-gold/10 rounded text-gray-400 hover:text-mot-gold transition-colors"
               >
                 <Smile className="h-4 w-4" />
               </button>
             </Tooltip>
             <Tooltip content="Reply" position="top">
-              <button className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors">
+              <button className="p-1.5 hover:bg-mot-gold/10 rounded text-gray-400 hover:text-mot-gold transition-colors">
                 <Reply className="h-4 w-4" />
               </button>
             </Tooltip>
             {isOwn && (
               <>
                 <Tooltip content="Edit" position="top">
-                  <button className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors">
+                  <button className="p-1.5 hover:bg-mot-gold/10 rounded text-gray-400 hover:text-mot-gold transition-colors">
                     <Edit className="h-4 w-4" />
                   </button>
                 </Tooltip>
@@ -121,7 +123,7 @@ const MessageItem = React.memo<{
               </>
             )}
             <Tooltip content="More" position="top">
-              <button className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors">
+              <button className="p-1.5 hover:bg-mot-gold/10 rounded text-gray-400 hover:text-mot-gold transition-colors">
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </Tooltip>
@@ -135,12 +137,14 @@ const MessageItem = React.memo<{
 MessageItem.displayName = 'MessageItem';
 
 // Optimized Message List with auto-scroll
-export const MessageList = React.memo<MessageListProps>(({ channelId }) => {
+export const MessageList = React.memo<MessageListProps>(({ channelId, isDM = false }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   
-  const messages = useMessageStore((state) => state.messages[channelId] || []);
+  const channelMessages = useMessageStore((state) => state.messages[channelId] || []);
+  const dmMessages = useDMStore((state) => state.messages[channelId] || []);
+  const messages: Message[] = isDM ? (dmMessages as any) : channelMessages;
   const currentUser = useAuthStore((state) => state.user);
 
   // Detect if user is at bottom of scroll
@@ -171,8 +175,8 @@ export const MessageList = React.memo<MessageListProps>(({ channelId }) => {
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-gray-500 animate-fade-in">
-        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-          <Hash className="w-8 h-8 text-gray-600" />
+        <div className="w-16 h-16 bg-mot-gold/10 rounded-full flex items-center justify-center mb-4">
+          <Hash className="w-8 h-8 text-mot-gold" />
         </div>
         <h3 className="text-xl font-semibold text-white mb-2">No messages yet</h3>
         <p className="text-sm">Be the first to say something!</p>
@@ -202,7 +206,7 @@ export const MessageList = React.memo<MessageListProps>(({ channelId }) => {
       {!isAtBottom && messages.length > 0 && (
         <button
           onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-          className="fixed bottom-24 right-8 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 shadow-lg transition-all hover:-translate-y-1 animate-scale-in"
+          className="fixed bottom-24 right-8 bg-mot-gold hover:bg-mot-gold-light text-mot-black rounded-full p-3 shadow-gold-glow-sm transition-all hover:-translate-y-1 animate-scale-in"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />

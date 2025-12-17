@@ -1,5 +1,5 @@
 import pool from '../config/database';
-import redisClient from '../config/redis';
+import redisClient, { isRedisEnabled } from '../config/redis';
 import logger from '../config/logger';
 
 export async function performStartupChecks(): Promise<boolean> {
@@ -16,16 +16,20 @@ export async function performStartupChecks(): Promise<boolean> {
     allPassed = false;
   }
 
-  // Check Redis connection
-  try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
+  // Check Redis connection (optional)
+  if (redisClient && process.env.DISABLE_REDIS !== 'true') {
+    try {
+      if (!redisClient.isOpen) {
+        await redisClient.connect();
+      }
+      await redisClient.ping();
+      logger.info('✓ Redis connection successful');
+    } catch (error) {
+      logger.warn('⚠ Redis connection failed (running without Redis):', error);
+      // Don't fail startup - Redis is optional for local dev
     }
-    await redisClient.ping();
-    logger.info('✓ Redis connection successful');
-  } catch (error) {
-    logger.error('✗ Redis connection failed:', error);
-    allPassed = false;
+  } else {
+    logger.info('⚠ Redis disabled - running without Redis caching');
   }
 
   // Check required tables exist
