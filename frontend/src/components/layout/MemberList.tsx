@@ -22,6 +22,7 @@ interface MemberListProps {
   guildId?: string;
   onMemberClick?: (member: Member) => void;
   onMemberAction?: () => void;
+  className?: string;
 }
 
 interface ContextMenuProps {
@@ -221,14 +222,14 @@ const MemberItem = React.memo<{
 
 MemberItem.displayName = 'MemberItem';
 
-export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guildId, onMemberClick, onMemberAction }) => {
+export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guildId, onMemberClick, onMemberAction, className }) => {
   const { onlineMembers, offlineMembers } = useMemo(() => ({
     onlineMembers: members.filter((m) => m.status !== 'offline'),
     offlineMembers: members.filter((m) => m.status === 'offline'),
   }), [members]);
 
   return (
-    <div className="w-60 bg-mot-surface flex flex-col overflow-y-auto custom-scrollbar border-l border-mot-border">
+    <div className={cn("w-60 bg-mot-surface flex flex-col overflow-y-auto custom-scrollbar border-l border-mot-border", className)}>
       <div className="p-3">
         {onlineMembers.length > 0 && (
           <div className="mb-4">
@@ -278,18 +279,18 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
       </div>
 
       {/* Ad Component - Bottom of Sidebar */}
-      <div className="mt-auto border-t border-mot-border/30 p-3">
-        <AdComponent 
-          adFormat="rectangle"
-          className="w-full"
-          fallbackContent={
-            <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
-              <p className="text-xs text-gray-500 mb-2">Support the platform</p>
-              <p className="text-[10px] text-gray-600">Ad space available</p>
-            </div>
-          }
-        />
-      </div>
+        <div className="mt-auto border-t border-mot-border/30 p-3">
+          <AdComponent 
+            adFormat="rectangle"
+            className="w-full"
+            fallbackContent={
+              <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
+                <p className="text-xs text-gray-500 mb-2">Support the platform</p>
+                <p className="text-[10px] text-gray-600">Ad space available</p>
+              </div>
+            }
+          />
+        </div>
     </div>
   );
 });

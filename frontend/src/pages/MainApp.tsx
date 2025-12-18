@@ -28,8 +28,11 @@ import { useDMStore } from '../store/dmStore';
 import { useFriendsStore } from '../store/friendsStore';
 import { socketManager } from '../lib/socket';
 import { guildAPI } from '../lib/api';
-import { Hash, Users, Settings, User } from 'lucide-react';
+import { Hash, Users, Settings, User, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import MobileHeader from '../components/mobile/MobileHeader';
+import MobileSidebar from '../components/mobile/MobileSidebar';
 
 export const MainApp: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +51,11 @@ export const MainApp: React.FC = () => {
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+
+  // Mobile State
+  const { isMobile } = useMobileDetection();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMembersOpen, setMobileMembersOpen] = useState(false);
 
   const { user, isAuthenticated } = useAuthStore();
   const { guilds, currentGuild, channels, fetchGuilds, selectGuild } = useGuildStore();
@@ -220,8 +228,8 @@ export const MainApp: React.FC = () => {
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-mot-gold/2 rounded-full blur-[150px]" />
       </div>
 
-      {/* Left Navigation - Unified Sidebar */}
-      <div className="flex flex-col w-[80px] bg-mot-surface py-3 items-center gap-2 overflow-y-auto custom-scrollbar">
+      {/* Left Navigation - Unified Sidebar - HIDDEN ON MOBILE */}
+      <div className="hidden md:flex flex-col w-[80px] bg-mot-surface py-3 items-center gap-2 overflow-y-auto custom-scrollbar">
         {/* MOT Logo */}
         <button
           onClick={() => navigate('/app/friends')}
@@ -270,12 +278,12 @@ export const MainApp: React.FC = () => {
       </div>
 
       <Routes>
-        <Route path="/friends" element={<><DMList channels={dmChannels as any} currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} /><FriendsPage /></>} />
+        <Route path="/friends" element={<><DMList className="hidden md:flex" channels={dmChannels as any} currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} /><FriendsPage /></>} />
 
         <Route path="/dms/:dmId" element={
           <>
-            <DMList channels={dmChannels as any} currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} />
-            <div className="flex-1 flex flex-col relative">
+            <DMList className="hidden md:flex" channels={dmChannels as any} currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} />
+            <div className="flex-1 flex flex-col relative w-full">
               {currentDMChannel ? (
                 <>
                   <DMHeader channel={currentDMChannel as any} />
@@ -299,7 +307,8 @@ export const MainApp: React.FC = () => {
           <>
             {currentGuild ? (
               <>
-                <div className="flex flex-col w-60 bg-neutral-850">
+                {/* Desktop Sidebar - HIDDEN ON MOBILE */}
+                <div className="hidden md:flex flex-col w-60 bg-neutral-850">
                   {/* Server Dropdown Menu */}
                   <ServerDropdown
                     onOpenServerSettings={() => setShowServerSettings(true)}
@@ -330,7 +339,29 @@ export const MainApp: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex-1 flex flex-col relative">
+                {/* Mobile Sidebar & Header */}
+                <MobileSidebar 
+                  isOpen={mobileMenuOpen}
+                  onClose={() => setMobileMenuOpen(false)}
+                  channels={channels}
+                  currentChannel={currentChannelId || undefined}
+                  onChannelClick={handleChannelSelect}
+                  currentGuildId={currentGuild.id}
+                  onGuildSelect={handleGuildSelect}
+                  onCreateGuild={() => setShowCreateGuild(true)}
+                />
+
+                <div className="flex-1 flex flex-col relative w-full">
+                  {/* Mobile Header */}
+                  {isMobile && (
+                    <MobileHeader 
+                      title={currentChannel?.name || 'Channel'}
+                      subtitle={currentChannel?.topic}
+                      onMenuClick={() => setMobileMenuOpen(true)}
+                      onMembersClick={() => setMobileMembersOpen(true)}
+                    />
+                  )}
+
                   {/* Show Voice Channel View when connected to voice AND viewing voice channel */}
                   {showVoiceChat && selectedVoiceChannelId && currentChannelId === selectedVoiceChannelId ? (
                     <VoiceChannelView
@@ -346,7 +377,8 @@ export const MainApp: React.FC = () => {
                     />
                   ) : currentChannel ? (
                     <>
-                      <div className="h-12 px-4 flex items-center justify-between border-b border-mot-border bg-mot-surface shadow-sm">
+                      {/* Desktop Channel Header - HIDDEN ON MOBILE */}
+                      <div className="hidden md:flex h-12 px-4 items-center justify-between border-b border-mot-border bg-mot-surface shadow-sm">
                         <div className="flex items-center flex-1 min-w-0">
                           <div className="w-6 h-6 rounded bg-mot-gold/20 flex items-center justify-center mr-2">
                             <Hash className="h-4 w-4 text-mot-gold" />
@@ -377,15 +409,48 @@ export const MainApp: React.FC = () => {
                 </div>
 
                 <MemberList
+                  className="hidden lg:block"
                   members={members}
                   ownerId={currentGuild.owner_id}
                   guildId={currentGuild.id}
                   onMemberClick={(member) => setSelectedMemberId(member.id)}
                   onMemberAction={fetchMembers}
                 />
+
+                {/* Mobile Member List Drawer */}
+                {isMobile && (
+                  <>
+                    <div 
+                      className={`fixed inset-0 bg-black/80 z-40 transition-opacity ${mobileMembersOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                      onClick={() => setMobileMembersOpen(false)}
+                    />
+                    <div className={`fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ${mobileMembersOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                      <div className="h-full flex flex-col">
+                        <div className="bg-mot-surface border-b border-mot-border p-4 flex justify-between items-center">
+                          <h3 className="font-bold text-white">Members</h3>
+                          <button onClick={() => setMobileMembersOpen(false)}>
+                            <X className="w-5 h-5 text-gray-400" />
+                          </button>
+                        </div>
+                        <MemberList
+                          className="w-[280px] h-full"
+                          members={members}
+                          ownerId={currentGuild.owner_id}
+                          guildId={currentGuild.id}
+                          onMemberClick={(member) => {
+                            setSelectedMemberId(member.id);
+                            setMobileMembersOpen(false);
+                          }}
+                          onMemberAction={fetchMembers}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             ) : guilds.length === 0 ? (
               <div className="flex-1 flex items-center justify-center relative">
+                {/* Empty State Content */}
                 <div className="absolute top-20 left-20 w-64 h-64 bg-mot-gold/5 rounded-full blur-3xl animate-float" />
                 <div className="absolute bottom-20 right-20 w-80 h-80 bg-mot-gold/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
 
@@ -407,6 +472,7 @@ export const MainApp: React.FC = () => {
           </>
         } />
       </Routes>
+
 
       {/* Modals */}
       <CreateGuildModal isOpen={showCreateGuild} onClose={() => setShowCreateGuild(false)} />

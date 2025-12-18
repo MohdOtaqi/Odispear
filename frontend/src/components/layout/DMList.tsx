@@ -29,6 +29,7 @@ interface DMListProps {
   onDMSelect?: (dmChannelId: string) => void;
   onChannelSelect?: (channelId: string) => void; // Backward compatibility
   onCreateDM?: () => void;
+  className?: string;
 }
 
 export const DMList = React.memo<DMListProps>(({
@@ -38,13 +39,14 @@ export const DMList = React.memo<DMListProps>(({
   onDMSelect,
   onChannelSelect,
   onCreateDM,
+  className,
 }) => {
   const { user } = useAuthStore();
   const handleSelect = onDMSelect || onChannelSelect || (() => {});
   const activeId = currentDMChannelId || currentChannelId;
 
   return (
-    <div className="w-60 bg-mot-surface flex flex-col">
+    <div className={cn("w-60 bg-mot-surface flex flex-col", className)}>
       {/* Header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-mot-border">
         <h2 className="font-semibold text-white">Direct Messages</h2>
