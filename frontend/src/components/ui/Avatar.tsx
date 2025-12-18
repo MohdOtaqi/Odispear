@@ -49,12 +49,22 @@ export const Avatar = React.memo<AvatarProps>(({
     if (fallback) return fallback;
     if (alt) {
       const firstChar = alt.charAt(0);
-      // If username starts with a number, show the number
       if (/\d/.test(firstChar)) return firstChar;
       return firstChar.toUpperCase();
     }
     return '?';
   };
+
+  const getImageUrl = (url?: string) => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${apiUrl}${url.startsWith('/') ? url : `/${url}`}`;
+  };
+
+  const imageUrl = getImageUrl(src);
 
   return (
     <div className={cn('relative inline-block flex-shrink-0', className)}>
@@ -66,9 +76,9 @@ export const Avatar = React.memo<AvatarProps>(({
         )}
         onClick={onClick}
       >
-        {src && !imageError ? (
+        {imageUrl && !imageError ? (
           <img 
-            src={src} 
+            src={imageUrl} 
             alt={alt} 
             className="h-full w-full object-cover"
             onError={() => setImageError(true)}

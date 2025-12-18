@@ -55,7 +55,8 @@
     top: 0;
     bottom: 0;
     z-index: 50;
-    width: 280px;
+    width: 260px;
+    max-width: 70vw;
     box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3);
   }
 }
