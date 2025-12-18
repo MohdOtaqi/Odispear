@@ -129,10 +129,12 @@ const ParticipantItem: React.FC<{ participant: Participant }> = ({ participant }
             }
           `}
         />
-        <img
-          src={participant.avatar_url || `https://ui-avatars.com/api/?name=${participant.username}`}
+        <Avatar
+          src={participant.avatar_url}
           alt={participant.username}
-          className="w-8 h-8 rounded-full relative z-10"
+          fallback={participant.username.charAt(0).toUpperCase()}
+          size="sm"
+          className="relative z-10"
         />
         
         {/* Status indicator */}

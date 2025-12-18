@@ -270,17 +270,22 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                     <div className={`${screenShareParticipant ? 'w-12 h-12' : 'w-24 h-24'} rounded-full overflow-hidden border-4 ${
                       voiceUser.speaking ? 'border-green-500' : 'border-mot-gold/30'
                     }`}>
-                      {voiceUser.avatar_url ? (
-                        <img 
-                          src={voiceUser.avatar_url} 
-                          alt={voiceUser.username}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className={`w-full h-full bg-gradient-to-br from-mot-gold to-mot-gold-dark flex items-center justify-center ${screenShareParticipant ? 'text-lg' : 'text-3xl'} font-bold text-mot-black`}>
+                      <div className="w-full h-full bg-gradient-to-br from-mot-gold to-mot-gold-dark flex items-center justify-center">
+                        {voiceUser.avatar_url ? (
+                          <img 
+                            src={voiceUser.avatar_url.startsWith('http') ? voiceUser.avatar_url : `${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://n0tmot.com/api' : 'http://localhost:5000')}${voiceUser.avatar_url}`}
+                            alt={voiceUser.username}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`${voiceUser.avatar_url ? 'hidden' : ''} w-full h-full flex items-center justify-center ${screenShareParticipant ? 'text-lg' : 'text-3xl'} font-bold text-mot-black`}>
                           {voiceUser.username.charAt(0).toUpperCase()}
                         </div>
-                      )}
+                      </div>
                     </div>
                   
                     {/* Mute/Deafen indicators */}

@@ -230,8 +230,8 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
   }), [members]);
 
   return (
-    <div className={cn("w-60 bg-mot-surface flex flex-col border-l border-mot-border", className)}>
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+    <div className={cn("w-60 bg-mot-surface flex flex-col h-full border-l border-mot-border", className)}>
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
         {onlineMembers.length > 0 && (
           <div className="mb-4">
             <div className="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">
@@ -279,19 +279,19 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
         )}
       </div>
 
-      {/* Ad Component - Bottom of Sidebar */}
-        <div className="mt-auto border-t border-mot-border/30 p-3">
-          <AdComponent 
-            adFormat="rectangle"
-            className="w-full"
-            fallbackContent={
-              <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
-                <p className="text-xs text-gray-500 mb-2">Support the platform</p>
-                <p className="text-[10px] text-gray-600">Ad space available</p>
-              </div>
-            }
-          />
-        </div>
+      {/* Ad Component - Absolutely Stuck at Bottom */}
+      <div className="flex-shrink-0 border-t border-mot-border/30 p-3 bg-mot-surface">
+        <AdComponent 
+          adFormat="rectangle"
+          className="w-full"
+          fallbackContent={
+            <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
+              <p className="text-xs text-gray-500 mb-2">Support the platform</p>
+              <p className="text-[10px] text-gray-600">Ad space available</p>
+            </div>
+          }
+        />
+      </div>
     </div>
   );
 });

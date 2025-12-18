@@ -60,7 +60,8 @@ export const Avatar = React.memo<AvatarProps>(({
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    // For production, use the domain's API endpoint
+    const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://n0tmot.com/api' : 'http://localhost:5000');
     return `${apiUrl}${url.startsWith('/') ? url : `/${url}`}`;
   };
 
