@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Plus, Smile, Gift } from 'lucide-react';
+import { Send, Plus, Smile, Gift, Paperclip, Mic } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import { useMessageStore } from '../../store/messageStore';
 import { useDMStore } from '../../store/dmStore';
 import { socketManager } from '../../lib/socket';
 import { useDebounce } from '../../hooks/usePerformance';
+import toast from 'react-hot-toast';
 
 interface MessageInputProps {
   channelId: string;
@@ -133,7 +134,25 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <Tooltip content="Attach file" position="top">
+            <button 
+              onClick={() => toast('File upload coming soon!', { icon: '📎' })}
+              className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+          </Tooltip>
+          
+          <Tooltip content="Voice message" position="top">
+            <button 
+              onClick={() => toast('Voice recording coming soon!', { icon: '🎤' })}
+              className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+          </Tooltip>
+
           <Tooltip content="Gift Nitro" position="top">
             <button
               type="button"
@@ -144,13 +163,12 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
             </button>
           </Tooltip>
 
-          <Tooltip content="Add Emoji" position="top">
-            <button
-              type="button"
-              className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all"
-              aria-label="Add Emoji"
+          <Tooltip content="Add emoji" position="top">
+            <button 
+              onClick={() => toast('Emoji picker coming soon! 😊', { icon: '😄' })}
+              className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
             >
-              <Smile className="h-5 w-5" />
+              <Smile className="w-5 h-5" />
             </button>
           </Tooltip>
 
