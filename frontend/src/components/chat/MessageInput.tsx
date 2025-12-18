@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Plus, Smile, Gift, Paperclip, Mic } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
+import { EmojiPicker } from '../EmojiPicker';
 import { useMessageStore } from '../../store/messageStore';
 import { useDMStore } from '../../store/dmStore';
 import { socketManager } from '../../lib/socket';
 import { useDebounce } from '../../hooks/usePerformance';
 import toast from 'react-hot-toast';
+import api from '../../lib/api';
 
 interface MessageInputProps {
   channelId: string;
@@ -16,7 +18,10 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   
   const sendChannelMessage = useMessageStore((state) => state.sendMessage);
@@ -97,6 +102,53 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
     }
   }, [handleSubmit]);
 
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    setMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+    textareaRef.current?.focus();
+  }, []);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const fileUrl = response.data.url;
+      // Send message with file attachment
+      const fileMessage = `[File: ${file.name}](${fileUrl})`;
+      
+      if (isDM) {
+        await sendDMMessage(channelId, fileMessage);
+      } else {
+        await sendChannelMessage(channelId, fileMessage);
+      }
+      
+      toast.success('File uploaded successfully!');
+    } catch (error) {
+      console.error('File upload failed:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [channelId, isDM, sendDMMessage, sendChannelMessage]);
+
   return (
     <div className="border-t border-mot-border p-4 bg-mot-surface">
       <form onSubmit={handleSubmit} className="flex items-end gap-2">
@@ -104,12 +156,25 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
         <Tooltip content="Upload File" position="top">
           <button
             type="button"
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Upload File"
           >
-            <Plus className="h-5 w-5" />
+            {isUploading ? (
+              <div className="h-5 w-5 border-2 border-mot-gold border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Plus className="h-5 w-5" />
+            )}
           </button>
         </Tooltip>
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileUpload}
+          className="hidden"
+          accept="image/*,video/*,.pdf,.txt,.doc,.docx"
+        />
 
         {/* Message Input */}
         <div className="flex-1 bg-mot-surface-subtle rounded-lg border border-mot-border focus-within:border-mot-gold/50 transition-colors">
@@ -135,42 +200,24 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <Tooltip content="Attach file" position="top">
-            <button 
-              onClick={() => toast('File upload coming soon!', { icon: '📎' })}
-              className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
-            >
-              <Paperclip className="w-5 h-5" />
-            </button>
-          </Tooltip>
+          <div className="relative">
+            <Tooltip content="Add emoji" position="top">
+              <button 
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+            </Tooltip>
+            {showEmojiPicker && (
+              <EmojiPicker 
+                onEmojiSelect={handleEmojiSelect}
+                onClose={() => setShowEmojiPicker(false)}
+              />
+            )}
+          </div>
           
-          <Tooltip content="Voice message" position="top">
-            <button 
-              onClick={() => toast('Voice recording coming soon!', { icon: '🎤' })}
-              className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
-            >
-              <Mic className="w-5 h-5" />
-            </button>
-          </Tooltip>
-
-          <Tooltip content="Gift Nitro" position="top">
-            <button
-              type="button"
-              className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all"
-              aria-label="Gift Nitro"
-            >
-              <Gift className="h-5 w-5" />
-            </button>
-          </Tooltip>
-
-          <Tooltip content="Add emoji" position="top">
-            <button 
-              onClick={() => toast('Emoji picker coming soon! 😊', { icon: '😄' })}
-              className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
-            >
-              <Smile className="w-5 h-5" />
-            </button>
-          </Tooltip>
 
           {/* Send Button */}
           <Tooltip content={message.trim() ? 'Send Message' : 'Type a message'} position="top">

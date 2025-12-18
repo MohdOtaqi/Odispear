@@ -52,8 +52,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose
       case 'gestures': return <ThumbsUp className="w-5 h-5" />;
       case 'hearts': return <Heart className="w-5 h-5" />;
       case 'objects': return <Star className="w-5 h-5" />;
-      case 'activities': return <Fire className="w-5 h-5" />;
-      case 'food': return <Party className="w-5 h-5" />;
+      case 'activities': return <span className="text-base">⚽</span>;
+      case 'food': return <span className="text-base">🍕</span>;
       case 'flags': return <span className="text-base">🏁</span>;
       default: return <Smile className="w-5 h-5" />;
     }

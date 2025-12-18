@@ -279,14 +279,14 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
         )}
       </div>
 
-      {/* Ad Component - Absolutely Stuck at Bottom */}
-      <div className="flex-shrink-0 border-t border-mot-border/30 p-3 bg-mot-surface">
+      {/* Ad Component - Fixed at Bottom on Mobile */}
+      <div className="flex-shrink-0 md:relative md:border-t md:border-mot-border/30 md:p-3 md:bg-mot-surface fixed bottom-0 left-0 right-0 md:left-auto md:right-auto bg-mot-surface border-t border-mot-border p-2 z-40">
         <AdComponent 
           adFormat="rectangle"
-          className="w-full"
+          className="w-full max-w-md mx-auto md:max-w-none"
           fallbackContent={
-            <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
-              <p className="text-xs text-gray-500 mb-2">Support the platform</p>
+            <div className="bg-mot-surface/30 rounded-lg p-3 md:p-4 text-center border border-mot-border/50">
+              <p className="text-xs text-gray-500 mb-1 md:mb-2">Support the platform</p>
               <p className="text-[10px] text-gray-600">Ad space available</p>
             </div>
           }
