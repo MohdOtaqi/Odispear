@@ -230,8 +230,8 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
   }), [members]);
 
   return (
-    <div className={cn("w-60 bg-mot-surface flex flex-col overflow-y-auto custom-scrollbar border-l border-mot-border", className)}>
-      <div className="p-3">
+    <div className={cn("w-60 bg-mot-surface flex flex-col border-l border-mot-border", className)}>
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
         {onlineMembers.length > 0 && (
           <div className="mb-4">
             <div className="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">
