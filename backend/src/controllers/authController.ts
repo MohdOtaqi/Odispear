@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { query } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { generateAccessToken, generateRefreshToken } from '../utils/tokens';
 import { AuthRequest } from '../middleware/auth';
+import { sendPasswordResetEmail } from '../services/emailService';
 
 export const register = async (
   req: Request,
@@ -228,6 +230,122 @@ export const updateProfile = async (
     );
 
     res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const googleAuthCallback = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = req.user as any;
+    
+    if (!user) {
+      throw new AppError('Authentication failed', 401);
+    }
+
+    const accessToken = generateAccessToken(user.id, user.email, user.username);
+    const refreshToken = generateRefreshToken();
+
+    await query(
+      `INSERT INTO sessions (user_id, refresh_token, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '30 days')`,
+      [user.id, refreshToken]
+    );
+
+    await query(
+      'UPDATE users SET status = $1 WHERE id = $2',
+      ['online', user.id]
+    );
+
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${accessToken}&refresh=${refreshToken}`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requestPasswordReset = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email } = req.body;
+
+    const result = await query(
+      'SELECT id, email, username FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ message: 'If an account exists, a password reset email will be sent.' });
+    }
+
+    const user = result.rows[0];
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    await query(
+      `INSERT INTO password_reset_tokens (user_id, token, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '1 hour')`,
+      [user.id, tokenHash]
+    );
+
+    await sendPasswordResetEmail(user.email, resetToken);
+
+    res.json({ message: 'If an account exists, a password reset email will be sent.' });
+  } catch (error) {
+    console.error('[Auth] Password reset request error:', error);
+    res.json({ message: 'If an account exists, a password reset email will be sent.' });
+  }
+};
+
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      throw new AppError('Token and new password are required', 400);
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const result = await query(
+      `SELECT user_id FROM password_reset_tokens 
+       WHERE token = $1 AND expires_at > NOW() AND used = FALSE`,
+      [tokenHash]
+    );
+
+    if (result.rows.length === 0) {
+      throw new AppError('Invalid or expired reset token', 400);
+    }
+
+    const { user_id } = result.rows[0];
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [passwordHash, user_id]
+    );
+
+    await query(
+      'UPDATE password_reset_tokens SET used = TRUE WHERE token = $1',
+      [tokenHash]
+    );
+
+    await query(
+      'DELETE FROM sessions WHERE user_id = $1',
+      [user_id]
+    );
+
+    res.json({ message: 'Password reset successful. Please login with your new password.' });
   } catch (error) {
     next(error);
   }

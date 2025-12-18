@@ -1,0 +1,28 @@
+# robots.txt for Odispear
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app/
+
+# Sitemap
+Sitemap: https://n0tmot.com/sitemap.xml
+
+# Common bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+# Crawl delay to prevent server overload
+Crawl-delay: 10

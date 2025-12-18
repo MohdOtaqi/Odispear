@@ -28,17 +28,33 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor to handle token refresh and network errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle network errors gracefully
+    if (!error.response) {
+      console.error('[API] Network error - server may be offline');
+      return Promise.reject({
+        message: 'Network error. Please check your internet connection.',
+        isNetworkError: true,
+        originalError: error
+      });
+    }
+
+    // Handle 401 Unauthorized - attempt token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
+        
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
         const response = await axios.post('/api/v1/auth/refresh', {
           refreshToken,
         });
@@ -50,10 +66,43 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
+        // Force logout on refresh failure
+        console.error('[API] Token refresh failed - logging out');
         localStorage.clear();
         window.location.href = '/login';
-        return Promise.reject(refreshError);
+        return Promise.reject({
+          message: 'Session expired. Please log in again.',
+          isAuthError: true,
+          originalError: refreshError
+        });
       }
+    }
+
+    // Handle 403 Forbidden
+    if (error.response?.status === 403) {
+      return Promise.reject({
+        message: 'You do not have permission to perform this action.',
+        isForbidden: true,
+        originalError: error
+      });
+    }
+
+    // Handle 404 Not Found
+    if (error.response?.status === 404) {
+      return Promise.reject({
+        message: 'The requested resource was not found.',
+        isNotFound: true,
+        originalError: error
+      });
+    }
+
+    // Handle 500+ Server Errors
+    if (error.response?.status >= 500) {
+      return Promise.reject({
+        message: 'Server error. Please try again later.',
+        isServerError: true,
+        originalError: error
+      });
     }
 
     return Promise.reject(error);

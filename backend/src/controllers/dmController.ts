@@ -476,58 +476,14 @@ export const startDMCall = async (
       throw new AppError('Not a participant in this DM', 403);
     }
 
-    // Get Daily.co API key from environment
-    const DAILY_API_KEY = process.env.DAILY_API_KEY;
-    const DAILY_DOMAIN = process.env.DAILY_DOMAIN;
-
-    if (!DAILY_API_KEY || !DAILY_DOMAIN) {
-      throw new AppError('Voice service not configured', 500);
-    }
-
-    const axios = require('axios');
-    const dailyApi = axios.create({
-      baseURL: 'https://api.daily.co/v1',
-      headers: {
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
     // Create room name from DM channel ID
     const roomName = `dm-${channelId.substring(0, 8)}`;
+    const userName = req.user?.username || 'Guest';
 
-    // Try to get existing room or create new one
-    let room;
-    try {
-      const roomResponse = await dailyApi.get(`/rooms/${roomName}`);
-      room = roomResponse.data;
-    } catch (error: any) {
-      if (error.response && error.response.status === 404) {
-        // Create new room
-        const createResponse = await dailyApi.post('/rooms', {
-          name: roomName,
-          privacy: 'public',
-          properties: {
-            enable_chat: true,
-            start_video_off: !video,
-            start_audio_off: false,
-            exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
-          }
-        });
-        room = createResponse.data;
-      } else {
-        throw error;
-      }
-    }
-
-    // Generate meeting token for the user
-    const tokenResponse = await dailyApi.post('/meeting-tokens', {
-      properties: {
-        room_name: roomName,
-        user_id: userId,
-        user_name: req.user?.username || 'Guest'
-      }
-    });
+    // Use centralized Daily.co service with automatic fallback
+    const dailyService = require('../services/dailyService');
+    const room = await dailyService.getOrCreateRoom(roomName);
+    const token = await dailyService.generateMeetingToken(roomName, userId, userName);
 
     // Notify other participants about the call
     const participants = await query(
@@ -549,7 +505,7 @@ export const startDMCall = async (
     });
 
     res.json({
-      token: tokenResponse.data.token,
+      token,
       roomUrl: room.url
     });
   } catch (error) {

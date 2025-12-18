@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { Avatar } from '../ui/Avatar';
 import { Crown, MessageSquare, UserMinus, Ban, Clock, ShieldAlert } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
+import AdComponent from '../ads/AdComponent';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
@@ -274,6 +275,20 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
             <p className="text-sm">No members found</p>
           </div>
         )}
+
+        {/* Ad Component - Sidebar Placement */}
+        <div className="mt-4 px-2">
+          <AdComponent 
+            adFormat="rectangle"
+            className="w-full"
+            fallbackContent={
+              <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
+                <p className="text-xs text-gray-500 mb-2">Support the platform</p>
+                <p className="text-[10px] text-gray-600">Ad space available</p>
+              </div>
+            }
+          />
+        </div>
       </div>
     </div>
   );

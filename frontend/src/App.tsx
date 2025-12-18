@@ -6,6 +6,9 @@ import { RegisterPage } from './pages/RegisterPage';
 import { MainApp } from './pages/MainApp';
 import Home from './pages/HomeMOT';
 import { InvitePage } from './pages/InvitePage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import AuthCallback from './pages/AuthCallback';
 import { useAuthStore } from './store/authStore';
 import { useVoiceUsersStore } from './store/voiceUsersStore';
 import { VoiceChatProvider } from './components/VoiceChat/VoiceChatProvider';
@@ -69,6 +72,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/invite/:code" element={<InvitePage />} />
         <Route
           path="/app/*"
