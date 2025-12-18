@@ -51,13 +51,13 @@ const ResetPassword: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-purple-900/20 animate-shimmer" />
+      <div className="absolute inset-0 bg-gradient-to-br from-mot-gold/5 via-mot-gold/10 to-mot-gold/5 animate-shimmer" />
       
-      <div className="absolute top-20 left-20 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl animate-float" />
+      <div className="absolute top-20 left-20 w-72 h-72 bg-mot-gold/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
 
       <div className="relative w-full max-w-md animate-scale-in">
-        <div className="glass-effect rounded-2xl shadow-2xl p-8 border border-purple-600/20">
+        <div className="glass-effect rounded-2xl shadow-2xl p-8 border border-mot-border">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold gradient-text mb-2">Reset Password</h1>
             <p className="text-gray-400">Enter your new password</p>
@@ -74,7 +74,7 @@ const ResetPassword: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-11 py-3 text-white focus:border-purple-500 focus:outline-none transition-all"
+                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-11 py-3 text-white focus:border-mot-gold focus:outline-none transition-all"
                   placeholder="••••••••"
                   required
                   minLength={6}
@@ -82,7 +82,7 @@ const ResetPassword: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-400 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-mot-gold transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -94,12 +94,12 @@ const ResetPassword: React.FC = () => {
                 Confirm Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-all"
+                  className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-mot-gold focus:outline-none transition-all"
                   placeholder="••••••••"
                   required
                   minLength={6}
@@ -110,7 +110,7 @@ const ResetPassword: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-xl transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-b from-mot-gold-light via-mot-gold to-mot-gold-deep text-mot-black font-bold py-3 rounded-xl transition-all hover:scale-105 shadow-gold-glow disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -125,7 +125,7 @@ const ResetPassword: React.FC = () => {
 
           <div className="mt-6 text-center text-sm text-gray-400">
             Remember your password?{' '}
-            <Link to="/login" className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
+            <Link to="/login" className="text-mot-gold hover:text-mot-gold-light font-semibold transition-colors">
               Login
             </Link>
           </div>

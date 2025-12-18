@@ -28,14 +28,14 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-purple-900/20 animate-shimmer" />
+      <div className="absolute inset-0 bg-gradient-to-br from-mot-gold/5 via-mot-gold/10 to-mot-gold/5 animate-shimmer" />
       
-      <div className="absolute top-20 left-20 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl animate-float" />
+      <div className="absolute top-20 left-20 w-72 h-72 bg-mot-gold/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
 
       <div className="relative w-full max-w-md animate-scale-in">
-        <div className="glass-effect rounded-2xl shadow-2xl p-8 border border-purple-600/20">
-          <Link to="/login" className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-6 transition-colors">
+        <div className="glass-effect rounded-2xl shadow-2xl p-8 border border-mot-border">
+          <Link to="/login" className="text-mot-gold hover:text-mot-gold-light font-semibold transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Login
           </Link>
@@ -52,12 +52,12 @@ const ForgotPassword: React.FC = () => {
                   Email Address
                 </label>
                 <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-mot-gold transition-colors" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-all"
+                    className="w-full bg-[#2b2d31] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white focus:border-mot-gold focus:outline-none transition-all"
                     placeholder="name@example.com"
                     required
                   />
@@ -67,7 +67,7 @@ const ForgotPassword: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-xl transition-all hover-lift disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-b from-mot-gold-light via-mot-gold to-mot-gold-deep text-mot-black font-bold py-3 rounded-xl transition-all hover:scale-105 shadow-gold-glow disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
@@ -88,11 +88,11 @@ const ForgotPassword: React.FC = () => {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Check Your Email</h3>
               <p className="text-gray-400 mb-6">
-                We've sent password reset instructions to <span className="text-purple-400">{email}</span>
+                We've sent password reset instructions to <span className="text-mot-gold">{email}</span>
               </p>
               <Link 
                 to="/login"
-                className="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-all hover-lift"
+                className="inline-block bg-gradient-to-b from-mot-gold-light via-mot-gold to-mot-gold-deep text-mot-black font-bold px-6 py-3 rounded-xl transition-all hover:scale-105 shadow-gold-glow"
               >
                 Return to Login
               </Link>
