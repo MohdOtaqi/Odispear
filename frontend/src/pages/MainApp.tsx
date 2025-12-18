@@ -383,8 +383,8 @@ export const MainApp: React.FC = () => {
                           <div className="w-6 h-6 rounded bg-mot-gold/20 flex items-center justify-center mr-2">
                             <Hash className="h-4 w-4 text-mot-gold" />
                           </div>
-                          <h3 className="font-bold text-white">{currentChannel.name}</h3>
-                          {currentChannel.topic && (
+                          <h3 className="font-bold text-white">{currentChannel?.name || 'Channel'}</h3>
+                          {currentChannel?.topic && (
                             <>
                               <div className="mx-3 w-px h-4 bg-white/10" />
                               <p className="text-sm text-gray-400 truncate">{currentChannel.topic}</p>
