@@ -6,6 +6,7 @@ import AdComponent from '../ads/AdComponent';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
+import { cn } from '../../lib/utils';
 
 interface Member {
   id: string;
