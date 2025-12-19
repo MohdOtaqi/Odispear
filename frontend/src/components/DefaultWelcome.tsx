@@ -8,15 +8,15 @@ export const DefaultWelcome: React.FC = () => {
   const { guilds } = useGuildStore();
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-mot-black relative overflow-hidden min-h-screen md:min-h-0 pb-24 md:pb-0">
+    <div className="flex-1 flex items-center justify-center bg-mot-black relative overflow-hidden min-h-screen md:min-h-0 pb-32 md:pb-0">
       {/* Enhanced Mobile Background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-10 right-10 w-[200px] md:w-[400px] h-[200px] md:h-[400px] bg-mot-gold/8 rounded-full blur-[100px] md:blur-[150px]" />
-        <div className="absolute bottom-20 left-10 w-[150px] md:w-[300px] h-[150px] md:h-[300px] bg-mot-gold/5 rounded-full blur-[80px] md:blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-mot-gold/3 rounded-full blur-[120px] md:blur-[200px]" />
+        <div className="absolute top-5 right-5 w-[150px] md:w-[400px] h-[150px] md:h-[400px] bg-mot-gold/10 rounded-full blur-[80px] md:blur-[150px]" />
+        <div className="absolute bottom-10 left-5 w-[120px] md:w-[300px] h-[120px] md:h-[300px] bg-mot-gold/8 rounded-full blur-[60px] md:blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-mot-gold/5 rounded-full blur-[100px] md:blur-[200px]" />
       </div>
 
-      <div className="text-center max-w-sm md:max-w-2xl mx-auto px-4 md:px-6 relative z-10 w-full">
+      <div className="text-center max-w-xs md:max-w-2xl mx-auto px-3 md:px-6 relative z-10 w-full safe-area-inset">
         {/* Logo */}
         <div className="mb-6 md:mb-8">
           <div className="mb-4 md:mb-6">
