@@ -18,38 +18,34 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
     return null;
   }
 
-  // Check if we're on a DM page with sidebar visible (large screens)
+  // Check if we're on a DM page - sidebar has its own ad there
   const isDMPage = location.pathname.includes('/dms/');
-
-  // Smart positioning: On DM pages, position higher to avoid covering sidebar content
-  // On other pages, position at bottom-right corner
-  const desktopPosition = isDMPage
-    ? 'bottom-20 right-[300px]'  // Move left of sidebar and higher
-    : 'bottom-4 right-4';        // Normal bottom-right
 
   return (
     <>
-      {/* Desktop Global Ad - Smart positioning based on page */}
-      <div className={`hidden lg:block fixed ${desktopPosition} z-30 ${className}`}>
-        <div className="bg-mot-surface/95 backdrop-blur-md border border-mot-gold/50 rounded-xl shadow-lg overflow-hidden w-[200px]">
-          <AdComponent
-            adFormat="rectangle"
-            className="w-full"
-            fallbackContent={
-              <div className="bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 p-4 text-center">
-                <div className="w-12 h-12 mx-auto mb-3 bg-mot-gold/20 rounded-full flex items-center justify-center">
-                  <Gem className="w-6 h-6 text-mot-gold" />
+      {/* Desktop Global Ad - Hide on DM pages (sidebar has its own ad) */}
+      {!isDMPage && (
+        <div className={`hidden lg:block fixed bottom-4 right-4 z-30 ${className}`}>
+          <div className="bg-mot-surface/95 backdrop-blur-md border border-mot-gold/50 rounded-xl shadow-lg overflow-hidden w-[200px]">
+            <AdComponent
+              adFormat="rectangle"
+              className="w-full"
+              fallbackContent={
+                <div className="bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 p-4 text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 bg-mot-gold/20 rounded-full flex items-center justify-center">
+                    <Gem className="w-6 h-6 text-mot-gold" />
+                  </div>
+                  <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
+                  <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
+                  <button className="w-full py-2.5 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
+                    Upgrade Now
+                  </button>
                 </div>
-                <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
-                <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
-                <button className="w-full py-2.5 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
-                  Upgrade Now
-                </button>
-              </div>
-            }
-          />
+              }
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Mobile Global Ad - Bottom Banner */}
       <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 ${className}`}>

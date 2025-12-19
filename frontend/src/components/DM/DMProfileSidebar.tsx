@@ -202,6 +202,20 @@ export const DMProfileSidebar: React.FC<DMProfileSidebarProps> = ({ channel, cla
                     </button>
                 </div>
 
+                {/* Ad Section - Inside Sidebar */}
+                <div className="flex-1 flex items-end p-4">
+                    <div className="w-full bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 rounded-lg p-4 text-center border border-mot-gold/40">
+                        <div className="w-10 h-10 mx-auto mb-2 bg-mot-gold/20 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">💎</span>
+                        </div>
+                        <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
+                        <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
+                        <button className="w-full py-2 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
+                            Upgrade Now
+                        </button>
+                    </div>
+                </div>
+
                 {/* View Full Profile Button */}
                 <div className="p-4 border-t border-mot-border">
                     <button
