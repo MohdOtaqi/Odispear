@@ -6,6 +6,7 @@ import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
 import { cn } from '../../lib/utils';
+import AdComponent from '../ads/AdComponent';
 
 interface Member {
   id: string;
@@ -276,6 +277,11 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
             <p className="text-sm">No members found</p>
           </div>
         )}
+
+        {/* Desktop Ad Placement */}
+        <div className="mt-auto pt-4 hidden md:block">
+          <AdComponent adFormat="horizontal" />
+        </div>
       </div>
 
 

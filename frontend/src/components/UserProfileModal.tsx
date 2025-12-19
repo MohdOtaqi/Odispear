@@ -137,14 +137,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
         icon: g.icon_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(g.name)}&background=6366f1&color=fff`
       }));
 
+      // Helper to get full image URL for uploads
+      const getImageUrl = (url?: string) => {
+        if (!url) return null;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          return url;
+        }
+        const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://n0tmot.com/api' : 'http://localhost:5000');
+        return `${apiUrl}${url.startsWith('/') ? url : `/${url}`}`;
+      };
+
       // Transform backend response to match UserProfile interface
       setProfile({
         id: userData.id,
         username: userData.username,
         discriminator: userData.discriminator || '0000',
         displayName: userData.display_name || userData.username,
-        avatar: userData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.username)}&background=6366f1&color=fff`,
-        banner: userData.banner_url || undefined,
+        avatar: getImageUrl(userData.avatar_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.username)}&background=6366f1&color=fff`,
+        banner: getImageUrl(userData.banner_url) || undefined,
         bio: userData.bio || '',
         status: userData.status || 'offline',
         customStatus: userData.status_text || userData.custom_status || '',
@@ -575,8 +585,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
             <button
               onClick={() => setActiveTab('about')}
               className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'about'
-                  ? 'text-mot-gold border-b-2 border-mot-gold'
-                  : 'text-gray-400 hover:text-white'
+                ? 'text-mot-gold border-b-2 border-mot-gold'
+                : 'text-gray-400 hover:text-white'
                 }`}
             >
               About Me
@@ -585,8 +595,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
               <button
                 onClick={() => setActiveTab('activity')}
                 className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'activity'
-                    ? 'text-mot-gold border-b-2 border-mot-gold'
-                    : 'text-gray-400 hover:text-white'
+                  ? 'text-mot-gold border-b-2 border-mot-gold'
+                  : 'text-gray-400 hover:text-white'
                   }`}
               >
                 Activity
@@ -595,8 +605,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
             <button
               onClick={() => setActiveTab('mutual')}
               className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'mutual'
-                  ? 'text-mot-gold border-b-2 border-mot-gold'
-                  : 'text-gray-400 hover:text-white'
+                ? 'text-mot-gold border-b-2 border-mot-gold'
+                : 'text-gray-400 hover:text-white'
                 }`}
             >
               Mutual
@@ -605,8 +615,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
               <button
                 onClick={() => setActiveTab('roles')}
                 className={`pb-3 px-1 text-sm font-medium transition-colors ${activeTab === 'roles'
-                    ? 'text-mot-gold border-b-2 border-mot-gold'
-                    : 'text-gray-400 hover:text-white'
+                  ? 'text-mot-gold border-b-2 border-mot-gold'
+                  : 'text-gray-400 hover:text-white'
                   }`}
               >
                 Roles
