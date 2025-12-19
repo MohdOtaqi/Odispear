@@ -215,8 +215,8 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
           {/* Header with Avatar */}
           <div className="flex items-start justify-between -mt-12 mb-8">
             <div className="flex items-end gap-4">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full bg-mot-surface border-4 border-mot-surface-subtle overflow-hidden">
+              <div className="relative z-20">
+                <div className="w-24 h-24 rounded-full bg-mot-surface border-4 border-mot-surface-subtle overflow-hidden shadow-xl">
                   {(avatarPreview || profileData.avatar_url) ? (
                     <img
                       src={avatarPreview || getImageUrl(profileData.avatar_url)}

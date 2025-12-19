@@ -113,18 +113,31 @@ export const UserSettingsModal = React.memo<UserSettingsModalProps>(({ isOpen, o
           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
             {activeTab === 'account' && (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 p-4 bg-mot-surface rounded-lg border border-mot-border">
-                  <Avatar
-                    src={user?.avatar_url}
-                    alt={user?.username || ''}
-                    size="xl"
-                    fallback={user?.username?.charAt(0) || 'U'}
-                  />
-                  <div>
-                    <h3 className="text-lg font-bold text-white">{user?.display_name || user?.username}</h3>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Avatar
+                      src={user?.avatar_url}
+                      alt={user?.username}
+                      fallback={user?.username?.charAt(0)}
+                      size="lg"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-white">{user?.username}</h3>
                     <p className="text-sm text-gray-400">@{user?.username}</p>
                   </div>
-                  <Button variant="secondary" size="sm" className="ml-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // Find and open ProfileEditor
+                      const profileEditor = document.querySelector('[data-profile-editor-trigger]') as HTMLButtonElement;
+                      if (profileEditor) {
+                        profileEditor.click();
+                        onClose(); // Close settings modal
+                      }
+                    }}
+                    className="bg-mot-gold/20 border-mot-gold text-mot-gold hover:bg-mot-gold/30"
+                  >
                     Change Avatar
                   </Button>
                 </div>
