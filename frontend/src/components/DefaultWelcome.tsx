@@ -53,13 +53,13 @@ export const DefaultWelcome: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {guilds.length > 0 ? (
             <>
-              <p className="text-gray-300 mb-4">
-                Select a server from the left sidebar to get started
+              <p className="text-gray-300 mb-3 md:mb-4 text-sm md:text-base">
+                Select a server from the sidebar to get started
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-col gap-3 justify-center">
                 <button
                   onClick={() => navigate('/app/friends')}
                   className="px-6 py-3 bg-mot-gold hover:bg-mot-gold-light text-mot-black font-semibold rounded-lg transition-all shadow-gold-glow-sm hover:scale-105"
@@ -70,15 +70,15 @@ export const DefaultWelcome: React.FC = () => {
             </>
           ) : (
             <>
-              <p className="text-gray-300 mb-6">
-                Get started by creating your first server or joining an existing one
+              <p className="text-gray-300 mb-4 md:mb-6 text-sm md:text-base">
+                Get started by creating your first server or joining one
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-col gap-3 justify-center">
                 <button
                   onClick={() => navigate('/app/friends')}
                   className="px-6 py-3 bg-mot-gold hover:bg-mot-gold-light text-mot-black font-semibold rounded-lg transition-all shadow-gold-glow-sm hover:scale-105 flex items-center justify-center gap-2"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 md:w-5 h-4 md:h-5" />
                   Create Server
                 </button>
                 <button

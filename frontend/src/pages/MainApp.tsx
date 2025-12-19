@@ -33,6 +33,7 @@ import toast from 'react-hot-toast';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import MobileHeader from '../components/mobile/MobileHeader';
 import MobileSidebar from '../components/mobile/MobileSidebar';
+import { DefaultWelcome } from '../components/DefaultWelcome';
 
 export const MainApp: React.FC = () => {
   const navigate = useNavigate();
@@ -291,7 +292,13 @@ export const MainApp: React.FC = () => {
                   <MessageInput channelId={currentDMChannel.id} isDM />
                 </>
               ) : (
-                <DefaultWelcome />
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center animate-fade-in">
+                    <Users className="w-16 h-16 text-mot-gold mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-white mb-2">Select a DM</h3>
+                    <p className="text-gray-400">Choose a conversation to start chatting</p>
+                  </div>
+                </div>
               )}
             </div>
           </>
@@ -345,7 +352,7 @@ export const MainApp: React.FC = () => {
                   onCreateGuild={() => setShowCreateGuild(true)}
                 />
 
-                <div className="flex-1 flex flex-col relative w-full">
+                <div className="flex-1 flex flex-col relative w-full pb-20 md:pb-0">
                   {/* Mobile Header */}
                   {isMobile && (
                     <MobileHeader 

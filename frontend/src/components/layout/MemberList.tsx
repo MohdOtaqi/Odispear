@@ -231,7 +231,7 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
 
   return (
     <div className={cn("w-60 bg-mot-surface flex flex-col h-full border-l border-mot-border", className)}>
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 pb-20 md:pb-3">
         {onlineMembers.length > 0 && (
           <div className="mb-4">
             <div className="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">
@@ -279,14 +279,14 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
         )}
       </div>
 
-      {/* Ad Component - Fixed at Bottom on Mobile */}
-      <div className="flex-shrink-0 md:relative md:border-t md:border-mot-border/30 md:p-3 md:bg-mot-surface fixed bottom-0 left-0 right-0 md:left-auto md:right-auto bg-mot-surface border-t border-mot-border p-2 z-40">
+      {/* Ad Component - Only fixed at bottom on mobile, normal in sidebar on desktop */}
+      <div className="flex-shrink-0 border-t border-mot-border/30 p-3 bg-mot-surface md:relative md:static fixed bottom-0 left-0 right-0 md:left-auto md:right-auto z-40 md:z-auto">
         <AdComponent 
           adFormat="rectangle"
-          className="w-full"
+          className="w-full max-w-md mx-auto md:max-w-none"
           fallbackContent={
-            <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
-              <p className="text-xs text-gray-500 mb-2">Support the platform</p>
+            <div className="bg-mot-surface/30 rounded-lg p-3 md:p-4 text-center border border-mot-border/50">
+              <p className="text-xs text-gray-500 mb-1 md:mb-2">Support the platform</p>
               <p className="text-[10px] text-gray-600">Ad space available</p>
             </div>
           }
