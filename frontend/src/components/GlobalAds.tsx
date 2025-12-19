@@ -22,7 +22,7 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
     <>
       {/* Desktop Global Ad - Same style as sidebar ad, shows everywhere */}
       <div className={`hidden md:block fixed bottom-4 right-4 z-30 ${className}`}>
-        <div className="bg-mot-surface/95 backdrop-blur-md border border-mot-gold/50 rounded-xl shadow-lg overflow-hidden w-[240px]">
+        <div className="bg-mot-surface/95 backdrop-blur-md border border-mot-gold/50 rounded-xl shadow-lg overflow-hidden w-[200px]">
           <AdComponent
             adFormat="rectangle"
             className="w-full"
