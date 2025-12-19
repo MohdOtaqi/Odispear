@@ -34,6 +34,7 @@ import { useMobileDetection } from '../hooks/useMobileDetection';
 import MobileHeader from '../components/mobile/MobileHeader';
 import MobileSidebar from '../components/mobile/MobileSidebar';
 import { DefaultWelcome } from '../components/DefaultWelcome';
+import AdComponent from '../components/ads/AdComponent';
 
 export const MainApp: React.FC = () => {
   const navigate = useNavigate();
@@ -241,8 +242,8 @@ export const MainApp: React.FC = () => {
             src="/MOT.gif"
             alt="MOT"
             className={`w-16 h-16 rounded-xl transition-all ${isOnFriendsPage || isOnDMsPage
-                ? 'drop-shadow-[0_0_12px_rgba(245,166,35,0.6)]'
-                : 'opacity-90 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(245,166,35,0.4)]'
+              ? 'drop-shadow-[0_0_12px_rgba(245,166,35,0.6)]'
+              : 'opacity-90 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(245,166,35,0.4)]'
               }`}
           />
         </button>
@@ -341,7 +342,7 @@ export const MainApp: React.FC = () => {
                 </div>
 
                 {/* Mobile Sidebar & Header */}
-                <MobileSidebar 
+                <MobileSidebar
                   isOpen={mobileMenuOpen}
                   onClose={() => setMobileMenuOpen(false)}
                   channels={channels}
@@ -355,7 +356,7 @@ export const MainApp: React.FC = () => {
                 <div className="flex-1 flex flex-col relative w-full pb-20 md:pb-0">
                   {/* Mobile Header */}
                   {isMobile && (
-                    <MobileHeader 
+                    <MobileHeader
                       title={currentChannel?.name || 'Channel'}
                       subtitle={currentChannel?.topic}
                       onMenuClick={() => setMobileMenuOpen(true)}
@@ -421,7 +422,7 @@ export const MainApp: React.FC = () => {
                 {/* Mobile Member List Drawer */}
                 {isMobile && (
                   <>
-                    <div 
+                    <div
                       className={`fixed inset-0 bg-black/80 z-40 transition-opacity ${mobileMembersOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                       onClick={() => setMobileMembersOpen(false)}
                     />
@@ -469,7 +470,9 @@ export const MainApp: React.FC = () => {
                   </button>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <DefaultWelcome />
+            )}
           </>
         } />
       </Routes>
@@ -523,6 +526,22 @@ export const MainApp: React.FC = () => {
           onClose={() => setSelectedMemberId(null)}
           guildId={currentGuild?.id}
         />
+      )}
+
+      {/* Mobile Ad - Fixed at bottom */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-mot-surface border-t border-mot-border p-2 safe-area-inset-bottom">
+          <AdComponent
+            adFormat="horizontal"
+            className="w-full max-w-lg mx-auto"
+            fallbackContent={
+              <div className="bg-mot-surface/50 rounded-lg p-2 text-center border border-mot-border/50">
+                <p className="text-xs text-gray-500">Support the platform</p>
+                <p className="text-[10px] text-gray-600">Ad space available</p>
+              </div>
+            }
+          />
+        </div>
       )}
 
     </div>

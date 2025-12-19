@@ -2,7 +2,6 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { Avatar } from '../ui/Avatar';
 import { Crown, MessageSquare, UserMinus, Ban, Clock, ShieldAlert } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
-import AdComponent from '../ads/AdComponent';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
@@ -39,9 +38,9 @@ interface ContextMenuProps {
 const MemberContextMenu: React.FC<ContextMenuProps> = ({ x, y, member, isOwner, guildId, onClose, onAction }) => {
   const { user } = useAuthStore();
   const [showTimeoutOptions, setShowTimeoutOptions] = useState(false);
-  
+
   const isSelf = user?.id === member.id;
-  
+
   const handleKick = async () => {
     if (!guildId) return;
     try {
@@ -90,7 +89,7 @@ const MemberContextMenu: React.FC<ContextMenuProps> = ({ x, y, member, isOwner, 
   return (
     <>
       <div className="fixed inset-0 z-[100]" onClick={onClose} />
-      <div 
+      <div
         className="fixed z-[101] bg-[#1a1a1c] border border-neutral-700 rounded-lg shadow-2xl py-2 min-w-[200px] max-h-[80vh] overflow-y-auto"
         style={{ left: Math.max(10, adjustedX), top: Math.max(10, adjustedY) }}
       >
@@ -98,7 +97,7 @@ const MemberContextMenu: React.FC<ContextMenuProps> = ({ x, y, member, isOwner, 
           <p className="text-sm font-semibold text-white">{member.display_name || member.username}</p>
           <p className="text-xs text-neutral-400">@{member.username}</p>
         </div>
-        
+
         {canModerate && (
           <div className="py-1">
             <button
@@ -108,7 +107,7 @@ const MemberContextMenu: React.FC<ContextMenuProps> = ({ x, y, member, isOwner, 
               <UserMinus className="h-4 w-4 text-neutral-400" />
               Kick
             </button>
-            
+
             <button
               onClick={handleBan}
               className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/20 flex items-center gap-3 transition-colors"
@@ -116,7 +115,7 @@ const MemberContextMenu: React.FC<ContextMenuProps> = ({ x, y, member, isOwner, 
               <Ban className="h-4 w-4" />
               Ban
             </button>
-            
+
             <div>
               <button
                 onClick={() => setShowTimeoutOptions(!showTimeoutOptions)}
@@ -126,7 +125,7 @@ const MemberContextMenu: React.FC<ContextMenuProps> = ({ x, y, member, isOwner, 
                 Timeout
                 <span className="ml-auto text-xs text-neutral-500">{showTimeoutOptions ? '▼' : '▶'}</span>
               </button>
-              
+
               {showTimeoutOptions && (
                 <div className="bg-[#141416] border-t border-neutral-700 py-1">
                   {[
@@ -150,7 +149,7 @@ const MemberContextMenu: React.FC<ContextMenuProps> = ({ x, y, member, isOwner, 
             </div>
           </div>
         )}
-        
+
         {!canModerate && !isSelf && (
           <div className="px-4 py-3 text-xs text-neutral-500 flex items-center gap-2">
             <ShieldAlert className="h-4 w-4" />
@@ -171,16 +170,16 @@ const MemberItem = React.memo<{
 }>(({ member, isOwner, guildId, onClick, onAction }) => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const displayName = member.nickname || member.display_name || member.username;
-  
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY });
   }, []);
-  
+
   return (
     <>
       <Tooltip content={`View ${displayName}'s profile`} position="left">
-        <button 
+        <button
           onClick={onClick}
           onContextMenu={handleContextMenu}
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-mot-gold/10 group transition-all duration-150"
@@ -205,7 +204,7 @@ const MemberItem = React.memo<{
           <MessageSquare className="h-4 w-4 text-mot-gold opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       </Tooltip>
-      
+
       {contextMenu && (
         <MemberContextMenu
           x={contextMenu.x}
@@ -231,7 +230,7 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
 
   return (
     <div className={cn("w-60 bg-mot-surface flex flex-col h-full border-l border-mot-border", className)}>
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 pb-20 md:pb-3">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
         {onlineMembers.length > 0 && (
           <div className="mb-4">
             <div className="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">
@@ -279,19 +278,7 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
         )}
       </div>
 
-      {/* Ad Component - Only fixed at bottom on mobile, normal in sidebar on desktop */}
-      <div className="flex-shrink-0 border-t border-mot-border/30 p-3 bg-mot-surface md:relative md:static fixed bottom-0 left-0 right-0 md:left-auto md:right-auto z-40 md:z-auto">
-        <AdComponent 
-          adFormat="rectangle"
-          className="w-full max-w-md mx-auto md:max-w-none"
-          fallbackContent={
-            <div className="bg-mot-surface/30 rounded-lg p-3 md:p-4 text-center border border-mot-border/50">
-              <p className="text-xs text-gray-500 mb-1 md:mb-2">Support the platform</p>
-              <p className="text-[10px] text-gray-600">Ad space available</p>
-            </div>
-          }
-        />
-      </div>
+
     </div>
   );
 });
