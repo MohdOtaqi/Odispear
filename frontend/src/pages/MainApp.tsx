@@ -267,6 +267,7 @@ export const MainApp: React.FC = () => {
           onClick={() => setShowProfileEditor(true)}
           className="w-12 h-12 rounded-2xl bg-mot-surface-subtle hover:bg-mot-gold text-gray-400 hover:text-mot-black transition-all flex items-center justify-center hover:rounded-xl"
           title="Edit Profile"
+          data-profile-editor-trigger
         >
           <User className="w-5 h-5" />
         </button>

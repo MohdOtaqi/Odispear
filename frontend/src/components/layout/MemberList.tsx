@@ -279,33 +279,6 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
         )}
       </div>
 
-      {/* Desktop Ad Placement - Fixed at bottom of member list */}
-      <div className="hidden md:block flex-shrink-0 border-t border-mot-border/30 p-3 bg-mot-surface">
-        <AdComponent 
-          adFormat="rectangle"
-          className="w-full"
-          fallbackContent={
-            <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
-              <p className="text-xs text-gray-500 mb-2">Support the platform</p>
-              <p className="text-[10px] text-gray-600">Ad space available</p>
-            </div>
-          }
-        />
-      </div>
-
-      {/* Mobile Ad Overlay - Only shows on mobile at bottom of screen */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-mot-surface border-t border-mot-border p-4 safe-area-inset-bottom">
-        <AdComponent 
-          adFormat="rectangle"
-          className="w-full max-w-xs mx-auto"
-          fallbackContent={
-            <div className="bg-gradient-to-r from-mot-gold/10 to-mot-gold/20 rounded-xl p-4 text-center border border-mot-gold/30">
-              <p className="text-xs text-mot-gold font-medium mb-1">Support MOT Platform</p>
-              <p className="text-[10px] text-gray-400">Ad space available</p>
-            </div>
-          }
-        />
-      </div>
     </div>
   );
 });
