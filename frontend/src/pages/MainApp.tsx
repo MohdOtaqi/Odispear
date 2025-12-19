@@ -350,42 +350,6 @@ export const MainApp: React.FC = () => {
                   channels={channels}
                   currentChannel={currentChannelId || undefined}
                   onChannelClick={handleChannelSelect}
-                  currentGuildId={currentGuild.id}
-                  onGuildSelect={handleGuildSelect}
-                  onCreateGuild={() => setShowCreateGuild(true)}
-                />
-
-                <div className="flex-1 flex flex-col relative w-full pb-20 md:pb-0">
-                  {/* Mobile Header */}
-                  {isMobile && (
-                    <MobileHeader
-                      title={currentChannel?.name || 'Channel'}
-                      subtitle={currentChannel?.topic}
-                      onMenuClick={() => setMobileMenuOpen(true)}
-                      onMembersClick={() => setMobileMembersOpen(true)}
-                    />
-                  )}
-
-                  {/* Show Voice Channel View when connected to voice AND viewing voice channel */}
-                  {showVoiceChat && selectedVoiceChannelId && currentChannelId === selectedVoiceChannelId ? (
-                    <VoiceChannelView
-                      channelId={selectedVoiceChannelId}
-                      channelName={channels.find(c => c.id === selectedVoiceChannelId)?.name || 'Voice Channel'}
-                      connectedUsers={[]}
-                      onJoinVoice={() => handleVoiceChannelJoin(selectedVoiceChannelId)}
-                      onLeave={async () => {
-                        await leaveVoiceChannel();
-                        setShowVoiceChat(false);
-                        setSelectedVoiceChannelId(null);
-                      }}
-                    />
-                  ) : currentChannel ? (
-                    <>
-                      {/* Desktop Channel Header - HIDDEN ON MOBILE */}
-                      <div className="hidden md:flex h-12 px-4 items-center justify-between border-b border-mot-border bg-mot-surface shadow-sm">
-                        <div className="flex items-center flex-1 min-w-0">
-                          <div className="w-6 h-6 rounded bg-mot-gold/20 flex items-center justify-center mr-2">
-                            <Hash className="h-4 w-4 text-mot-gold" />
                           </div>
                           <h3 className="font-bold text-white">{currentChannel?.name || 'Channel'}</h3>
                           {currentChannel?.topic && (
