@@ -34,6 +34,7 @@ import { useMobileDetection } from '../hooks/useMobileDetection';
 import MobileHeader from '../components/mobile/MobileHeader';
 import MobileSidebar from '../components/mobile/MobileSidebar';
 import DefaultWelcome from '../components/DefaultWelcome';
+import GlobalAds from '../components/GlobalAds';
 import AdComponent from '../components/ads/AdComponent';
 
 export const MainApp: React.FC = () => {
@@ -529,22 +530,9 @@ export const MainApp: React.FC = () => {
         />
       )}
 
-      {/* Mobile Ad - Fixed at bottom */}
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-mot-surface border-t border-mot-border p-2 safe-area-inset-bottom">
-          <AdComponent
-            adFormat="horizontal"
-            className="w-full max-w-lg mx-auto"
-            fallbackContent={
-              <div className="bg-mot-surface/50 rounded-lg p-2 text-center border border-mot-border/50">
-                <p className="text-xs text-gray-500">Support the platform</p>
-                <p className="text-[10px] text-gray-600">Ad space available</p>
-              </div>
-            }
-          />
-        </div>
-      )}
-
+      {/* Global Ads Component - Shows on ALL app pages */}
+      <GlobalAds />
     </div>
   );
+};
 };
