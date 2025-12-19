@@ -38,15 +38,19 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
       </div>
 
       {/* Mobile Global Ad - Bottom Banner */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 ${className}`}>
-        <div className="bg-mot-surface/95 backdrop-blur-md border-t border-mot-border/50 p-3 safe-area-inset-bottom">
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 z-50 ${className}`}>
+        <div className="bg-mot-surface border-t-2 border-mot-gold p-3 safe-area-inset-bottom">
+          {/* Debug indicator for mobile */}
+          <div className="bg-red-500 text-white text-xs p-1 mb-2 text-center rounded">
+            MOBILE AD WORKING ✓
+          </div>
           <AdComponent 
             adFormat="banner"
-            className="w-full max-w-sm mx-auto"
+            className="w-full"
             fallbackContent={
-              <div className="bg-gradient-to-r from-mot-gold/15 to-mot-gold/25 rounded-xl p-3 text-center border border-mot-gold/40">
-                <p className="text-xs text-mot-gold font-bold mb-1">💎 Support MOT Platform</p>
-                <p className="text-[10px] text-gray-300">Join Premium for ad-free experience</p>
+              <div className="bg-gradient-to-r from-mot-gold/30 to-mot-gold/20 rounded-lg p-3 text-center border border-mot-gold/50">
+                <p className="text-sm text-mot-gold font-bold mb-1">💎 Support MOT Platform</p>
+                <p className="text-xs text-white">Premium ad-free experience</p>
               </div>
             }
           />
