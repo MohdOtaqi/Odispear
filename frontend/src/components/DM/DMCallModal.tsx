@@ -26,18 +26,38 @@ export const DMCallModal: React.FC<DMCallModalProps> = ({
   const [isVideoOn, setIsVideoOn] = useState(initialVideo);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [connectionTimeout, setConnectionTimeout] = useState(30); // 30 second timeout
   const callFrameRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       startCall();
+      // Start connection timeout countdown
+      timeoutRef.current = setInterval(() => {
+        setConnectionTimeout(prev => {
+          if (prev <= 1) {
+            // Timeout reached - cancel call
+            if (timeoutRef.current) {
+              clearInterval(timeoutRef.current);
+            }
+            toast.error('Connection timed out. Please try again.');
+            handleEndCall();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+      }
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
       }
       if (callFrameRef.current) {
         callFrameRef.current.destroy();
@@ -49,13 +69,13 @@ export const DMCallModal: React.FC<DMCallModalProps> = ({
   const startCall = async () => {
     try {
       setIsConnecting(true);
-      
+
       // Get call token from backend
       const { data } = await api.post(`/dm/${channelId}/call`, { video: initialVideo });
-      
+
       // Import Daily.co
       const DailyIframe = (await import('@daily-co/daily-js')).default;
-      
+
       // Create Daily.co call frame
       if (containerRef.current) {
         callFrameRef.current = DailyIframe.createFrame(containerRef.current, {
@@ -75,8 +95,13 @@ export const DMCallModal: React.FC<DMCallModalProps> = ({
           token: data.token
         });
 
+        // Stop timeout timer - connection successful
+        if (timeoutRef.current) {
+          clearInterval(timeoutRef.current);
+        }
+
         setIsConnecting(false);
-        
+
         // Start call duration timer
         timerRef.current = setInterval(() => {
           setCallDuration(prev => prev + 1);
@@ -97,6 +122,9 @@ export const DMCallModal: React.FC<DMCallModalProps> = ({
   const handleEndCall = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
+    }
+    if (timeoutRef.current) {
+      clearInterval(timeoutRef.current);
     }
     if (callFrameRef.current) {
       callFrameRef.current.leave();
@@ -163,11 +191,21 @@ export const DMCallModal: React.FC<DMCallModalProps> = ({
             />
             <h3 className="text-xl font-semibold text-white mt-4">{participantName}</h3>
             <p className="text-gray-400 mt-2">Connecting...</p>
+            <p className="text-sm text-gray-500 mt-1">Timeout in {connectionTimeout}s</p>
             <div className="mt-4 flex gap-4">
               <div className="w-3 h-3 rounded-full bg-mot-gold animate-bounce" style={{ animationDelay: '0ms' }} />
               <div className="w-3 h-3 rounded-full bg-mot-gold animate-bounce" style={{ animationDelay: '150ms' }} />
               <div className="w-3 h-3 rounded-full bg-mot-gold animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
+
+            {/* Cancel/Disconnect button */}
+            <button
+              onClick={handleEndCall}
+              className="mt-8 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-full transition-colors flex items-center gap-2"
+            >
+              <PhoneOff className="w-5 h-5" />
+              Cancel Call
+            </button>
           </div>
         )}
 
@@ -185,27 +223,24 @@ export const DMCallModal: React.FC<DMCallModalProps> = ({
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-6 py-3 bg-black/70 rounded-full">
           <button
             onClick={toggleMute}
-            className={`p-4 rounded-full transition-colors ${
-              isMuted ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
+            className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
           >
             {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </button>
 
           <button
             onClick={toggleVideo}
-            className={`p-4 rounded-full transition-colors ${
-              !isVideoOn ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
+            className={`p-4 rounded-full transition-colors ${!isVideoOn ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
           >
             {isVideoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
           </button>
 
           <button
             onClick={toggleScreenShare}
-            className={`p-4 rounded-full transition-colors ${
-              isScreenSharing ? 'bg-mot-gold text-mot-black' : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
+            className={`p-4 rounded-full transition-colors ${isScreenSharing ? 'bg-mot-gold text-mot-black' : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
           >
             <Monitor className="w-5 h-5" />
           </button>

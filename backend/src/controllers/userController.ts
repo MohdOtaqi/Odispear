@@ -64,7 +64,7 @@ export const uploadImage = async (
         path.dirname(req.file.path),
         `avatar-${userId}-${Date.now()}.webp`
       );
-      
+
       await sharp(req.file.path)
         .resize(256, 256, { fit: 'cover' })
         .webp({ quality: 90 })
@@ -80,7 +80,7 @@ export const uploadImage = async (
         path.dirname(req.file.path),
         `banner-${userId}-${Date.now()}.webp`
       );
-      
+
       await sharp(req.file.path)
         .resize(1024, 256, { fit: 'cover' })
         .webp({ quality: 90 })
@@ -248,6 +248,54 @@ export const getUserProfile = async (
       status_text: null,
       custom_status: null,
       discriminator: '0000',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get mutual servers and friends between current user and target user
+export const getUserMutuals = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const currentUserId = req.user!.id;
+    const { userId } = req.params;
+
+    // Get mutual servers (guilds both users are members of)
+    const mutualServersResult = await query(
+      `SELECT COUNT(DISTINCT g.id) as count
+       FROM guilds g
+       JOIN guild_members gm1 ON g.id = gm1.guild_id AND gm1.user_id = $1
+       JOIN guild_members gm2 ON g.id = gm2.guild_id AND gm2.user_id = $2`,
+      [currentUserId, userId]
+    );
+
+    // Get mutual friends (users who are friends with both)
+    const mutualFriendsResult = await query(
+      `SELECT COUNT(DISTINCT mutual_friend_id) as count FROM (
+        -- Friends of current user
+        SELECT 
+          CASE WHEN f1.user_id = $1 THEN f1.friend_id ELSE f1.user_id END as mutual_friend_id
+        FROM friendships f1
+        WHERE (f1.user_id = $1 OR f1.friend_id = $1) AND f1.status = 'accepted'
+        
+        INTERSECT
+        
+        -- Friends of target user
+        SELECT 
+          CASE WHEN f2.user_id = $2 THEN f2.friend_id ELSE f2.user_id END as mutual_friend_id
+        FROM friendships f2
+        WHERE (f2.user_id = $2 OR f2.friend_id = $2) AND f2.status = 'accepted'
+      ) as mutual_friends`,
+      [currentUserId, userId]
+    );
+
+    res.json({
+      mutualServers: parseInt(mutualServersResult.rows[0]?.count || '0', 10),
+      mutualFriends: parseInt(mutualFriendsResult.rows[0]?.count || '0', 10),
     });
   } catch (error) {
     next(error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, ChevronRight, UserCircle } from 'lucide-react';
+import { Calendar, Users, ChevronRight, UserCircle, Gem } from 'lucide-react';
 import { format } from 'date-fns';
 import { Avatar } from '../ui/Avatar';
 import { UserProfileModal } from '../UserProfileModal';
@@ -34,6 +34,7 @@ export const DMProfileSidebar: React.FC<DMProfileSidebarProps> = ({ channel, cla
     const [userProfile, setUserProfile] = useState<any>(null);
     const [mutualServers, setMutualServers] = useState<number>(0);
     const [mutualFriends, setMutualFriends] = useState<number>(0);
+    const [loading, setLoading] = useState(true);
 
     // Find the other participant (not the current user)
     const otherParticipant = channel.participants?.find(
@@ -52,18 +53,26 @@ export const DMProfileSidebar: React.FC<DMProfileSidebarProps> = ({ channel, cla
         if (!otherParticipant) return;
 
         try {
+            setLoading(true);
             const userId = otherParticipant.user_id || otherParticipant.id;
             const response = await api.get(`/users/${userId}`);
             setUserProfile(response.data);
 
-            // Calculate mutual servers (simplified - count guilds the other user might be in)
-            // In a real implementation, this would come from the API
-            setMutualServers(Math.floor(Math.random() * 5) + 1);
-
-            // Calculate mutual friends from friends list
-            setMutualFriends(Math.floor(Math.random() * 15) + 1);
+            // Fetch real mutual data from API
+            try {
+                const mutualResponse = await api.get(`/users/${userId}/mutuals`);
+                setMutualServers(mutualResponse.data.mutualServers || 0);
+                setMutualFriends(mutualResponse.data.mutualFriends || 0);
+            } catch (mutualError) {
+                // Fallback if mutuals endpoint doesn't exist yet
+                console.log('Mutuals endpoint not available, using defaults');
+                setMutualServers(0);
+                setMutualFriends(0);
+            }
         } catch (error) {
             console.error('Failed to fetch user profile:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -168,7 +177,9 @@ export const DMProfileSidebar: React.FC<DMProfileSidebarProps> = ({ channel, cla
                             </div>
                             <div className="text-left">
                                 <p className="text-sm font-medium text-white">Mutual Servers</p>
-                                <p className="text-xs text-gray-400">{mutualServers} server{mutualServers !== 1 ? 's' : ''}</p>
+                                <p className="text-xs text-gray-400">
+                                    {loading ? '...' : `${mutualServers} server${mutualServers !== 1 ? 's' : ''}`}
+                                </p>
                             </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-mot-gold transition-colors" />
@@ -182,11 +193,28 @@ export const DMProfileSidebar: React.FC<DMProfileSidebarProps> = ({ channel, cla
                             </div>
                             <div className="text-left">
                                 <p className="text-sm font-medium text-white">Mutual Friends</p>
-                                <p className="text-xs text-gray-400">{mutualFriends} friend{mutualFriends !== 1 ? 's' : ''}</p>
+                                <p className="text-xs text-gray-400">
+                                    {loading ? '...' : `${mutualFriends} friend${mutualFriends !== 1 ? 's' : ''}`}
+                                </p>
                             </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-mot-gold transition-colors" />
                     </button>
+
+                    {/* Divider before ad */}
+                    <div className="h-px bg-mot-border" />
+
+                    {/* Ad Section - Inside Sidebar */}
+                    <div className="bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 rounded-lg p-4 text-center border border-mot-gold/40">
+                        <div className="w-10 h-10 mx-auto mb-2 bg-mot-gold/20 rounded-full flex items-center justify-center">
+                            <Gem className="w-5 h-5 text-mot-gold" />
+                        </div>
+                        <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
+                        <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
+                        <button className="w-full py-2 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
+                            Upgrade Now
+                        </button>
+                    </div>
                 </div>
 
                 {/* View Full Profile Button */}

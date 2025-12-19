@@ -16,6 +16,9 @@ router.patch('/profile', userController.updateProfile);
 // Change password
 router.post('/change-password', userController.changePassword);
 
+// Get mutual servers/friends with a user
+router.get('/:userId/mutuals', userController.getUserMutuals);
+
 // Get user profile
 router.get('/:userId', userController.getUserProfile);
 
