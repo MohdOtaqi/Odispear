@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import AdComponent from './AdComponent';
+import AdComponent from './ads/AdComponent';
 
 interface GlobalAdsProps {
   className?: string;
@@ -9,9 +9,11 @@ interface GlobalAdsProps {
 export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
   const location = useLocation();
   
-  // Don't show ads on login/register pages
+  // Don't show ads on login/register pages  
   const hideAdsPages = ['/login', '/register', '/', '/welcome'];
   const shouldHideAds = hideAdsPages.includes(location.pathname);
+  
+  console.log('GlobalAds - Current path:', location.pathname, 'Should hide:', shouldHideAds);
   
   if (shouldHideAds) {
     return null;
