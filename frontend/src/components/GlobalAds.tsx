@@ -22,9 +22,9 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
 
   return (
     <>
-      {/* Desktop Global Ad - Smaller Bottom Right Corner */}
-      <div className={`hidden md:block fixed ${location.pathname.includes('/dm/') ? 'bottom-20 right-2' : 'bottom-4 right-4'} z-40 ${className}`}>
-        <div className="bg-mot-surface border border-mot-gold rounded-lg shadow-lg p-2 w-48">
+      {/* Desktop Global Ad - Smart Positioning */}
+      <div className={`hidden md:block fixed ${location.pathname.includes('/dm/') ? 'top-20 right-4' : 'bottom-4 right-4'} z-40 ${className}`}>
+        <div className="bg-mot-surface border border-mot-gold rounded-lg shadow-lg p-2 w-44">
           <AdComponent 
             adFormat="rectangle"
             className="w-full"
