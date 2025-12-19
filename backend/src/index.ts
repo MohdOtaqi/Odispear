@@ -70,7 +70,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files (avatars, banners, etc.)
 const uploadsPath = path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsPath));
+app.use('/api/uploads', express.static(uploadsPath));
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(requestLogger);
