@@ -33,9 +33,10 @@ import toast from 'react-hot-toast';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import MobileHeader from '../components/mobile/MobileHeader';
 import MobileSidebar from '../components/mobile/MobileSidebar';
-import DefaultWelcome from '../components/DefaultWelcome';
-import GlobalAds from '../components/GlobalAds';
+import { DefaultWelcome } from '../components/DefaultWelcome';
 import AdComponent from '../components/ads/AdComponent';
+import GlobalAds from '../components/GlobalAds';
+import { DMProfileSidebar } from '../components/DM/DMProfileSidebar';
 
 export const MainApp: React.FC = () => {
   const navigate = useNavigate();
@@ -287,7 +288,7 @@ export const MainApp: React.FC = () => {
         <Route path="/dms/:dmId" element={
           <>
             <DMList className="hidden md:flex" channels={dmChannels as any} currentDMChannelId={currentDMChannelId || undefined} onDMSelect={handleDMSelect} />
-            <div className="flex-1 flex flex-col relative w-full">
+            <div className="flex-1 flex flex-col relative">
               {currentDMChannel ? (
                 <>
                   <DMHeader channel={currentDMChannel as any} />
@@ -304,6 +305,13 @@ export const MainApp: React.FC = () => {
                 </div>
               )}
             </div>
+            {/* DM Profile Sidebar - hidden on mobile/tablet */}
+            {currentDMChannel && (
+              <DMProfileSidebar
+                className="hidden lg:flex"
+                channel={currentDMChannel as any}
+              />
+            )}
           </>
         } />
 
@@ -350,6 +358,42 @@ export const MainApp: React.FC = () => {
                   channels={channels}
                   currentChannel={currentChannelId || undefined}
                   onChannelClick={handleChannelSelect}
+                  currentGuildId={currentGuild.id}
+                  onGuildSelect={handleGuildSelect}
+                  onCreateGuild={() => setShowCreateGuild(true)}
+                />
+
+                <div className="flex-1 flex flex-col relative w-full pb-20 md:pb-0">
+                  {/* Mobile Header */}
+                  {isMobile && (
+                    <MobileHeader
+                      title={currentChannel?.name || 'Channel'}
+                      subtitle={currentChannel?.topic}
+                      onMenuClick={() => setMobileMenuOpen(true)}
+                      onMembersClick={() => setMobileMembersOpen(true)}
+                    />
+                  )}
+
+                  {/* Show Voice Channel View when connected to voice AND viewing voice channel */}
+                  {showVoiceChat && selectedVoiceChannelId && currentChannelId === selectedVoiceChannelId ? (
+                    <VoiceChannelView
+                      channelId={selectedVoiceChannelId}
+                      channelName={channels.find(c => c.id === selectedVoiceChannelId)?.name || 'Voice Channel'}
+                      connectedUsers={[]}
+                      onJoinVoice={() => handleVoiceChannelJoin(selectedVoiceChannelId)}
+                      onLeave={async () => {
+                        await leaveVoiceChannel();
+                        setShowVoiceChat(false);
+                        setSelectedVoiceChannelId(null);
+                      }}
+                    />
+                  ) : currentChannel ? (
+                    <>
+                      {/* Desktop Channel Header - HIDDEN ON MOBILE */}
+                      <div className="hidden md:flex h-12 px-4 items-center justify-between border-b border-mot-border bg-mot-surface shadow-sm">
+                        <div className="flex items-center flex-1 min-w-0">
+                          <div className="w-6 h-6 rounded bg-mot-gold/20 flex items-center justify-center mr-2">
+                            <Hash className="h-4 w-4 text-mot-gold" />
                           </div>
                           <h3 className="font-bold text-white">{currentChannel?.name || 'Channel'}</h3>
                           {currentChannel?.topic && (
@@ -494,8 +538,25 @@ export const MainApp: React.FC = () => {
         />
       )}
 
-      {/* Global Ads Component - Shows on ALL app pages */}
+      {/* Mobile Ad - Fixed at bottom */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-mot-surface border-t border-mot-border p-2 safe-area-inset-bottom">
+          <AdComponent
+            adFormat="horizontal"
+            className="w-full max-w-lg mx-auto"
+            fallbackContent={
+              <div className="bg-mot-surface/50 rounded-lg p-2 text-center border border-mot-border/50">
+                <p className="text-xs text-gray-500">Support the platform</p>
+                <p className="text-[10px] text-gray-600">Ad space available</p>
+              </div>
+            }
+          />
+        </div>
+      )}
+
+      {/* Global Ads Component - Shows on desktop */}
       <GlobalAds />
+
     </div>
   );
 };

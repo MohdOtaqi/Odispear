@@ -8,32 +8,35 @@ interface GlobalAdsProps {
 
 export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
   const location = useLocation();
-  
+
   // Don't show ads on login/register pages  
   const hideAdsPages = ['/login', '/register', '/', '/welcome'];
   const shouldHideAds = hideAdsPages.includes(location.pathname);
-  
+
   console.log('GlobalAds - Current path:', location.pathname, 'Should hide:', shouldHideAds);
   // Force build change v2 - smarter positioning
-  
+
   if (shouldHideAds) {
     return null;
   }
 
   return (
     <>
-      {/* Desktop Global Ad - Ultra Smart Positioning */}
-      <div className={`hidden md:block fixed ${location.pathname.includes('/dm/') ? 'top-16 left-4' : 'bottom-4 right-4'} z-30 ${className}`}>
-        <div className="bg-mot-surface/90 backdrop-blur border border-mot-gold/60 rounded-md shadow-md p-1.5 w-40">
-          <AdComponent 
+      {/* Desktop Global Ad - Wider and Taller with Smart Positioning */}
+      <div className={`hidden md:block fixed ${location.pathname.includes('/dms/') ? 'bottom-20 right-4' : 'bottom-4 right-4'} z-30 ${className}`}>
+        <div className="bg-mot-surface/95 backdrop-blur-md border border-mot-gold/50 rounded-lg shadow-lg p-4 w-52">
+          <AdComponent
             adFormat="rectangle"
             className="w-full"
             fallbackContent={
-              <div className="bg-gradient-to-br from-mot-gold/25 to-mot-gold/15 rounded p-2 text-center border border-mot-gold/40">
-                <p className="text-xs text-mot-gold font-bold mb-1">💎 MOT Premium</p>
-                <p className="text-[10px] text-white/90 leading-tight">Ad-free experience</p>
-                <button className="mt-1 px-2 py-0.5 bg-mot-gold text-mot-black rounded text-[10px] font-bold">
-                  Upgrade
+              <div className="bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 rounded-lg p-4 text-center border border-mot-gold/40">
+                <div className="w-10 h-10 mx-auto mb-2 bg-mot-gold/20 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">💎</span>
+                </div>
+                <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
+                <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
+                <button className="w-full py-2 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
+                  Upgrade Now
                 </button>
               </div>
             }
@@ -44,8 +47,8 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
       {/* Mobile Global Ad - Bottom Banner */}
       <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 ${className}`}>
         <div className="bg-mot-surface/95 backdrop-blur-md border-t border-mot-border/50 p-3 safe-area-inset-bottom">
-          <AdComponent 
-            adFormat="banner"
+          <AdComponent
+            adFormat="horizontal"
             className="w-full max-w-sm mx-auto"
             fallbackContent={
               <div className="bg-gradient-to-r from-mot-gold/15 to-mot-gold/25 rounded-xl p-3 text-center border border-mot-gold/40">
