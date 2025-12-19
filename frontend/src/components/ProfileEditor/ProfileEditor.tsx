@@ -43,6 +43,16 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to get full image URL for uploads
+  const getImageUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url;
+    }
+    const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://n0tmot.com/api' : 'http://localhost:5000');
+    return `${apiUrl}${url.startsWith('/') ? url : `/${url}`}`;
+  };
+
   // Handle avatar upload
   const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -180,7 +190,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
         <div className="relative h-32 bg-gradient-to-r from-mot-gold-deep via-mot-gold to-mot-gold-light overflow-hidden flex-shrink-0">
           {(bannerPreview || profileData.banner_url) && (
             <img
-              src={bannerPreview || profileData.banner_url}
+              src={bannerPreview || getImageUrl(profileData.banner_url)}
               alt="Banner"
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -209,7 +219,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
                 <div className="w-24 h-24 rounded-full bg-mot-surface border-4 border-mot-surface-subtle overflow-hidden">
                   {(avatarPreview || profileData.avatar_url) ? (
                     <img
-                      src={avatarPreview || profileData.avatar_url}
+                      src={avatarPreview || getImageUrl(profileData.avatar_url)}
                       alt="Avatar"
                       className="w-full h-full object-cover"
                     />
