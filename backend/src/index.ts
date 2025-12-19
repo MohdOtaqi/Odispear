@@ -57,8 +57,10 @@ const io = new Server(httpServer, {
 });
 
 // Middleware - Disable helmet's CSP since we set our own in securityHeaders
+// Set crossOriginResourcePolicy to cross-origin to allow avatar/upload loading
 app.use(helmet({
   contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 app.use(securityHeaders);
 app.use(cors({
