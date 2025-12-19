@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { Gem } from 'lucide-react';
 import AdComponent from './ads/AdComponent';
 
 interface GlobalAdsProps {
@@ -13,41 +14,33 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
   const hideAdsPages = ['/login', '/register', '/', '/welcome'];
   const shouldHideAds = hideAdsPages.includes(location.pathname);
 
-  console.log('GlobalAds - Current path:', location.pathname, 'Should hide:', shouldHideAds);
-  // Force build change v2 - smarter positioning
-
   if (shouldHideAds) {
     return null;
   }
 
-  // Hide on DM pages since the sidebar already has an ad
-  const isDMPage = location.pathname.includes('/dms/');
-
   return (
     <>
-      {/* Desktop Global Ad - Only show when NOT on DM pages (DM has sidebar ad) */}
-      {!isDMPage && (
-        <div className={`hidden md:block fixed bottom-4 right-4 z-30 ${className}`}>
-          <div className="bg-mot-surface/95 backdrop-blur-md border border-mot-gold/50 rounded-lg shadow-lg p-4 w-52">
-            <AdComponent
-              adFormat="rectangle"
-              className="w-full"
-              fallbackContent={
-                <div className="bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 rounded-lg p-4 text-center border border-mot-gold/40">
-                  <div className="w-10 h-10 mx-auto mb-2 bg-mot-gold/20 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">💎</span>
-                  </div>
-                  <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
-                  <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
-                  <button className="w-full py-2 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
-                    Upgrade Now
-                  </button>
+      {/* Desktop Global Ad - Same style as sidebar ad, shows everywhere */}
+      <div className={`hidden md:block fixed bottom-4 right-4 z-30 ${className}`}>
+        <div className="bg-mot-surface/95 backdrop-blur-md border border-mot-gold/50 rounded-xl shadow-lg overflow-hidden w-[240px]">
+          <AdComponent
+            adFormat="rectangle"
+            className="w-full"
+            fallbackContent={
+              <div className="bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 p-4 text-center">
+                <div className="w-12 h-12 mx-auto mb-3 bg-mot-gold/20 rounded-full flex items-center justify-center">
+                  <Gem className="w-6 h-6 text-mot-gold" />
                 </div>
-              }
-            />
-          </div>
+                <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
+                <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
+                <button className="w-full py-2.5 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
+                  Upgrade Now
+                </button>
+              </div>
+            }
+          />
         </div>
-      )}
+      </div>
 
       {/* Mobile Global Ad - Bottom Banner */}
       <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 ${className}`}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, ChevronRight, UserCircle, Gem } from 'lucide-react';
+import { Calendar, Users, ChevronRight, UserCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Avatar } from '../ui/Avatar';
 import { UserProfileModal } from '../UserProfileModal';
@@ -200,21 +200,6 @@ export const DMProfileSidebar: React.FC<DMProfileSidebarProps> = ({ channel, cla
                         </div>
                         <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-mot-gold transition-colors" />
                     </button>
-
-                    {/* Divider before ad */}
-                    <div className="h-px bg-mot-border" />
-
-                    {/* Ad Section - Inside Sidebar */}
-                    <div className="bg-gradient-to-br from-mot-gold/20 via-mot-gold/15 to-mot-gold/10 rounded-lg p-4 text-center border border-mot-gold/40">
-                        <div className="w-10 h-10 mx-auto mb-2 bg-mot-gold/20 rounded-full flex items-center justify-center">
-                            <Gem className="w-5 h-5 text-mot-gold" />
-                        </div>
-                        <p className="text-sm text-mot-gold font-bold mb-1">MOT Premium</p>
-                        <p className="text-xs text-white/80 leading-tight mb-3">Enjoy an ad-free experience</p>
-                        <button className="w-full py-2 px-4 bg-gradient-to-r from-mot-gold to-mot-gold-light text-mot-black rounded-lg text-sm font-bold hover:scale-105 transition-transform shadow-gold-glow">
-                            Upgrade Now
-                        </button>
-                    </div>
                 </div>
 
                 {/* View Full Profile Button */}
