@@ -33,7 +33,7 @@ import toast from 'react-hot-toast';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import MobileHeader from '../components/mobile/MobileHeader';
 import MobileSidebar from '../components/mobile/MobileSidebar';
-import { DefaultWelcome } from '../components/DefaultWelcome';
+import DefaultWelcome from '../components/DefaultWelcome';
 import AdComponent from '../components/ads/AdComponent';
 
 export const MainApp: React.FC = () => {
