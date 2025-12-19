@@ -188,7 +188,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
         onClick={(e) => e.stopPropagation()}
       >
         {/* Banner with Animated Gradient */}
-        <div className="relative h-36 overflow-hidden flex-shrink-0">
+        <div className="relative h-36 flex-shrink-0">
           {/* Animated gradient background */}
           <div className="absolute inset-0 bg-gradient-to-r from-mot-gold via-amber-500 to-mot-gold-deep animate-gradient-x" />
           {/* Overlay pattern */}
@@ -212,7 +212,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
           />
           <button
             onClick={() => bannerInputRef.current?.click()}
-            className="absolute top-4 right-4 p-2.5 bg-black/40 text-white hover:bg-mot-gold hover:text-mot-black rounded-xl transition-all duration-300 backdrop-blur-sm group"
+            className="absolute top-4 right-4 p-2.5 bg-black/40 text-white hover:bg-mot-gold hover:text-mot-black rounded-xl transition-all duration-300 backdrop-blur-sm group z-10"
           >
             <Camera className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </button>
@@ -220,29 +220,29 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 p-2.5 bg-black/40 text-white hover:bg-red-500 rounded-xl transition-all duration-300 backdrop-blur-sm group"
+            className="absolute top-4 left-4 p-2.5 bg-black/40 text-white hover:bg-red-500 rounded-xl transition-all duration-300 backdrop-blur-sm group z-10"
           >
             <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
           </button>
-        </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
-          {/* Header with Avatar */}
-          <div className="flex items-end gap-5 -mt-14 mb-8">
-            {/* Avatar with glow */}
+          {/* Avatar - positioned to overlap banner bottom */}
+          <div className="absolute -bottom-16 left-8 z-20">
             <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-mot-gold to-amber-500 rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity" />
-              <div className="relative w-28 h-28 rounded-full bg-mot-surface border-4 border-mot-surface-subtle overflow-hidden ring-2 ring-mot-gold/50">
+              {/* Animated glow ring */}
+              <div className="absolute -inset-2 bg-gradient-to-r from-mot-gold via-amber-400 to-mot-gold-deep rounded-full blur-lg opacity-60 group-hover:opacity-100 animate-pulse-slow transition-opacity duration-500" />
+              {/* Avatar ring border */}
+              <div className="absolute -inset-1 bg-gradient-to-br from-mot-gold to-amber-500 rounded-full" />
+              {/* Avatar container */}
+              <div className="relative w-32 h-32 rounded-full bg-mot-surface overflow-hidden">
                 {(avatarPreview || profileData.avatar_url) ? (
                   <img
                     src={avatarPreview || getImageUrl(profileData.avatar_url)}
                     alt="Avatar"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-mot-gold to-mot-gold-deep">
-                    <User className="w-14 h-14 text-white" />
+                    <User className="w-16 h-16 text-white" />
                   </div>
                 )}
               </div>
@@ -253,16 +253,22 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose })
                 onChange={handleAvatarChange}
                 className="hidden"
               />
+              {/* Camera button */}
               <button
                 onClick={() => avatarInputRef.current?.click()}
-                className="absolute bottom-1 right-1 p-2 bg-mot-gold text-mot-black hover:bg-mot-gold-light rounded-full transition-all duration-300 shadow-lg hover:scale-110"
+                className="absolute -bottom-1 -right-1 p-2.5 bg-mot-gold text-mot-black hover:bg-mot-gold-light rounded-full transition-all duration-300 shadow-lg hover:scale-110 hover:shadow-mot-gold/50"
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-5 h-5" />
               </button>
             </div>
+          </div>
+        </div>
 
-            {/* Title section */}
-            <div className="pb-2">
+        {/* Scrollable Content - Extra padding for avatar overflow */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-20 custom-scrollbar">
+          {/* Title section - positioned after avatar space */}
+          <div className="flex items-start mb-8 ml-44">
+            <div>
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-5 h-5 text-mot-gold" />
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
