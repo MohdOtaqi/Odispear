@@ -6,11 +6,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Check if SSL is required (for AWS RDS)
+const isSSL = process.env.DATABASE_URL?.includes('sslmode=require');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // Allow self-signed certificates for AWS RDS
+  ssl: isSSL ? { rejectUnauthorized: false } : false,
 });
 
 pool.on('error', (err: any) => {
