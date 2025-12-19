@@ -14,7 +14,7 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
   const shouldHideAds = hideAdsPages.includes(location.pathname);
   
   console.log('GlobalAds - Current path:', location.pathname, 'Should hide:', shouldHideAds);
-  // Force build change for smaller ads
+  // Force build change v2 - smarter positioning
   
   if (shouldHideAds) {
     return null;
@@ -22,9 +22,9 @@ export const GlobalAds: React.FC<GlobalAdsProps> = ({ className }) => {
 
   return (
     <>
-      {/* Desktop Global Ad - Smart Positioning */}
-      <div className={`hidden md:block fixed ${location.pathname.includes('/dm/') ? 'top-20 right-4' : 'bottom-4 right-4'} z-40 ${className}`}>
-        <div className="bg-mot-surface border border-mot-gold rounded-lg shadow-lg p-2 w-44">
+      {/* Desktop Global Ad - Ultra Smart Positioning */}
+      <div className={`hidden md:block fixed ${location.pathname.includes('/dm/') ? 'top-16 left-4' : 'bottom-4 right-4'} z-30 ${className}`}>
+        <div className="bg-mot-surface/90 backdrop-blur border border-mot-gold/60 rounded-md shadow-md p-1.5 w-40">
           <AdComponent 
             adFormat="rectangle"
             className="w-full"
