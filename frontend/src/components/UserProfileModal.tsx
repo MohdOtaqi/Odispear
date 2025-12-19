@@ -443,11 +443,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
         <div className="relative px-6 pb-6">
           <div className="flex items-end justify-between -mt-12">
             <div className="flex items-end gap-4">
-              <div className="relative z-20">
+              <div className="relative">
                 <img
                   src={profile.avatar}
                   alt={profile.username}
-                  className="w-24 h-24 rounded-full border-4 border-gray-900 shadow-xl"
+                  className="w-24 h-24 rounded-full border-4 border-gray-900"
                   style={{ borderColor: profile.accentColor || '#6366f1' }}
                 />
                 <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-gray-900 ${getStatusColor(profile.status)}`} />

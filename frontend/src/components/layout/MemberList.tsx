@@ -231,7 +231,7 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
 
   return (
     <div className={cn("w-60 bg-mot-surface flex flex-col h-full border-l border-mot-border", className)}>
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 pb-24 md:pb-3">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
         {onlineMembers.length > 0 && (
           <div className="mb-4">
             <div className="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">
@@ -277,14 +277,35 @@ export const MemberList = React.memo<MemberListProps>(({ members, ownerId, guild
             <p className="text-sm">No members found</p>
           </div>
         )}
-
-        {/* Desktop Ad Placement */}
-        <div className="mt-auto pt-4 hidden md:block">
-          <AdComponent adFormat="horizontal" />
-        </div>
       </div>
 
+      {/* Desktop Ad Placement - Fixed at bottom of member list */}
+      <div className="hidden md:block flex-shrink-0 border-t border-mot-border/30 p-3 bg-mot-surface">
+        <AdComponent 
+          adFormat="rectangle"
+          className="w-full"
+          fallbackContent={
+            <div className="bg-mot-surface/30 rounded-lg p-4 text-center border border-mot-border/50">
+              <p className="text-xs text-gray-500 mb-2">Support the platform</p>
+              <p className="text-[10px] text-gray-600">Ad space available</p>
+            </div>
+          }
+        />
+      </div>
 
+      {/* Mobile Ad Overlay - Only shows on mobile at bottom of screen */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-mot-surface border-t border-mot-border p-4 safe-area-inset-bottom">
+        <AdComponent 
+          adFormat="rectangle"
+          className="w-full max-w-xs mx-auto"
+          fallbackContent={
+            <div className="bg-gradient-to-r from-mot-gold/10 to-mot-gold/20 rounded-xl p-4 text-center border border-mot-gold/30">
+              <p className="text-xs text-mot-gold font-medium mb-1">Support MOT Platform</p>
+              <p className="text-[10px] text-gray-400">Ad space available</p>
+            </div>
+          }
+        />
+      </div>
     </div>
   );
 });

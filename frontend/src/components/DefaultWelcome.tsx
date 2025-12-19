@@ -15,18 +15,21 @@ export const DefaultWelcome: React.FC = () => {
         <div className="absolute bottom-1/3 left-1/4 w-[300px] h-[300px] bg-mot-gold/3 rounded-full blur-[100px]" />
       </div>
 
-      <div className="text-center max-w-2xl mx-auto px-6 relative z-10">
+      <div className="text-center max-w-sm md:max-w-2xl mx-auto px-6 md:px-6 relative z-10 w-full">
         {/* Logo */}
-        <div className="mb-8">
-          <img
-            src="/MOT.gif"
-            alt="MOT Platform"
-            className="h-32 w-auto mx-auto mb-6 drop-shadow-[0_0_20px_rgba(245,166,35,0.3)]"
-          />
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Welcome to <span className="text-mot-gold">MOT Platform</span>
+        <div className="mb-8 md:mb-8">
+          <div className="mb-6 md:mb-8">
+            <img
+              src="/MOT.gif"
+              alt="MOT Platform"
+              className="h-20 md:h-32 w-auto mx-auto drop-shadow-[0_0_25px_rgba(245,166,35,0.4)] animate-pulse"
+            />
+          </div>
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-3 leading-tight">
+            Welcome to <br className="md:hidden" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-mot-gold to-mot-gold-light">MOT Platform</span>
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-300 md:text-gray-400 text-sm md:text-lg font-medium md:font-normal">
             Modern voice, video, and text chat for communities
           </p>
         </div>
