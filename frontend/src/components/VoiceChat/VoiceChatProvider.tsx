@@ -208,40 +208,11 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // Play connected sound
         playConnectSound();
 
-        // FORCE aggressive noise suppression for ALL browsers
-        // This runs immediately (no delay) and replaces the audio track
-        setTimeout(async () => {
-          try {
-            console.log('[Voice] Applying FORCED aggressive noise suppression...');
-
-            // Get a fresh audio stream with browser noise suppression first
-            const rawStream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                // Let browser pick optimal sample rate
-              },
-              video: false,
-            });
-
-            // Apply our custom aggressive noise processing
-            const processedStream = await createNoiseSuppressedStream(rawStream);
-            const audioTrack = processedStream.getAudioTracks()[0];
-
-            if (audioTrack && callObjectRef.current) {
-              await callObjectRef.current.setInputDevicesAsync({
-                audioSource: audioTrack,
-              });
-              console.log('[Voice] ✅ FORCED aggressive noise suppression ACTIVE for this browser');
-            } else {
-              console.warn('[Voice] Could not set audio track - callObject or track missing');
-            }
-          } catch (err) {
-            console.error('[Voice] Failed to enable forced noise suppression:', err);
-            // Even if this fails, the browser's built-in noise suppression should still work
-          }
-        }, 100); // Reduced delay from 200ms to 100ms
+        // NOTE: We do NOT apply custom noise suppression here because:
+        // 1. Daily's RNN (Krisp-powered) is applied in step 6 below the join
+        // 2. Daily's RNN is superior to our custom processing
+        // 3. Custom processing is only used as fallback when RNN is not supported
+        // The RNN status is checked and fallback is applied in the updateInputSettings call
       });
 
       co.on('left-meeting', () => {

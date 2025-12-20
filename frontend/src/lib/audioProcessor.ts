@@ -126,40 +126,55 @@ export async function createNoiseSuppressedStream(
     const audioContext = new AudioContext();
     const source = audioContext.createMediaStreamSource(enhancedStream);
 
-    // High-pass filter to remove low-frequency rumble and microphone handling noise
+    // HIGH-PASS FILTER - Remove low-frequency rumble (more aggressive at 120Hz)
     const highPassFilter = audioContext.createBiquadFilter();
     highPassFilter.type = 'highpass';
-    highPassFilter.frequency.value = 100; // Cut below 100Hz (more aggressive)
-    highPassFilter.Q.value = 0.5; // Gentle slope to avoid artifacts
+    highPassFilter.frequency.value = 120; // Cut below 120Hz (aggressive)
+    highPassFilter.Q.value = 0.7; // Slightly sharper rolloff
 
-    // Notch filter to remove common 60Hz/50Hz power line hum
-    const notchFilter = audioContext.createBiquadFilter();
-    notchFilter.type = 'notch';
-    notchFilter.frequency.value = 60; // 60Hz hum (US) or 50Hz (EU)
-    notchFilter.Q.value = 30; // Narrow notch
+    // NOTCH FILTER 1 - Remove 60Hz power line hum (US)
+    const notchFilter60 = audioContext.createBiquadFilter();
+    notchFilter60.type = 'notch';
+    notchFilter60.frequency.value = 60;
+    notchFilter60.Q.value = 30;
 
-    // Low-pass filter to remove high-frequency hiss (above 7kHz)
+    // NOTCH FILTER 2 - Remove 50Hz power line hum (EU)
+    const notchFilter50 = audioContext.createBiquadFilter();
+    notchFilter50.type = 'notch';
+    notchFilter50.frequency.value = 50;
+    notchFilter50.Q.value = 30;
+
+    // PEAKING FILTER - Boost voice presence (1-4kHz range)
+    const voicePresence = audioContext.createBiquadFilter();
+    voicePresence.type = 'peaking';
+    voicePresence.frequency.value = 2500; // Center of voice clarity
+    voicePresence.Q.value = 1;
+    voicePresence.gain.value = 3; // +3dB boost to voice clarity
+
+    // LOW-PASS FILTER - Remove high-frequency hiss (tighter at 6kHz)
     const lowPassFilter = audioContext.createBiquadFilter();
     lowPassFilter.type = 'lowpass';
-    lowPassFilter.frequency.value = 7000; // Voice doesn't need above 7kHz
-    lowPassFilter.Q.value = 0.5;
+    lowPassFilter.frequency.value = 6000; // Tighter cutoff at 6kHz
+    lowPassFilter.Q.value = 0.7;
 
-    // Compressor for consistent volume and sudden noise reduction
+    // COMPRESSOR - Aggressive noise reduction and volume consistency
     const compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.value = -30; // Start compressing at -30dB
-    compressor.knee.value = 20; // Soft knee for natural sound
-    compressor.ratio.value = 6; // 6:1 compression
-    compressor.attack.value = 0.002; // 2ms attack (fast)
-    compressor.release.value = 0.15; // 150ms release
+    compressor.threshold.value = -35; // Start compressing at -35dB (earlier)
+    compressor.knee.value = 10; // Harder knee for more aggressive action
+    compressor.ratio.value = 8; // 8:1 compression (stronger)
+    compressor.attack.value = 0.001; // 1ms attack (very fast)
+    compressor.release.value = 0.1; // 100ms release
 
-    // Gain node for final volume adjustment
+    // GAIN - Compensate for filtering
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = 1.2; // Slight boost to compensate for filtering
+    gainNode.gain.value = 1.4; // More boost to compensate for aggressive filtering
 
     // Connect the audio processing chain
     source.connect(highPassFilter);
-    highPassFilter.connect(notchFilter);
-    notchFilter.connect(lowPassFilter);
+    highPassFilter.connect(notchFilter60);
+    notchFilter60.connect(notchFilter50);
+    notchFilter50.connect(voicePresence);
+    voicePresence.connect(lowPassFilter);
     lowPassFilter.connect(compressor);
     compressor.connect(gainNode);
 
@@ -169,8 +184,8 @@ export async function createNoiseSuppressedStream(
 
     noiseGateActive = true;
 
-    console.log('[AudioProcessor] Aggressive noise suppression ACTIVE');
-    console.log('[AudioProcessor] Filters: HP@100Hz, Notch@60Hz, LP@7kHz, Compressor 6:1');
+    console.log('[AudioProcessor] AGGRESSIVE noise suppression ACTIVE (Edge-optimized)');
+    console.log('[AudioProcessor] Filters: HP@120Hz, Notch@60Hz+50Hz, Voice@2.5kHz, LP@6kHz, Compressor 8:1');
     console.log('[AudioProcessor] Sample rate:', audioContext.sampleRate);
     return destination.stream;
   } catch (error) {
