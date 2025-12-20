@@ -37,6 +37,8 @@ import { DefaultWelcome } from '../components/DefaultWelcome';
 import AdComponent from '../components/ads/AdComponent';
 import GlobalAds from '../components/GlobalAds';
 import { DMProfileSidebar } from '../components/DM/DMProfileSidebar';
+import { IncomingCallModal } from '../components/DM/IncomingCallModal';
+import { DMCallModal } from '../components/DM/DMCallModal';
 
 export const MainApp: React.FC = () => {
   const navigate = useNavigate();
@@ -60,6 +62,16 @@ export const MainApp: React.FC = () => {
   const { isMobile } = useMobileDetection();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMembersOpen, setMobileMembersOpen] = useState(false);
+
+  // Incoming call state
+  const [incomingCall, setIncomingCall] = useState<{
+    channelId: string;
+    callerName: string;
+    callerAvatar?: string;
+    roomUrl: string;
+    hasVideo: boolean;
+  } | null>(null);
+  const [activeCallChannelId, setActiveCallChannelId] = useState<string | null>(null);
 
   const { user, isAuthenticated } = useAuthStore();
   const { guilds, currentGuild, channels, fetchGuilds, selectGuild } = useGuildStore();
@@ -156,6 +168,36 @@ export const MainApp: React.FC = () => {
       friendsStore.fetchFriends();
       friendsStore.fetchSentRequests();
       useFriendsStore.getState().fetchPendingRequests();
+    });
+
+    // Incoming DM call notification
+    socketManager.on('dm:call-started', (data: {
+      channelId: string;
+      callerId: string;
+      callerName: string;
+      roomUrl: string;
+      video: boolean;
+    }) => {
+      console.log('[MainApp] Incoming call:', data);
+      // Find the caller's avatar from DM channels
+      const dmChannel = dmChannels.find(dm => dm.id === data.channelId);
+      const callerParticipant = dmChannel?.participants?.find(
+        (p: any) => p.id === data.callerId || p.user_id === data.callerId
+      );
+
+      setIncomingCall({
+        channelId: data.channelId,
+        callerName: data.callerName,
+        callerAvatar: callerParticipant?.avatar_url,
+        roomUrl: data.roomUrl,
+        hasVideo: data.video,
+      });
+
+      // Play notification sound
+      toast(`📞 Incoming call from ${data.callerName}`, {
+        duration: 10000,
+        icon: '📞',
+      });
     });
 
     // Presence updates - update member status in real-time
@@ -556,6 +598,38 @@ export const MainApp: React.FC = () => {
 
       {/* Global Ads Component - Shows on desktop */}
       <GlobalAds />
+
+      {/* Incoming Call Modal */}
+      <IncomingCallModal
+        isOpen={!!incomingCall}
+        callerName={incomingCall?.callerName || ''}
+        callerAvatar={incomingCall?.callerAvatar}
+        hasVideo={incomingCall?.hasVideo || false}
+        onAccept={(withVideo) => {
+          if (incomingCall) {
+            setActiveCallChannelId(incomingCall.channelId);
+            setIncomingCall(null);
+            // Navigate to DM and open call modal
+            navigate(`/app/dms/${incomingCall.channelId}`);
+          }
+        }}
+        onDecline={() => {
+          setIncomingCall(null);
+          toast('Call declined');
+        }}
+      />
+
+      {/* Active DM Call Modal */}
+      {activeCallChannelId && (
+        <DMCallModal
+          isOpen={!!activeCallChannelId}
+          onClose={() => setActiveCallChannelId(null)}
+          channelId={activeCallChannelId}
+          participantName={incomingCall?.callerName || currentDMChannel?.participants?.find((p: any) => p.id !== user?.id)?.username || 'User'}
+          participantAvatar={incomingCall?.callerAvatar || currentDMChannel?.participants?.find((p: any) => p.id !== user?.id)?.avatar_url}
+          initialVideo={false}
+        />
+      )}
 
     </div>
   );

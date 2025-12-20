@@ -64,6 +64,7 @@ class SocketManager {
       'voice.participants',
       'channel.joined',
       'dm.joined',
+      'dm:call-started',
       'friend.request',
       'friend.accepted',
     ];
