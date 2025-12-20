@@ -46,6 +46,13 @@ class SocketManager {
   private setupEventForwarding() {
     if (!this.socket) return;
 
+    // Debug: Log ALL incoming events
+    this.socket.onAny((event: string, ...args: any[]) => {
+      if (event.startsWith('voice.')) {
+        console.log(`[Socket] Voice event received: ${event}`, args);
+      }
+    });
+
     const events = [
       'message.create',
       'message.update',
