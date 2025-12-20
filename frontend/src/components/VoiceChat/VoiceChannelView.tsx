@@ -146,7 +146,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
 
   // State for context menu and profile modal
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; userId: string; username: string; isLocal: boolean } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; userId: string; username: string; isLocal: boolean; sessionId?: string } | null>(null);
+  const [userVolumes, setUserVolumes] = useState<Record<string, number>>({}); // Per-user volume (0-200)
 
   // Handle right-click on user card
   const handleContextMenu = useCallback((e: React.MouseEvent, voiceUser: any) => {
@@ -158,7 +159,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
       y: e.clientY,
       userId: voiceUser.id,
       username: voiceUser.username,
-      isLocal: voiceUser.isLocal
+      isLocal: voiceUser.isLocal,
+      sessionId: voiceUser.session_id
     });
   }, [user?.id]);
 
@@ -574,16 +576,50 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
       {/* Context Menu for voice users */}
       {contextMenu && (
         <div
-          className="fixed z-[100] bg-mot-surface border border-mot-gold/30 rounded-xl shadow-2xl py-1 min-w-[180px]"
+          className="fixed z-[100] bg-mot-surface border border-mot-gold/30 rounded-xl shadow-2xl py-2 min-w-[220px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={() => setContextMenu(null)}
+          onClick={(e) => e.stopPropagation()}
         >
+          {/* User header */}
+          <div className="px-4 py-2 border-b border-mot-border mb-2">
+            <p className="text-sm font-medium text-white">{contextMenu.username}</p>
+          </div>
+
+          {/* Volume slider */}
+          <div className="px-4 py-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-400">User Volume</span>
+              <span className="text-xs text-mot-gold font-medium">{userVolumes[contextMenu.userId] ?? 100}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="200"
+              value={userVolumes[contextMenu.userId] ?? 100}
+              onChange={(e) => {
+                const volume = parseInt(e.target.value);
+                setUserVolumes(prev => ({ ...prev, [contextMenu.userId]: volume }));
+                // Apply volume to audio element if exists
+                if (contextMenu.sessionId) {
+                  const audioEl = document.getElementById(`audio-${contextMenu.sessionId}`) as HTMLAudioElement;
+                  if (audioEl) {
+                    audioEl.volume = volume / 100;
+                  }
+                }
+              }}
+              className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-mot-gold"
+            />
+          </div>
+
+          <div className="border-t border-mot-border my-2" />
+
+          {/* Profile actions */}
           <button
             onClick={() => {
               setSelectedUserId(contextMenu.userId);
               setContextMenu(null);
             }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-mot-gold/10 hover:text-white transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-200 hover:bg-mot-gold/10 hover:text-white transition-colors"
           >
             <User className="w-4 h-4" />
             View Profile
@@ -593,31 +629,78 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
               // TODO: Open DM with this user
               setContextMenu(null);
             }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-mot-gold/10 hover:text-white transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-200 hover:bg-mot-gold/10 hover:text-white transition-colors"
           >
             <MessageSquare className="w-4 h-4" />
-            Send Message
+            Message
           </button>
-          <div className="border-t border-mot-border my-1" />
+          <button
+            onClick={() => {
+              // TODO: Add friend request
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-200 hover:bg-mot-gold/10 hover:text-white transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            Add Friend
+          </button>
+
+          <div className="border-t border-mot-border my-2" />
+
+          {/* Moderation actions */}
           <button
             onClick={() => {
               // TODO: Server mute this user
               setContextMenu(null);
             }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-200 hover:bg-red-500/10 hover:text-red-400 transition-colors"
           >
             <MicOff className="w-4 h-4" />
             Server Mute
           </button>
           <button
             onClick={() => {
+              // TODO: Server deafen this user
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-200 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          >
+            <VolumeX className="w-4 h-4" />
+            Server Deafen
+          </button>
+          <button
+            onClick={() => {
               // TODO: Disconnect this user from voice
               setContextMenu(null);
             }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-200 hover:bg-red-500/10 hover:text-red-400 transition-colors"
           >
             <UserX className="w-4 h-4" />
             Disconnect
+          </button>
+
+          <div className="border-t border-mot-border my-2" />
+
+          {/* Dangerous actions at bottom */}
+          <button
+            onClick={() => {
+              // TODO: Kick user from server
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-orange-400 hover:bg-orange-500/10 transition-colors"
+          >
+            <UserX className="w-4 h-4" />
+            Kick
+          </button>
+          <button
+            onClick={() => {
+              // TODO: Ban user from server
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+          >
+            <UserX className="w-4 h-4" />
+            Ban
           </button>
         </div>
       )}

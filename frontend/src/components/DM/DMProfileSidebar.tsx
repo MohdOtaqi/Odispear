@@ -128,7 +128,7 @@ export const DMProfileSidebar: React.FC<DMProfileSidebarProps> = ({ channel, cla
                         {/* Avatar overlapping banner */}
                         <div className="relative px-4 pb-4">
                             <div className="relative -mt-8 mb-2">
-                                <div className="w-16 h-16 rounded-full border-4 border-mot-surface-subtle overflow-hidden bg-mot-surface">
+                                <div className="w-16 h-16 rounded-full border-4 border-mot-surface-subtle overflow-hidden bg-gradient-to-br from-mot-gold to-amber-600">
                                     <Avatar
                                         src={avatarUrl}
                                         alt={displayName}
