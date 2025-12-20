@@ -324,21 +324,28 @@ export const InvitePage: React.FC = () => {
           whileHover={{ borderColor: "rgba(212, 175, 55, 0.3)" }}
         >
           {/* Server Banner */}
-          <div className="relative h-40 bg-gradient-to-br from-mot-gold/30 via-amber-500/20 to-mot-gold/30 overflow-hidden">
-            {/* Animated gradient overlay */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-mot-gold/10 via-transparent to-mot-gold/10"
-              animate={{ x: ['-100%', '100%'] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            />
-
+          <div className="relative h-40 bg-gradient-to-br from-mot-gold/25 via-amber-500/15 to-mot-gold/20 overflow-hidden">
+            {/* Smooth shimmer effect using CSS animation */}
             <div
-              className="absolute inset-0 opacity-30"
+              className="absolute inset-0 -translate-x-full animate-shimmer"
               style={{
-                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.2) 1px, transparent 0)',
-                backgroundSize: '20px 20px'
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
+                animation: 'shimmer 3s ease-in-out infinite'
               }}
             />
+
+            {/* Static dot pattern - no animation */}
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.25) 1px, transparent 0)',
+                backgroundSize: '24px 24px'
+              }}
+            />
+
+            {/* Subtle glow orbs - GPU optimized with opacity only */}
+            <div className="absolute top-4 right-8 w-32 h-32 rounded-full bg-mot-gold/10 blur-3xl" />
+            <div className="absolute bottom-4 left-12 w-24 h-24 rounded-full bg-amber-500/10 blur-2xl" />
 
             {/* Gradient fade at bottom */}
             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-mot-surface/60 to-transparent" />
