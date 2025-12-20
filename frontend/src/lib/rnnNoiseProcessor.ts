@@ -36,53 +36,77 @@ export async function createRNNoiseSuppressedStream(
         audioContext = new AudioContext();
         const source = audioContext.createMediaStreamSource(enhancedStream);
 
-        // Apply gentle filter chain that preserves voice quality
-        // Edge browser needs lighter processing to avoid distortion
+        // Apply balanced filter chain - suppresses noise without distortion
+        // Edge browser needs moderate processing for effective noise cancellation
 
-        // HIGH-PASS FILTER - Remove only deep rumble (< 80Hz)
+        // HIGH-PASS FILTER - Remove rumble and low-frequency noise
         const highPassFilter = audioContext.createBiquadFilter();
         highPassFilter.type = 'highpass';
-        highPassFilter.frequency.value = 80; // Gentle: 80Hz cutoff
+        highPassFilter.frequency.value = 100; // Moderate: 100Hz cutoff
         highPassFilter.Q.value = 0.7;
 
-        // NOTCH FILTER - Remove 60Hz power line hum (US)
+        // NOTCH FILTER 1 - Remove 60Hz power line hum (US)
         const notchFilter60 = audioContext.createBiquadFilter();
         notchFilter60.type = 'notch';
         notchFilter60.frequency.value = 60;
-        notchFilter60.Q.value = 10; // Narrower notch
+        notchFilter60.Q.value = 20;
 
-        // LOW-PASS FILTER - Remove only very high frequency hiss (> 8kHz)
+        // NOTCH FILTER 2 - Remove 50Hz power line hum (EU)
+        const notchFilter50 = audioContext.createBiquadFilter();
+        notchFilter50.type = 'notch';
+        notchFilter50.frequency.value = 50;
+        notchFilter50.Q.value = 20;
+
+        // VOICE PRESENCE - Boost voice clarity (2-4kHz range)
+        const voicePresence = audioContext.createBiquadFilter();
+        voicePresence.type = 'peaking';
+        voicePresence.frequency.value = 2500;
+        voicePresence.Q.value = 1.0;
+        voicePresence.gain.value = 3; // +3dB boost
+
+        // LOW-PASS FILTER - Remove high-frequency hiss
         const lowPassFilter = audioContext.createBiquadFilter();
         lowPassFilter.type = 'lowpass';
-        lowPassFilter.frequency.value = 8000; // Preserve full voice range
-        lowPassFilter.Q.value = 0.7;
+        lowPassFilter.frequency.value = 7000; // 7kHz cutoff
+        lowPassFilter.Q.value = 0.8;
 
-        // GENTLE COMPRESSOR - Smooth out volume without crushing
+        // MAIN COMPRESSOR - Moderate compression for noise suppression
         const compressor = audioContext.createDynamicsCompressor();
-        compressor.threshold.value = -30; // More gentle threshold
-        compressor.knee.value = 12; // Soft knee for natural sound
-        compressor.ratio.value = 3; // 3:1 compression (gentle)
-        compressor.attack.value = 0.003; // 3ms attack
-        compressor.release.value = 0.25; // 250ms release
+        compressor.threshold.value = -35; // Moderate threshold
+        compressor.knee.value = 8; // Medium knee
+        compressor.ratio.value = 6; // 6:1 compression (moderate)
+        compressor.attack.value = 0.001; // 1ms attack
+        compressor.release.value = 0.2; // 200ms release
 
-        // GAIN - Minimal boost
+        // NOISE GATE - Cut very quiet background noise
+        const gate = audioContext.createDynamicsCompressor();
+        gate.threshold.value = -55; // Gate threshold
+        gate.knee.value = 5;
+        gate.ratio.value = 20; // Strong ratio for gating effect
+        gate.attack.value = 0.001;
+        gate.release.value = 0.1;
+
+        // GAIN - Moderate boost
         const gainNode = audioContext.createGain();
-        gainNode.gain.value = 1.2; // Slight boost
+        gainNode.gain.value = 1.4; // Moderate boost
 
-        // Connect simplified processing chain
+        // Connect balanced processing chain
         source.connect(highPassFilter);
         highPassFilter.connect(notchFilter60);
-        notchFilter60.connect(lowPassFilter);
+        notchFilter60.connect(notchFilter50);
+        notchFilter50.connect(voicePresence);
+        voicePresence.connect(lowPassFilter);
         lowPassFilter.connect(compressor);
-        compressor.connect(gainNode);
+        compressor.connect(gate);
+        gate.connect(gainNode);
 
         // Create output stream
         const destination = audioContext.createMediaStreamDestination();
         gainNode.connect(destination);
 
-        console.log('[RNNoise] ✅ Gentle noise suppression ACTIVE (Edge-optimized)');
-        console.log('[RNNoise] Filters: HP@80Hz, Notch@60Hz, LP@8kHz');
-        console.log('[RNNoise] Compression: 3:1 @ -30dB, 3ms attack');
+        console.log('[RNNoise] ✅ Balanced noise suppression ACTIVE (Edge-optimized)');
+        console.log('[RNNoise] Filters: HP@100Hz, Notch@60Hz+50Hz, Voice+3dB@2.5kHz, LP@7kHz');
+        console.log('[RNNoise] Compression: 6:1 @ -35dB, Gate @ -55dB');
         console.log('[RNNoise] Sample rate:', audioContext.sampleRate);
 
         return destination.stream;
