@@ -457,12 +457,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
           <div className="flex items-end justify-between -mt-12">
             <div className="flex items-end gap-4">
               <div className="relative">
-                <img
-                  src={profile.avatar}
-                  alt={profile.username}
-                  className="w-24 h-24 rounded-full border-4 border-gray-900 object-cover object-center"
-                  style={{ borderColor: profile.accentColor || '#6366f1' }}
-                />
+                <div className="w-24 h-24 rounded-full border-4 border-gray-900 bg-gradient-to-br from-mot-gold to-amber-600 overflow-hidden" style={{ borderColor: profile.accentColor || '#6366f1' }}>
+                  <img
+                    src={profile.avatar}
+                    alt={profile.username}
+                    className="w-full h-full object-cover object-center"
+                  />
+                </div>
                 <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-gray-900 ${getStatusColor(profile.status)}`} />
               </div>
               <div className="pb-2">
