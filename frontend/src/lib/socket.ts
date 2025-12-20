@@ -61,6 +61,7 @@ class SocketManager {
       'voice.user_joined',
       'voice.user_left',
       'voice.state_update',
+      'voice.participants',
       'channel.joined',
       'dm.joined',
       'friend.request',
