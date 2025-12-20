@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Plus, Smile, Gift, Paperclip, Mic } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Plus, Smile, Paperclip, X } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import { EmojiPicker } from '../EmojiPicker';
 import { useMessageStore } from '../../store/messageStore';
@@ -12,18 +13,20 @@ import api from '../../lib/api';
 interface MessageInputProps {
   channelId: string;
   isDM?: boolean;
+  placeholder?: string;
 }
 
-export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = false }) => {
+export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = false, placeholder }) => {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  
+
   const sendChannelMessage = useMessageStore((state) => state.sendMessage);
   const sendDMMessage = useDMStore((state) => state.sendDMMessage);
 
@@ -33,7 +36,7 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
     if (!textarea) return;
 
     textarea.style.height = 'auto';
-    const newHeight = Math.min(textarea.scrollHeight, 200); // Max 200px
+    const newHeight = Math.min(textarea.scrollHeight, 200);
     textarea.style.height = `${newHeight}px`;
   }, []);
 
@@ -50,12 +53,10 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
       socketManager.startTyping(channelId);
     }
 
-    // Clear previous timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Stop typing after 3 seconds of no input
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
       socketManager.stopTyping(channelId);
@@ -70,7 +71,7 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!message.trim() || isSending) return;
 
     setIsSending(true);
@@ -83,8 +84,7 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
       setMessage('');
       setIsTyping(false);
       socketManager.stopTyping(channelId);
-      
-      // Reset textarea height
+
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -112,7 +112,6 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       toast.error('File size must be less than 10MB');
       return;
@@ -128,15 +127,14 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
       });
 
       const fileUrl = response.data.url;
-      // Send message with file attachment
       const fileMessage = `[File: ${file.name}](${fileUrl})`;
-      
+
       if (isDM) {
         await sendDMMessage(channelId, fileMessage);
       } else {
         await sendChannelMessage(channelId, fileMessage);
       }
-      
+
       toast.success('File uploaded successfully!');
     } catch (error) {
       console.error('File upload failed:', error);
@@ -150,23 +148,34 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
   }, [channelId, isDM, sendDMMessage, sendChannelMessage]);
 
   return (
-    <div className="border-t border-mot-border p-4 bg-mot-surface">
-      <form onSubmit={handleSubmit} className="flex items-end gap-2">
+    <motion.div
+      className="border-t border-mot-border p-4 bg-gradient-to-t from-mot-surface to-mot-surface/95"
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <form onSubmit={handleSubmit} className="flex items-end gap-3">
         {/* Attachment Button */}
         <Tooltip content="Upload File" position="top">
-          <button
+          <motion.button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-shrink-0 p-2.5 text-gray-400 hover:text-mot-gold rounded-xl hover:bg-mot-gold/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Upload File"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             {isUploading ? (
-              <div className="h-5 w-5 border-2 border-mot-gold border-t-transparent rounded-full animate-spin" />
+              <motion.div
+                className="h-5 w-5 border-2 border-mot-gold border-t-transparent rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
             ) : (
               <Plus className="h-5 w-5" />
             )}
-          </button>
+          </motion.button>
         </Tooltip>
         <input
           ref={fileInputRef}
@@ -176,71 +185,124 @@ export const MessageInput = React.memo<MessageInputProps>(({ channelId, isDM = f
           accept="image/*,video/*,.pdf,.txt,.doc,.docx"
         />
 
-        {/* Message Input */}
-        <div className="flex-1 bg-mot-surface-subtle rounded-lg border border-mot-border focus-within:border-mot-gold/50 transition-colors">
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`Message #${channelId.substring(0, 8)}...`}
-            className="w-full bg-transparent px-4 py-3 text-white placeholder-gray-500 resize-none focus:outline-none custom-scrollbar"
-            rows={1}
-            maxLength={2000}
-            style={{ minHeight: '44px', maxHeight: '200px' }}
-          />
-          
-          {/* Character Counter */}
-          {message.length > 1800 && (
-            <div className={`px-4 pb-2 text-xs ${message.length >= 2000 ? 'text-red-400' : 'text-gray-500'}`}>
-              {message.length} / 2000
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Tooltip content="Add emoji" position="top">
-              <button 
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-2 text-gray-400 hover:text-mot-gold rounded-lg hover:bg-mot-gold/10 transition-all"
-              >
-                <Smile className="w-5 h-5" />
-              </button>
-            </Tooltip>
-            {showEmojiPicker && (
-              <EmojiPicker 
-                onEmojiSelect={handleEmojiSelect}
-                onClose={() => setShowEmojiPicker(false)}
+        {/* Message Input Container */}
+        <motion.div
+          className="flex-1 relative"
+          animate={{
+            boxShadow: isFocused ? "0 0 20px rgba(212, 175, 55, 0.15)" : "none"
+          }}
+        >
+          {/* Glow border effect */}
+          <AnimatePresence>
+            {isFocused && (
+              <motion.div
+                className="absolute -inset-0.5 bg-gradient-to-r from-mot-gold/50 via-amber-500/50 to-mot-gold/50 rounded-2xl blur-sm pointer-events-none"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
               />
             )}
+          </AnimatePresence>
+
+          <div className="relative bg-mot-surface-subtle rounded-xl border border-mot-border overflow-hidden">
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder={placeholder || `Message...`}
+              className="w-full bg-transparent px-4 py-3 text-white placeholder-gray-500 resize-none focus:outline-none custom-scrollbar"
+              rows={1}
+              maxLength={2000}
+              style={{ minHeight: '48px', maxHeight: '200px' }}
+            />
+
+            {/* Character Counter */}
+            <AnimatePresence>
+              {message.length > 1800 && (
+                <motion.div
+                  className={`px-4 pb-2 text-xs ${message.length >= 2000 ? 'text-red-400' : 'text-gray-500'}`}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                >
+                  {message.length} / 2000
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          
+        </motion.div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Emoji Picker */}
+          <div className="relative">
+            <Tooltip content="Add emoji" position="top">
+              <motion.button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="p-2.5 text-gray-400 hover:text-mot-gold rounded-xl hover:bg-mot-gold/10 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Smile className="w-5 h-5" />
+              </motion.button>
+            </Tooltip>
+            <AnimatePresence>
+              {showEmojiPicker && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                >
+                  <EmojiPicker
+                    onEmojiSelect={handleEmojiSelect}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Send Button */}
           <Tooltip content={message.trim() ? 'Send Message' : 'Type a message'} position="top">
-            <button
+            <motion.button
               type="submit"
               disabled={!message.trim() || isSending}
-              className={`flex-shrink-0 p-2 rounded-lg transition-all ${
-                message.trim() && !isSending
-                  ? 'bg-mot-gold hover:bg-mot-gold-light text-mot-black shadow-gold-glow-sm'
+              className={`flex-shrink-0 p-2.5 rounded-xl transition-colors ${message.trim() && !isSending
+                  ? 'bg-gradient-to-r from-mot-gold to-amber-500 text-mot-black shadow-lg'
                   : 'bg-mot-surface-subtle text-gray-500 cursor-not-allowed'
-              }`}
+                }`}
               aria-label="Send Message"
+              whileHover={message.trim() && !isSending ? {
+                scale: 1.1,
+                boxShadow: "0 0 25px rgba(212, 175, 55, 0.5)"
+              } : undefined}
+              whileTap={message.trim() && !isSending ? { scale: 0.9 } : undefined}
+              animate={message.trim() && !isSending ? {
+                boxShadow: ["0 0 10px rgba(212, 175, 55, 0.3)", "0 0 20px rgba(212, 175, 55, 0.5)", "0 0 10px rgba(212, 175, 55, 0.3)"]
+              } : undefined}
+              transition={{
+                boxShadow: { duration: 2, repeat: Infinity },
+                scale: { type: "spring", stiffness: 400, damping: 25 }
+              }}
             >
               {isSending ? (
-                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <motion.div
+                  className="h-5 w-5 border-2 border-current border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                />
               ) : (
                 <Send className="h-5 w-5" />
               )}
-            </button>
+            </motion.button>
           </Tooltip>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 });
 
