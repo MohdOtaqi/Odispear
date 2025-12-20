@@ -179,13 +179,13 @@ export const setupWebSocketHandlers = (io: Server) => {
     socket.on('guild.join', async (data: { guild_id: string }) => {
       try {
         const guildId = data.guild_id;
-        
+
         // Check if user is a member of the guild
         const result = await query(
           'SELECT id FROM guild_members WHERE guild_id = $1 AND user_id = $2',
           [guildId, userId]
         );
-        
+
         if (result.rows.length > 0) {
           socket.join(`guild:${guildId}`);
           logger.debug(`User ${userId} joined guild room: ${guildId}`);
@@ -207,7 +207,7 @@ export const setupWebSocketHandlers = (io: Server) => {
         // Optimized: Check Redis cache for permissions
         const cacheKey = `access:${userId}:${channelId}`;
         let cachedAccess: string | null = null;
-        
+
         if (isRedisEnabled() && redisClient) {
           try {
             cachedAccess = await redisClient.get(cacheKey);
@@ -261,7 +261,7 @@ export const setupWebSocketHandlers = (io: Server) => {
 
         let hasAccess = false;
         let cachedAccess: string | null = null;
-        
+
         if (isRedisEnabled() && redisClient) {
           try {
             cachedAccess = await redisClient.get(cacheKey);
@@ -301,6 +301,7 @@ export const setupWebSocketHandlers = (io: Server) => {
     socket.on('voice.join', async (data: { channel_id: string }) => {
       try {
         const channelId = data.channel_id;
+        logger.info(`[Voice] User ${userId} (${username}) joining voice channel: ${channelId}`);
 
         // Get the guild_id for this channel to broadcast to all guild members
         const channelResult = await query(
@@ -308,6 +309,7 @@ export const setupWebSocketHandlers = (io: Server) => {
           [channelId]
         );
         const guildId = channelResult.rows[0]?.guild_id;
+        logger.info(`[Voice] Channel ${channelId} belongs to guild: ${guildId}`);
 
         // Get user's avatar for display
         const userResult = await query(
@@ -316,16 +318,23 @@ export const setupWebSocketHandlers = (io: Server) => {
         );
         const avatarUrl = userResult.rows[0]?.avatar_url;
 
-        // Insert voice session
+        // Insert voice session - use simpler INSERT with explicit conflict handling
+        logger.info(`[Voice] Inserting voice session for user ${userId} in channel ${channelId}`);
+
+        // First, mark any existing active sessions for this user in this channel as left
+        await query(
+          `UPDATE voice_sessions SET left_at = NOW() WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
+          [channelId, userId]
+        );
+
+        // Now insert fresh session
         const result = await query(
           `INSERT INTO voice_sessions (channel_id, user_id)
            VALUES ($1, $2)
-           ON CONFLICT (channel_id, user_id) 
-           WHERE left_at IS NULL 
-           DO UPDATE SET joined_at = NOW()
            RETURNING *`,
           [channelId, userId]
         );
+        logger.info(`[Voice] Voice session created:`, result.rows[0]);
 
         socket.join(`voice:${channelId}`);
 
@@ -340,9 +349,15 @@ export const setupWebSocketHandlers = (io: Server) => {
           deafened: false,
         };
 
+        // Check how many sockets are in the guild room
+        const guildRoom = io.sockets.adapter.rooms.get(`guild:${guildId}`);
+        const socketsInGuild = guildRoom ? guildRoom.size : 0;
+        logger.info(`[Voice] Broadcasting voice.user_joined to guild:${guildId} (${socketsInGuild} sockets in room)`);
+
         // Broadcast to guild (so everyone in sidebar sees the user)
         if (guildId) {
           socket.to(`guild:${guildId}`).emit('voice.user_joined', voiceJoinData);
+          logger.info(`[Voice] Emitted voice.user_joined to guild room`);
         }
         // Also broadcast to channel room
         socket.to(`channel:${channelId}`).emit('voice.user_joined', voiceJoinData);
@@ -355,6 +370,7 @@ export const setupWebSocketHandlers = (io: Server) => {
            WHERE vs.channel_id = $1 AND vs.left_at IS NULL`,
           [channelId]
         );
+        logger.info(`[Voice] Sending ${participants.rows.length} participants to joining user`);
 
         socket.emit('voice.participants', {
           channel_id: channelId,

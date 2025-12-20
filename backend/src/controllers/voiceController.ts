@@ -17,11 +17,11 @@ export const getVoiceToken = async (
     const { channelId } = req.params;
     const userId = req.user!.id;
     const userName = req.user?.username || 'Guest';
-    
+
     console.log(`[Voice] Getting token for channel ${channelId}, user ${userId}`);
 
     const roomName = `channel-${channelId.substring(0, 8)}`;
-    
+
     // Use centralized Daily.co service with automatic fallback
     const room = await dailyService.getOrCreateRoom(roomName);
     const token = await dailyService.generateMeetingToken(roomName, userId, userName);
@@ -48,7 +48,9 @@ export const getGuildVoiceUsers = async (
 ): Promise<void> => {
   try {
     const { guildId } = req.params;
-    
+
+    console.log(`[VoiceAPI] Getting voice users for guild: ${guildId}`);
+
     // Get all active voice sessions for channels in this guild
     const result = await query(
       `SELECT vs.channel_id, vs.user_id, u.username, u.avatar_url, vs.muted, vs.deafened
@@ -59,6 +61,8 @@ export const getGuildVoiceUsers = async (
        ORDER BY vs.joined_at`,
       [guildId]
     );
+
+    console.log(`[VoiceAPI] Found ${result.rows.length} active voice sessions`);
 
     // Group by channel_id
     const voiceUsers: Record<string, any[]> = {};
@@ -75,8 +79,10 @@ export const getGuildVoiceUsers = async (
       });
     }
 
+    console.log(`[VoiceAPI] Returning voice users:`, voiceUsers);
     res.json(voiceUsers);
   } catch (error) {
+    console.error('[VoiceAPI] Error getting voice users:', error);
     next(new AppError('Failed to get voice users', 500));
   }
 };
