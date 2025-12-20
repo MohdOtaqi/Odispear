@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Volume2, Mic, MicOff, Headphones, Video, Monitor, Users, PhoneOff, Settings, VolumeX, ChevronDown, X, Maximize2 } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Volume2, Mic, MicOff, Headphones, Video, Monitor, Users, PhoneOff, Settings, VolumeX, ChevronDown, X, Maximize2, MessageSquare, User, UserX } from 'lucide-react';
 import { useVoiceChat, RESOLUTION_OPTIONS, FPS_OPTIONS, ScreenShareSettings } from './VoiceChatProvider';
 import { useAuthStore } from '../../store/authStore';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
+import { UserProfileModal } from '../UserProfileModal';
 
 // Component to render a participant's video
 const ParticipantVideo: React.FC<{ sessionId: string; isScreen?: boolean; isLocal?: boolean; getCallObject: () => any; className?: string }> = ({
@@ -143,6 +144,40 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
   const voiceChannelUsersMap = useVoiceUsersStore(state => state.voiceChannelUsers);
   const channelVoiceUsers = voiceChannelUsersMap[channelId] || [];
 
+  // State for context menu and profile modal
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; userId: string; username: string; isLocal: boolean } | null>(null);
+
+  // Handle right-click on user card
+  const handleContextMenu = useCallback((e: React.MouseEvent, voiceUser: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (voiceUser.id === user?.id) return; // Don't show menu for own user
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      userId: voiceUser.id,
+      username: voiceUser.username,
+      isLocal: voiceUser.isLocal
+    });
+  }, [user?.id]);
+
+  // Handle clicking user card to open profile
+  const handleUserClick = useCallback((e: React.MouseEvent, voiceUser: any) => {
+    e.stopPropagation();
+    if (voiceUser.hasVideo && voiceUser.session_id) {
+      // If has video, expand video (existing behavior)
+      setExpandedVideo({
+        sessionId: voiceUser.session_id,
+        username: voiceUser.username,
+        isLocal: voiceUser.isLocal
+      });
+    } else if (voiceUser.id !== user?.id) {
+      // Otherwise open profile modal (not for self)
+      setSelectedUserId(voiceUser.id);
+    }
+  }, [user?.id]);
+
   const {
     isConnected,
     channelId: currentChannelId,
@@ -252,11 +287,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
           allUsers.map((voiceUser: any) => (
             <div
               key={voiceUser.id}
-              onClick={() => voiceUser.hasVideo && voiceUser.session_id && setExpandedVideo({
-                sessionId: voiceUser.session_id,
-                username: voiceUser.username,
-                isLocal: voiceUser.isLocal
-              })}
+              onClick={(e) => handleUserClick(e, voiceUser)}
+              onContextMenu={(e) => handleContextMenu(e, voiceUser)}
               className={`relative ${screenShareParticipant || isScreenSharing ? 'w-32 h-24' : 'w-[280px] h-[200px]'} rounded-xl overflow-hidden transition-all cursor-pointer hover:scale-105 ${voiceUser.speaking
                 ? 'ring-4 ring-green-500 shadow-lg shadow-green-500/30'
                 : 'ring-2 ring-mot-border hover:ring-mot-gold'
@@ -537,6 +569,73 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Context Menu for voice users */}
+      {contextMenu && (
+        <div
+          className="fixed z-[100] bg-mot-surface border border-mot-gold/30 rounded-xl shadow-2xl py-1 min-w-[180px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={() => setContextMenu(null)}
+        >
+          <button
+            onClick={() => {
+              setSelectedUserId(contextMenu.userId);
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-mot-gold/10 hover:text-white transition-colors"
+          >
+            <User className="w-4 h-4" />
+            View Profile
+          </button>
+          <button
+            onClick={() => {
+              // TODO: Open DM with this user
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-mot-gold/10 hover:text-white transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Send Message
+          </button>
+          <div className="border-t border-mot-border my-1" />
+          <button
+            onClick={() => {
+              // TODO: Server mute this user
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          >
+            <MicOff className="w-4 h-4" />
+            Server Mute
+          </button>
+          <button
+            onClick={() => {
+              // TODO: Disconnect this user from voice
+              setContextMenu(null);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            <UserX className="w-4 h-4" />
+            Disconnect
+          </button>
+        </div>
+      )}
+
+      {/* Click outside to close context menu */}
+      {contextMenu && (
+        <div
+          className="fixed inset-0 z-[99]"
+          onClick={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
       )}
     </div>
   );
