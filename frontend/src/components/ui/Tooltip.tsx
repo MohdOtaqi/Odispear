@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
 interface TooltipProps {
   children: React.ReactNode;
-  content: string;
+  content: React.ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
   delay?: number;
+  className?: string;
 }
 
-export const Tooltip = React.memo<TooltipProps>(({ 
-  children, 
-  content, 
+export const Tooltip = React.memo<TooltipProps>(({
+  children,
+  content,
   position = 'top',
-  delay = 300
+  delay = 200,
+  className
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [timeoutId, setTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -36,35 +39,55 @@ export const Tooltip = React.memo<TooltipProps>(({
     right: 'left-full top-1/2 -translate-y-1/2 ml-2',
   };
 
+  const animationOrigin = {
+    top: { y: 5 },
+    bottom: { y: -5 },
+    left: { x: 5 },
+    right: { x: -5 },
+  };
+
+  const arrowPosition = {
+    top: { bottom: -4, left: '50%', transform: 'translateX(-50%) rotate(45deg)' },
+    bottom: { top: -4, left: '50%', transform: 'translateX(-50%) rotate(45deg)' },
+    left: { right: -4, top: '50%', transform: 'translateY(-50%) rotate(45deg)' },
+    right: { left: -4, top: '50%', transform: 'translateY(-50%) rotate(45deg)' },
+  };
+
   return (
-    <div 
-      className="relative inline-block"
+    <div
+      className={cn("relative inline-block", className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {children}
-      {isVisible && content && (
-        <div
-          className={cn(
-            'absolute z-tooltip px-3 py-1.5 bg-[#1e1f22] text-white text-sm rounded-lg shadow-xl border border-white/10 whitespace-nowrap pointer-events-none animate-scale-in',
-            positions[position]
-          )}
-        >
-          {content}
-          <div className="absolute w-2 h-2 bg-[#1e1f22] border-white/10 rotate-45" 
-            style={{
-              [position === 'top' ? 'bottom' : position === 'bottom' ? 'top' : position === 'left' ? 'right' : 'left']: '-4px',
-              left: position === 'top' || position === 'bottom' ? '50%' : undefined,
-              top: position === 'left' || position === 'right' ? '50%' : undefined,
-              transform: position === 'top' || position === 'bottom' ? 'translateX(-50%)' : 'translateY(-50%)',
-              borderTop: position === 'bottom' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-              borderLeft: position === 'right' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-              borderBottom: position === 'top' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-              borderRight: position === 'left' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-            }}
-          />
-        </div>
-      )}
+      <AnimatePresence>
+        {isVisible && content && (
+          <motion.div
+            className={cn(
+              'absolute z-tooltip px-3 py-2 bg-mot-surface-subtle/95 backdrop-blur-md text-white text-sm rounded-xl shadow-xl border border-mot-border whitespace-nowrap pointer-events-none',
+              positions[position]
+            )}
+            initial={{ opacity: 0, scale: 0.9, ...animationOrigin[position] }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, ...animationOrigin[position] }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+          >
+            {content}
+            {/* Arrow */}
+            <div
+              className="absolute w-2 h-2 bg-mot-surface-subtle border-mot-border"
+              style={{
+                ...arrowPosition[position],
+                borderTop: position === 'bottom' ? '1px solid' : 'none',
+                borderLeft: position === 'right' ? '1px solid' : 'none',
+                borderBottom: position === 'top' ? '1px solid' : 'none',
+                borderRight: position === 'left' ? '1px solid' : 'none',
+                borderColor: 'inherit'
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
