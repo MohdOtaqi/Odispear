@@ -29,14 +29,17 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
 
   addUser: (channelId, user) => {
     set((state) => {
-      const currentUsers = state.voiceChannelUsers[channelId] || [];
-      // Don't add if already exists
-      if (currentUsers.some(u => u.id === user.id)) {
-        return state;
+      // First, remove the user from ALL channels (prevents duplicate appearances)
+      const cleanedChannels: Record<string, VoiceUser[]> = {};
+      for (const [chId, users] of Object.entries(state.voiceChannelUsers)) {
+        cleanedChannels[chId] = users.filter(u => u.id !== user.id);
       }
+
+      // Now add the user to the new channel
+      const currentUsers = cleanedChannels[channelId] || [];
       return {
         voiceChannelUsers: {
-          ...state.voiceChannelUsers,
+          ...cleanedChannels,
           [channelId]: [...currentUsers, user],
         },
       };

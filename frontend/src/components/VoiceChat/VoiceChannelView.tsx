@@ -311,7 +311,7 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
 
               {/* User Avatar - Show when no video */}
               {!voiceUser.hasVideo && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className={`relative ${voiceUser.speaking ? 'animate-pulse' : ''}`}>
                     <div className={`${screenShareParticipant ? 'w-12 h-12' : 'w-24 h-24'} rounded-full overflow-hidden border-4 ${voiceUser.speaking ? 'border-green-500' : 'border-mot-gold/30'
                       }`}>
@@ -320,7 +320,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                           <img
                             src={voiceUser.avatar_url.startsWith('http') ? voiceUser.avatar_url : `${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://n0tmot.com/api' : 'http://localhost:5000')}${voiceUser.avatar_url}`}
                             alt={voiceUser.username}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover pointer-events-none select-none"
+                            draggable={false}
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
