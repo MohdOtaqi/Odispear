@@ -13,7 +13,7 @@ interface VoiceUser {
 interface VoiceUsersState {
   // Map of channel_id -> array of users
   voiceChannelUsers: Record<string, VoiceUser[]>;
-  
+
   // Actions
   addUser: (channelId: string, user: VoiceUser) => void;
   removeUser: (channelId: string, userId: string) => void;
@@ -61,7 +61,7 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
       return {
         voiceChannelUsers: {
           ...state.voiceChannelUsers,
-          [channelId]: currentUsers.map(u => 
+          [channelId]: currentUsers.map(u =>
             u.id === userId ? { ...u, ...newState } : u
           ),
         },
@@ -101,7 +101,7 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
       muted?: boolean;
       deafened?: boolean;
     }) => {
-      console.log('[VoiceStore] User joined voice:', data);
+      console.log('[VoiceStore] Received voice.user_joined event:', data);
       get().addUser(data.channel_id, {
         id: data.user_id,
         username: data.username,
@@ -109,6 +109,7 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
         muted: data.muted || false,
         deafened: data.deafened || false,
       });
+      console.log('[VoiceStore] Updated voiceChannelUsers:', get().voiceChannelUsers);
     });
 
     socketManager.on('voice.user_left', (data: {
