@@ -3,6 +3,8 @@ import Daily, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
 import { voiceAPI } from '../../lib/voiceAPI';
 import { socketManager } from '../../lib/socket';
 import { createNoiseSuppressedStream, destroyRNNoise } from '../../lib/audioProcessor';
+import { useVoiceUsersStore } from '../../store/voiceUsersStore';
+import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 
 // Screen share quality presets
@@ -402,6 +404,18 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Notify server via WebSocket so other users see us in voice channel
       socketManager.joinVoice(channelIdParam);
 
+      // Add current user to the voice users store immediately (for our own sidebar)
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser) {
+        useVoiceUsersStore.getState().addUser(channelIdParam, {
+          id: currentUser.id,
+          username: currentUser.username,
+          avatar_url: currentUser.avatar_url,
+          muted: false,
+          deafened: false,
+        });
+      }
+
     } catch (error: any) {
       console.error('Failed to join voice channel:', error);
       toast.error(error.response?.data?.error || 'Failed to join voice channel');
@@ -446,6 +460,12 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Notify server via WebSocket
     if (currentChannelId) {
       socketManager.leaveVoice(currentChannelId);
+
+      // Remove current user from voice users store (for our own sidebar)
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser) {
+        useVoiceUsersStore.getState().removeUser(currentChannelId, currentUser.id);
+      }
     }
   }, [channelId]);
 
