@@ -402,7 +402,37 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       });
 
-      // 5. Join the meeting
+      // 5. PRE-PROCESS AUDIO before joining
+      // Apply aggressive noise suppression BEFORE joining so Daily.co uses our processed stream
+      try {
+        console.log('[Voice] Pre-processing audio with aggressive noise suppression...');
+
+        // Get a raw audio stream
+        const rawStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: false,
+        });
+
+        // Apply our aggressive noise processing
+        const processedStream = await createRNNoiseSuppressedStream(rawStream);
+        const audioTrack = processedStream.getAudioTracks()[0];
+
+        if (audioTrack) {
+          // Set the processed audio as input BEFORE joining
+          await co.setInputDevicesAsync({
+            audioSource: audioTrack,
+          });
+          console.log('[Voice] ✅ Preprocessed audio set as input device');
+        }
+      } catch (preprocessError) {
+        console.warn('[Voice] Audio preprocessing failed, using default:', preprocessError);
+      }
+
+      // 6. Join the meeting with the preprocessed audio
       await co.join({
         url: roomUrl,
         token: token,
