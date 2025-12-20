@@ -19,6 +19,7 @@ interface VoiceUser {
   username: string;
   avatar_url?: string;
   muted?: boolean;
+  deafened?: boolean;
 }
 
 interface SidebarProps {
@@ -78,7 +79,7 @@ const VoiceChannelButton = React.memo<{
   isConnected: boolean;
 }>(({ channel, isActive, users, onJoin, isConnected }) => {
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       <button
         onClick={onJoin}
         className={cn(
@@ -90,41 +91,63 @@ const VoiceChannelButton = React.memo<{
         )}
       >
         <div className={cn(
-          'p-1 rounded-md transition-colors relative',
-          isConnected ? 'bg-green-500/20' : isActive ? 'bg-mot-gold/20' : 'bg-transparent group-hover:bg-mot-gold/10'
+          'p-1.5 rounded-lg transition-colors relative',
+          isConnected ? 'bg-green-500/20' : users.length > 0 ? 'bg-mot-gold/10' : 'bg-transparent group-hover:bg-mot-gold/10'
         )}>
           <Volume2 className={cn(
             "h-4 w-4 flex-shrink-0 transition-colors",
-            isConnected ? "text-green-400" : isActive && "text-mot-gold"
+            isConnected ? "text-green-400" : users.length > 0 ? "text-mot-gold" : ""
           )} />
           {isConnected && (
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           )}
         </div>
-        <span className="truncate font-medium">{channel.name}</span>
+        <span className="truncate font-medium flex-1 text-left">{channel.name}</span>
         {users.length > 0 && (
-          <span className="ml-auto text-xs text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">
+          <span className="text-xs font-medium bg-mot-gold/20 text-mot-gold px-2 py-0.5 rounded-full">
             {users.length}
           </span>
         )}
       </button>
 
-      {/* Users in voice channel */}
+      {/* Users in voice channel - always show if there are users */}
       {users.length > 0 && (
-        <div className="ml-4 pl-4 border-l border-mot-border/50 space-y-1">
+        <div className="ml-3 pl-3 border-l-2 border-mot-gold/30 space-y-0.5">
           {users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-gray-300 hover:bg-white/5 transition-colors"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm hover:bg-white/5 transition-colors group/user"
             >
-              <Avatar
-                src={user.avatar_url}
-                alt={user.username}
-                size="xs"
-                fallback={user.username.charAt(0)}
-              />
-              <span className="truncate text-xs font-medium">{user.username}</span>
-              {user.muted && <MicOff className="h-3 w-3 text-red-400 ml-auto" />}
+              {/* Avatar with online ring */}
+              <div className="relative">
+                <Avatar
+                  src={user.avatar_url}
+                  alt={user.username}
+                  size="xs"
+                  fallback={user.username.charAt(0)}
+                />
+                {/* Speaking indicator - pulsing ring */}
+                {!user.muted && (
+                  <span className="absolute -inset-0.5 rounded-full border-2 border-green-500/50 animate-pulse" />
+                )}
+              </div>
+
+              <span className={cn(
+                "truncate text-xs font-medium flex-1",
+                user.muted ? "text-gray-500" : "text-gray-200"
+              )}>
+                {user.username}
+              </span>
+
+              {/* Status indicators */}
+              <div className="flex items-center gap-1">
+                {user.deafened && (
+                  <Headphones className="h-3 w-3 text-red-400" />
+                )}
+                {user.muted && (
+                  <MicOff className="h-3 w-3 text-red-400" />
+                )}
+              </div>
             </div>
           ))}
         </div>
