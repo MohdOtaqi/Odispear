@@ -17,6 +17,7 @@ interface VoiceUsersState {
   // Actions
   addUser: (channelId: string, user: VoiceUser) => void;
   removeUser: (channelId: string, userId: string) => void;
+  removeUserFromAllChannels: (userId: string) => void;
   updateUserState: (channelId: string, userId: string, state: { muted?: boolean; deafened?: boolean }) => void;
   clearChannel: (channelId: string) => void;
   clearAll: () => void;
@@ -55,6 +56,16 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
           [channelId]: currentUsers.filter(u => u.id !== userId),
         },
       };
+    });
+  },
+
+  removeUserFromAllChannels: (userId) => {
+    set((state) => {
+      const cleanedChannels: Record<string, VoiceUser[]> = {};
+      for (const [chId, users] of Object.entries(state.voiceChannelUsers)) {
+        cleanedChannels[chId] = users.filter(u => u.id !== userId);
+      }
+      return { voiceChannelUsers: cleanedChannels };
     });
   },
 

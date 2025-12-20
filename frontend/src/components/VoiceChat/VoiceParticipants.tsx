@@ -30,7 +30,7 @@ export const VoiceParticipants: React.FC<VoiceParticipantsProps> = ({ channelId,
 
     const checkSpeaking = () => {
       const newSpeaking = new Set<string>();
-      
+
       participants.forEach(participant => {
         // Check if participant is speaking based on audio level
         if (participant.audio && !participant.local) {
@@ -107,7 +107,7 @@ export const VoiceParticipants: React.FC<VoiceParticipantsProps> = ({ channelId,
 
 const ParticipantItem: React.FC<{ participant: Participant }> = ({ participant }) => {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   return (
     <div
       className={`
@@ -123,8 +123,8 @@ const ParticipantItem: React.FC<{ participant: Participant }> = ({ participant }
         <div
           className={`
             absolute inset-0 rounded-full transition-all duration-300
-            ${participant.isSpeaking 
-              ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-[#2b2d31] animate-pulse' 
+            ${participant.isSpeaking
+              ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-[#2b2d31] animate-pulse'
               : ''
             }
           `}
@@ -136,7 +136,7 @@ const ParticipantItem: React.FC<{ participant: Participant }> = ({ participant }
           size="sm"
           className="relative z-10"
         />
-        
+
         {/* Status indicator */}
         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#2b2d31] rounded-full flex items-center justify-center z-20">
           {participant.isDeafened ? (
@@ -164,16 +164,15 @@ const ParticipantItem: React.FC<{ participant: Participant }> = ({ participant }
             <Volume2 className="w-3 h-3 text-green-400 animate-pulse" />
           )}
         </div>
-        
+
         {/* Connection quality */}
         {isHovered && (
           <div className="flex items-center gap-2 mt-0.5">
             <div className="flex items-center gap-1">
-              <Signal className={`w-3 h-3 ${
-                participant.ping < 30 ? 'text-green-400' :
+              <Signal className={`w-3 h-3 ${participant.ping < 30 ? 'text-green-400' :
                 participant.ping < 60 ? 'text-yellow-400' :
-                'text-red-400'
-              }`} />
+                  'text-red-400'
+                }`} />
               <span className="text-xs text-gray-500">{participant.ping}ms</span>
             </div>
           </div>
@@ -214,7 +213,7 @@ const ParticipantItem: React.FC<{ participant: Participant }> = ({ participant }
               )}
             </button>
           </Tooltip>
-          
+
           <Tooltip content={participant.isDeafened ? "User is deafened" : "Deafen user"}>
             <button className="p-1.5 hover:bg-white/10 rounded transition-colors">
               {participant.isDeafened ? (
