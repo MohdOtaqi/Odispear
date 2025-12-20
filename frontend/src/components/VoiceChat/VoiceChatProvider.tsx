@@ -364,38 +364,57 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               const updated = new Set(p);
               updated.delete(peerId);
               return updated;
-            });
-          }, 300);
-        }
       });
+    }, 300);
+  }
+});
 
-      // 5. Join the meeting first with default audio
-      await co.join({
-        url: roomUrl,
-        token: token,
-        startAudioOff: false,
-        startVideoOff: true,
-      });
+// 5. Enable browser-level noise suppression BEFORE joining
+// Request microphone with maximum noise suppression
+try {
+  const micStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: { ideal: true },
+      noiseSuppression: { ideal: true },  // Browser-level NS
+      autoGainControl: { ideal: true },
+    },
+    video: false,
+  });
+  
+  const audioTrack = micStream.getAudioTracks()[0];
+  if (audioTrack) {
+    await co.setInputDevicesAsync({
+      audioSource: audioTrack,
+    });
+    console.log('[Voice] Browser noise suppression enabled');
+  }
+} catch (micError) {
+  console.warn('[Voice] Could not set custom audio constraints:', micError);
+}
 
-      // 6. Enable Daily's Krisp-powered noise cancellation for ALL browsers
-      // Let Daily.co handle it - this works on Brave/Chrome/Firefox and potentially Edge too
-      try {
-        await co.updateInputSettings({
-          audio: {
-            processor: {
-              type: 'noise-cancellation',
-            },
-          },
-        });
-        console.log('[Voice] Daily.co Krisp noise cancellation enabled');
-      } catch (ncError) {
-        console.warn('[Voice] Daily.co noise cancellation not supported on this browser:', ncError);
-        console.log('[Voice] Falling back to browser built-in noise suppression');
-      }
+// 6. Join the meeting
+await co.join({
+  url: roomUrl,
+  token: token,
+  startAudioOff: false,
+  startVideoOff: true,
+});
 
-      setChannelId(channelIdParam);
+// 7. Try Daily.co Krisp (works on Brave/Chrome, ignored on Edge)
+try {
+  await co.updateInputSettings({
+    audio: {
+      processor: {
+        type: 'noise-cancellation',
+      },
+    },
+  });
+  console.log('[Voice] Daily.co Krisp enabled (Brave/Chrome)');
+} catch (ncError) {
+  console.log('[Voice] Daily.co Krisp not available (Edge will use browser NS)');
+}
 
-      // Notify server via WebSocket so other users see us in voice channel
+setChannelId(channelIdParam);
       socketManager.joinVoice(channelIdParam);
 
       // Add current user to the voice users store immediately (for our own sidebar)
