@@ -38,20 +38,31 @@ const ChannelButton = React.memo<{
   onClick: () => void;
 }>(({ channel, isActive, onClick }) => {
   const Icon = channel.type === 'voice' ? Volume2 : Hash;
-  
+
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150',
-        'hover:bg-mot-gold/10 hover:text-white',
+        'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all duration-200 group',
+        'hover:bg-mot-gold/10',
         isActive
-          ? 'bg-mot-gold/20 text-white border-l-2 border-mot-gold'
-          : 'text-gray-400'
+          ? 'bg-mot-gold/15 text-white'
+          : 'text-gray-400 hover:text-white'
       )}
     >
-      <Icon className="h-4 w-4 flex-shrink-0" />
+      <div className={cn(
+        'p-1 rounded-md transition-colors',
+        isActive ? 'bg-mot-gold/20' : 'bg-transparent group-hover:bg-mot-gold/10'
+      )}>
+        <Icon className={cn(
+          "h-4 w-4 flex-shrink-0 transition-colors",
+          isActive && "text-mot-gold"
+        )} />
+      </div>
       <span className="truncate font-medium">{channel.name}</span>
+      {isActive && (
+        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-mot-gold animate-pulse" />
+      )}
     </button>
   );
 });
@@ -67,28 +78,44 @@ const VoiceChannelButton = React.memo<{
   isConnected: boolean;
 }>(({ channel, isActive, users, onJoin, isConnected }) => {
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1">
       <button
         onClick={onJoin}
         className={cn(
-          'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150',
-          'hover:bg-mot-gold/10 hover:text-white',
+          'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all duration-200 group',
+          'hover:bg-mot-gold/10',
           isActive
-            ? 'bg-mot-gold/20 text-white'
-            : 'text-gray-400'
+            ? 'bg-mot-gold/15 text-white'
+            : 'text-gray-400 hover:text-white'
         )}
       >
-        <Volume2 className={cn("h-4 w-4 flex-shrink-0", isConnected && "text-green-400")} />
+        <div className={cn(
+          'p-1 rounded-md transition-colors relative',
+          isConnected ? 'bg-green-500/20' : isActive ? 'bg-mot-gold/20' : 'bg-transparent group-hover:bg-mot-gold/10'
+        )}>
+          <Volume2 className={cn(
+            "h-4 w-4 flex-shrink-0 transition-colors",
+            isConnected ? "text-green-400" : isActive && "text-mot-gold"
+          )} />
+          {isConnected && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          )}
+        </div>
         <span className="truncate font-medium">{channel.name}</span>
+        {users.length > 0 && (
+          <span className="ml-auto text-xs text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">
+            {users.length}
+          </span>
+        )}
       </button>
-      
+
       {/* Users in voice channel */}
       {users.length > 0 && (
-        <div className="ml-6 space-y-0.5">
+        <div className="ml-4 pl-4 border-l border-mot-border/50 space-y-1">
           {users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center gap-2 px-2 py-1 text-sm text-gray-300"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-gray-300 hover:bg-white/5 transition-colors"
             >
               <Avatar
                 src={user.avatar_url}
@@ -96,7 +123,7 @@ const VoiceChannelButton = React.memo<{
                 size="xs"
                 fallback={user.username.charAt(0)}
               />
-              <span className="truncate text-xs">{user.username}</span>
+              <span className="truncate text-xs font-medium">{user.username}</span>
               {user.muted && <MicOff className="h-3 w-3 text-red-400 ml-auto" />}
             </div>
           ))}
@@ -108,6 +135,7 @@ const VoiceChannelButton = React.memo<{
 
 VoiceChannelButton.displayName = 'VoiceChannelButton';
 
+
 export const Sidebar = React.memo<SidebarProps>(({
   currentChannelId,
   onChannelSelect,
@@ -117,10 +145,10 @@ export const Sidebar = React.memo<SidebarProps>(({
 }) => {
   const { currentGuild, channels } = useGuildStore();
   const { isConnected, channelId: connectedVoiceChannelId, localParticipant, toggleMute, toggleDeafen, leaveChannel, isDeafened } = useVoiceChat();
-  
+
   // Get voice users from the global store (populated by WebSocket events)
   const storeVoiceUsers = useVoiceUsersStore(state => state.voiceChannelUsers);
-  
+
   // Merge store users with prop-based users (fallback)
   const mergedVoiceUsers = { ...voiceChannelUsers, ...storeVoiceUsers };
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -165,7 +193,7 @@ export const Sidebar = React.memo<SidebarProps>(({
         {categories.map((category: Channel) => {
           const categoryChannels = getChannelsInCategory(category.id);
           const isCollapsed = collapsedCategories.has(category.id);
-          
+
           return (
             <div key={category.id}>
               <button
@@ -177,7 +205,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                   {category.name}
                 </span>
                 <Tooltip content="Create Channel" position="top">
-                  <span 
+                  <span
                     onClick={(e) => { e.stopPropagation(); onCreateChannel?.('text'); }}
                     className="hover:text-mot-gold transition-colors cursor-pointer"
                   >
@@ -221,9 +249,9 @@ export const Sidebar = React.memo<SidebarProps>(({
                 Text Channels
               </span>
               <Tooltip content="Create Text Channel" position="top">
-                <button 
+                <button
                   onClick={() => onCreateChannel?.('text')}
-                  className="hover:text-mot-gold transition-colors" 
+                  className="hover:text-mot-gold transition-colors"
                   aria-label="Create Text Channel"
                 >
                   <Plus className="h-4 w-4" />
@@ -252,9 +280,9 @@ export const Sidebar = React.memo<SidebarProps>(({
                 Voice Channels
               </span>
               <Tooltip content="Create Voice Channel" position="top">
-                <button 
+                <button
                   onClick={() => onCreateChannel?.('voice')}
-                  className="hover:text-mot-gold transition-colors" 
+                  className="hover:text-mot-gold transition-colors"
                   aria-label="Create Voice Channel"
                 >
                   <Plus className="h-4 w-4" />
@@ -291,7 +319,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                 </p>
               </div>
             </div>
-            
+
             {/* Voice Controls */}
             <div className="flex items-center gap-1">
               <Tooltip content={localParticipant?.audio === false ? 'Unmute' : 'Mute'} position="top">
@@ -307,7 +335,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                   {localParticipant?.audio === false ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </button>
               </Tooltip>
-              
+
               <Tooltip content={isDeafened ? 'Undeafen' : 'Deafen'} position="top">
                 <button
                   onClick={toggleDeafen}
@@ -321,7 +349,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                   <Headphones className="h-4 w-4" />
                 </button>
               </Tooltip>
-              
+
               <Tooltip content="Settings" position="top">
                 <button
                   className="flex-1 p-2 rounded-md hover:bg-white/10 text-gray-400 hover:text-white transition-colors flex items-center justify-center"
@@ -329,7 +357,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                   <Settings className="h-4 w-4" />
                 </button>
               </Tooltip>
-              
+
               <Tooltip content="Disconnect" position="top">
                 <button
                   onClick={leaveChannel}
