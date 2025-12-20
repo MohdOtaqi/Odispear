@@ -420,8 +420,12 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       socketManager.joinVoice(channelIdParam);
 
       // Add current user to the voice users store immediately (for our own sidebar)
+      // IMPORTANT: First remove ourselves from all channels, then add to new channel
       const currentUser = useAuthStore.getState().user;
       if (currentUser) {
+        // Explicitly remove from all channels first to ensure clean state
+        useVoiceUsersStore.getState().removeUserFromAllChannels(currentUser.id);
+        // Then add to the new channel
         useVoiceUsersStore.getState().addUser(channelIdParam, {
           id: currentUser.id,
           username: currentUser.username,
