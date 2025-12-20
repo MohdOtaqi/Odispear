@@ -220,7 +220,7 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true,
-                sampleRate: 48000,
+                // Let browser pick optimal sample rate
               },
               video: false,
             });

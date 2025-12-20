@@ -31,7 +31,7 @@ let frameCount = 0;
 function applyAggressiveNoiseGate(inputFrame: Float32Array, sampleRate: number = 48000): Float32Array {
   const output = new Float32Array(inputFrame.length);
   const frameDuration = inputFrame.length / sampleRate;
-  
+
   // Calculate RMS (root mean square) of the frame
   let sum = 0;
   let peakValue = 0;
@@ -41,18 +41,18 @@ function applyAggressiveNoiseGate(inputFrame: Float32Array, sampleRate: number =
     if (absVal > peakValue) peakValue = absVal;
   }
   const rms = Math.sqrt(sum / inputFrame.length);
-  
+
   // Smooth RMS to avoid rapid changes
   const smoothedRMS = lastRMS * 0.6 + rms * 0.4;
   lastRMS = smoothedRMS;
-  
+
   // Voice Activity Detection - check for speech characteristics
   const crestFactor = peakValue / (rms + 0.0001); // Speech typically has crest factor 3-6
   const isSpeechLike = crestFactor > 2 && crestFactor < 10;
-  
+
   // Determine if we should open the gate
   const shouldOpen = smoothedRMS > NOISE_GATE_THRESHOLD && isSpeechLike;
-  
+
   if (shouldOpen) {
     // Open gate quickly (attack)
     gateLevel = Math.min(1, gateLevel + (frameDuration / ATTACK_TIME));
@@ -65,22 +65,22 @@ function applyAggressiveNoiseGate(inputFrame: Float32Array, sampleRate: number =
     // Close gate aggressively (release)
     gateLevel = Math.max(0, gateLevel - (frameDuration / RELEASE_TIME));
   }
-  
+
   // Apply gate with spectral noise reduction
   for (let i = 0; i < output.length; i++) {
     let sample = inputFrame[i];
-    
+
     // Spectral subtraction - reduce low-level noise
     if (Math.abs(sample) < NOISE_FLOOR) {
       sample *= (1 - NOISE_REDUCTION_AMOUNT);
     }
-    
+
     // Smooth per-sample gating to avoid clicks
     const samplePosition = i / inputFrame.length;
     const smoothGate = gateLevel * (0.95 + 0.05 * Math.cos(samplePosition * Math.PI));
     output[i] = sample * smoothGate;
   }
-  
+
   return output;
 }
 
@@ -96,8 +96,9 @@ export function destroyRNNoise(): void {
 }
 
 /**
- * Create a noise-suppressed audio stream with Krisp-like aggressive filtering
- * Uses multiple techniques for maximum noise reduction
+ * Create a noise-suppressed audio stream with aggressive filtering
+ * Uses Web Audio API filters for stable, low-latency processing
+ * Works on all browsers without the deprecated ScriptProcessor
  */
 export async function createNoiseSuppressedStream(
   originalStream: MediaStream
@@ -110,9 +111,9 @@ export async function createNoiseSuppressedStream(
         audio: {
           deviceId: originalStream.getAudioTracks()[0]?.getSettings().deviceId,
           echoCancellation: true,
-          noiseSuppression: true, // Browser's built-in
+          noiseSuppression: true, // Browser's built-in (most effective)
           autoGainControl: true,
-          sampleRate: 48000,
+          // Let browser pick optimal sample rate for this device
         }
       });
       console.log('[AudioProcessor] Browser noise suppression enabled');
@@ -121,58 +122,56 @@ export async function createNoiseSuppressedStream(
       enhancedStream = originalStream;
     }
 
-    const audioContext = new AudioContext({ sampleRate: 48000 });
+    // Create audio context with default sample rate (browser picks best)
+    const audioContext = new AudioContext();
     const source = audioContext.createMediaStreamSource(enhancedStream);
-    
-    // High-pass filter to remove low-frequency rumble (below 80Hz)
+
+    // High-pass filter to remove low-frequency rumble and microphone handling noise
     const highPassFilter = audioContext.createBiquadFilter();
     highPassFilter.type = 'highpass';
-    highPassFilter.frequency.value = 80;
-    highPassFilter.Q.value = 0.7;
-    
-    // Low-pass filter to remove high-frequency hiss (above 8kHz for voice)
+    highPassFilter.frequency.value = 100; // Cut below 100Hz (more aggressive)
+    highPassFilter.Q.value = 0.5; // Gentle slope to avoid artifacts
+
+    // Notch filter to remove common 60Hz/50Hz power line hum
+    const notchFilter = audioContext.createBiquadFilter();
+    notchFilter.type = 'notch';
+    notchFilter.frequency.value = 60; // 60Hz hum (US) or 50Hz (EU)
+    notchFilter.Q.value = 30; // Narrow notch
+
+    // Low-pass filter to remove high-frequency hiss (above 7kHz)
     const lowPassFilter = audioContext.createBiquadFilter();
     lowPassFilter.type = 'lowpass';
-    lowPassFilter.frequency.value = 8000;
-    lowPassFilter.Q.value = 0.7;
-    
-    // Compressor to even out volume and reduce sudden loud noises
+    lowPassFilter.frequency.value = 7000; // Voice doesn't need above 7kHz
+    lowPassFilter.Q.value = 0.5;
+
+    // Compressor for consistent volume and sudden noise reduction
     const compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.value = -24;
-    compressor.knee.value = 12;
-    compressor.ratio.value = 4;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.1;
-    
-    // Create a ScriptProcessor for aggressive noise gate
-    const bufferSize = 1024; // Smaller buffer for lower latency
-    const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
-    
-    noiseGateActive = true;
-    
-    processor.onaudioprocess = (event) => {
-      if (!noiseGateActive) return;
-      
-      const inputData = event.inputBuffer.getChannelData(0);
-      const outputData = event.outputBuffer.getChannelData(0);
-      
-      // Apply aggressive noise gate with VAD
-      const processed = applyAggressiveNoiseGate(inputData, audioContext.sampleRate);
-      outputData.set(processed);
-    };
+    compressor.threshold.value = -30; // Start compressing at -30dB
+    compressor.knee.value = 20; // Soft knee for natural sound
+    compressor.ratio.value = 6; // 6:1 compression
+    compressor.attack.value = 0.002; // 2ms attack (fast)
+    compressor.release.value = 0.15; // 150ms release
+
+    // Gain node for final volume adjustment
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = 1.2; // Slight boost to compensate for filtering
 
     // Connect the audio processing chain
     source.connect(highPassFilter);
-    highPassFilter.connect(lowPassFilter);
+    highPassFilter.connect(notchFilter);
+    notchFilter.connect(lowPassFilter);
     lowPassFilter.connect(compressor);
-    compressor.connect(processor);
-    
+    compressor.connect(gainNode);
+
     // Create output stream
     const destination = audioContext.createMediaStreamDestination();
-    processor.connect(destination);
-    
-    console.log('[AudioProcessor] Aggressive Krisp-like noise suppression active');
-    console.log('[AudioProcessor] Filters: HP@80Hz, LP@8kHz, Compressor, VAD Gate');
+    gainNode.connect(destination);
+
+    noiseGateActive = true;
+
+    console.log('[AudioProcessor] Aggressive noise suppression ACTIVE');
+    console.log('[AudioProcessor] Filters: HP@100Hz, Notch@60Hz, LP@7kHz, Compressor 6:1');
+    console.log('[AudioProcessor] Sample rate:', audioContext.sampleRate);
     return destination.stream;
   } catch (error) {
     console.error('[AudioProcessor] Failed to create noise-suppressed stream:', error);
@@ -186,7 +185,7 @@ export async function createNoiseSuppressedStream(
 async function pingRegion(region: string): Promise<number> {
   const endpoints: Record<string, string> = {
     'us-west': 'https://gs-us-west-1.daily.co',
-    'us-east': 'https://gs-us-east-1.daily.co', 
+    'us-east': 'https://gs-us-east-1.daily.co',
     'eu-west': 'https://gs-eu-west-1.daily.co',
     'eu-central': 'https://gs-eu-central-1.daily.co',
     'ap-southeast': 'https://gs-ap-southeast-1.daily.co',
@@ -201,13 +200,13 @@ async function pingRegion(region: string): Promise<number> {
     // Use a simple fetch with a timeout
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    
-    await fetch(endpoint, { 
+
+    await fetch(endpoint, {
       method: 'HEAD',
       mode: 'no-cors',
-      signal: controller.signal 
+      signal: controller.signal
     });
-    
+
     clearTimeout(timeout);
     const latency = Math.round(performance.now() - start);
     console.log(`[Ping] ${region}: ${latency}ms`);
@@ -224,9 +223,9 @@ async function pingRegion(region: string): Promise<number> {
  */
 export async function findOptimalRegion(): Promise<string> {
   console.log('[AudioProcessor] Finding optimal region...');
-  
+
   const regions = ['us-west', 'us-east', 'eu-west', 'eu-central', 'ap-southeast', 'ap-northeast'];
-  
+
   // Ping all regions in parallel
   const results = await Promise.all(
     regions.map(async (region) => ({
@@ -237,10 +236,10 @@ export async function findOptimalRegion(): Promise<string> {
 
   // Sort by latency and pick the best
   results.sort((a, b) => a.latency - b.latency);
-  
+
   const optimal = results[0];
   console.log(`[AudioProcessor] Optimal region: ${optimal.region} (${optimal.latency}ms)`);
   console.log('[AudioProcessor] All regions:', results);
-  
+
   return optimal.region;
 }
