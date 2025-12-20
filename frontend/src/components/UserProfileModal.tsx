@@ -413,8 +413,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-gray-900 rounded-lg p-8">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50">
+        <div className="bg-mot-surface/80 backdrop-blur-xl border border-mot-gold/20 rounded-2xl p-8 animate-pulse">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-mot-gold"></div>
         </div>
       </div>
@@ -424,16 +424,29 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
   if (!profile) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in relative" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-mot-surface/95 backdrop-blur-xl rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in relative border border-mot-gold/20 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Banner */}
-        <div className="relative h-32 bg-gradient-to-r from-mot-gold-deep via-mot-gold to-mot-gold-light">
+        <div className="relative h-36 overflow-hidden rounded-t-3xl">
+          {/* Animated gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-mot-gold via-amber-500 to-mot-gold-light" />
+
+          {/* Decorative pattern */}
+          <div className="absolute inset-0 opacity-20" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.3) 1px, transparent 0)',
+            backgroundSize: '20px 20px'
+          }} />
+
           {profile.banner && (
             <img src={profile.banner} alt="" className="w-full h-full object-cover" />
           )}
+
+          {/* Gradient overlay at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-mot-surface/95 to-transparent" />
+
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+            className="absolute top-4 right-4 p-2.5 bg-black/40 backdrop-blur-sm rounded-xl text-white hover:bg-black/60 transition-all hover:rotate-90 hover:scale-110 border border-white/10"
           >
             <X className="w-5 h-5" />
           </button>
