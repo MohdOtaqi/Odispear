@@ -324,32 +324,45 @@ export const InvitePage: React.FC = () => {
           whileHover={{ borderColor: "rgba(212, 175, 55, 0.3)" }}
         >
           {/* Server Banner */}
-          <div className="relative h-32 bg-gradient-to-br from-mot-gold/20 via-mot-gold-deep/15 to-mot-gold/25">
+          <div className="relative h-40 bg-gradient-to-br from-mot-gold/30 via-amber-500/20 to-mot-gold/30 overflow-hidden">
+            {/* Animated gradient overlay */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-mot-gold/10 via-transparent to-mot-gold/10"
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            />
+
             <div
-              className="absolute inset-0 opacity-20"
+              className="absolute inset-0 opacity-30"
               style={{
-                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)',
-                backgroundSize: '24px 24px'
+                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.2) 1px, transparent 0)',
+                backgroundSize: '20px 20px'
               }}
             />
 
-            {/* Server Icon */}
+            {/* Gradient fade at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-mot-surface/60 to-transparent" />
+          </div>
+
+          {/* Server Icon - Centered above content */}
+          <div className="flex justify-center -mt-16">
             <motion.div
-              className="absolute -bottom-12 left-1/2 -translate-x-1/2"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, type: "spring" }}
+              initial={{ y: 20, opacity: 0, scale: 0.8 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
             >
               <motion.div
-                className="w-28 h-28 rounded-3xl bg-gradient-to-br from-mot-gold-light to-mot-gold p-1 shadow-xl"
-                style={{ boxShadow: '0 0 40px rgba(212, 175, 55, 0.4)' }}
-                whileHover={{ scale: 1.05, rotate: 3 }}
+                className="w-32 h-32 rounded-3xl bg-gradient-to-br from-mot-gold-light via-mot-gold to-amber-600 p-1.5"
+                style={{ boxShadow: '0 0 60px rgba(212, 175, 55, 0.5)' }}
+                whileHover={{ scale: 1.08, rotate: 3 }}
+                animate={{ boxShadow: ['0 0 40px rgba(212, 175, 55, 0.3)', '0 0 60px rgba(212, 175, 55, 0.6)', '0 0 40px rgba(212, 175, 55, 0.3)'] }}
+                transition={{ duration: 3, repeat: Infinity }}
               >
-                <div className="w-full h-full rounded-[22px] bg-mot-black flex items-center justify-center overflow-hidden">
+                <div className="w-full h-full rounded-[20px] bg-mot-black flex items-center justify-center overflow-hidden">
                   {invite.icon_url ? (
                     <img src={invite.icon_url} alt={invite.name} className="w-full h-full object-cover" />
                   ) : (
-                    <Users className="w-12 h-12 text-mot-gold" />
+                    <Users className="w-14 h-14 text-mot-gold" />
                   )}
                 </div>
               </motion.div>
@@ -357,7 +370,7 @@ export const InvitePage: React.FC = () => {
           </div>
 
           {/* Content */}
-          <div className="pt-16 pb-8 px-8">
+          <div className="pt-6 pb-8 px-8">
             <motion.div
               className="text-center mb-8"
               initial={{ opacity: 0, y: 10 }}
