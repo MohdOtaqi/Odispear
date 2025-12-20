@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import Daily, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
 import { voiceAPI } from '../../lib/voiceAPI';
 import { socketManager } from '../../lib/socket';
-import { createNoiseSuppressedStream, destroyRNNoise } from '../../lib/audioProcessor';
+import { createRNNoiseSuppressedStream, destroyRNNoise } from '../../lib/rnnNoiseProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { playJoinSound, playLeaveSound, playMuteSound, playUnmuteSound, playDeafenSound, playUndeafenSound, playConnectSound, playDisconnectSound } from '../../lib/voiceSounds';
@@ -208,11 +208,38 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // Play connected sound
         playConnectSound();
 
-        // NOTE: We do NOT apply custom noise suppression here because:
-        // 1. Daily's RNN (Krisp-powered) is applied in step 6 below the join
-        // 2. Daily's RNN is superior to our custom processing
-        // 3. Custom processing is only used as fallback when RNN is not supported
-        // The RNN status is checked and fallback is applied in the updateInputSettings call
+        // Apply aggressive noise suppression for all browsers
+        // This is especially important for Edge where Daily's RNN isn't supported
+        setTimeout(async () => {
+          try {
+            console.log('[Voice] Applying aggressive noise suppression...');
+
+            // Get a fresh audio stream with browser noise suppression
+            const rawStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+              },
+              video: false,
+            });
+
+            // Apply our aggressive noise processing
+            const processedStream = await createRNNoiseSuppressedStream(rawStream);
+            const audioTrack = processedStream.getAudioTracks()[0];
+
+            if (audioTrack && callObjectRef.current) {
+              await callObjectRef.current.setInputDevicesAsync({
+                audioSource: audioTrack,
+              });
+              console.log('[Voice] ✅ Aggressive noise suppression ACTIVE');
+            } else {
+              console.warn('[Voice] Could not set audio track');
+            }
+          } catch (err) {
+            console.error('[Voice] Noise suppression failed:', err);
+          }
+        }, 100);
       });
 
       co.on('left-meeting', () => {
