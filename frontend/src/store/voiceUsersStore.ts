@@ -184,11 +184,29 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
         deafened?: boolean;
       }>;
     }) => {
-      console.log('[VoiceStore] Voice participants:', data);
-      // Set all participants for this channel
-      set((state) => ({
-        voiceChannelUsers: {
-          ...state.voiceChannelUsers,
+      console.log('[VoiceStore] Voice participants received for channel:', data.channel_id, 'with', data.participants.length, 'participants');
+
+      // IMPORTANT: When we receive participants for a new channel,
+      // remove ANY of these users from ALL other channels to prevent duplicates
+      set((state) => {
+        // Get the user IDs from the new participants
+        const participantUserIds = data.participants.map(p => p.user_id);
+
+        // Clean up these users from all OTHER channels
+        const cleanedChannels: Record<string, VoiceUser[]> = {};
+        for (const [chId, users] of Object.entries(state.voiceChannelUsers)) {
+          if (chId !== data.channel_id) {
+            // Filter out users who are in the new channel's participants
+            cleanedChannels[chId] = users.filter(u => !participantUserIds.includes(u.id));
+            if (cleanedChannels[chId].length === 0) {
+              delete cleanedChannels[chId]; // Remove empty channel entries
+            }
+          }
+        }
+
+        // Now set the new channel's participants
+        const newState = {
+          ...cleanedChannels,
           [data.channel_id]: data.participants.map(p => ({
             id: p.user_id,
             username: p.username,
@@ -196,8 +214,11 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
             muted: p.muted || false,
             deafened: p.deafened || false,
           })),
-        },
-      }));
+        };
+
+        console.log('[VoiceStore] After voice.participants cleanup:', Object.keys(newState).map(k => `${k}: ${newState[k]?.length || 0} users`));
+        return { voiceChannelUsers: newState };
+      });
     });
   },
 }));
