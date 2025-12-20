@@ -119,6 +119,11 @@ const VoiceChannelButton = React.memo<{
             <button
               key={user.id}
               onClick={() => onUserClick?.(user.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onUserClick?.(user.id);
+              }}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm hover:bg-white/5 transition-colors group/user cursor-pointer text-left"
             >
               {/* Avatar with online ring */}

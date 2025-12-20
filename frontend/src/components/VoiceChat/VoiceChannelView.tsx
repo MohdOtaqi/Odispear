@@ -153,7 +153,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
   const handleContextMenu = useCallback((e: React.MouseEvent, voiceUser: any) => {
     e.preventDefault();
     e.stopPropagation();
-    if (voiceUser.id === user?.id) return; // Don't show menu for own user
+    // Don't show menu for own user, but still prevent browser context menu
+    if (voiceUser.id === user?.id) return;
     setContextMenu({
       x: e.clientX,
       y: e.clientY,

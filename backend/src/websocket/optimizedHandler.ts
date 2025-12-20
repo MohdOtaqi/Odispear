@@ -321,11 +321,36 @@ export const setupWebSocketHandlers = (io: Server) => {
         // Insert voice session - use simpler INSERT with explicit conflict handling
         logger.info(`[Voice] Inserting voice session for user ${userId} in channel ${channelId}`);
 
-        // First, mark any existing active sessions for this user in this channel as left
-        await query(
-          `UPDATE voice_sessions SET left_at = NOW() WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
-          [channelId, userId]
+        // First, find and clear ANY existing active sessions for this user (in ANY channel)
+        // This prevents duplicate appearances when switching channels
+        const existingSessions = await query(
+          `SELECT vs.channel_id, c.guild_id FROM voice_sessions vs
+           JOIN channels c ON vs.channel_id = c.id
+           WHERE vs.user_id = $1 AND vs.left_at IS NULL`,
+          [userId]
         );
+
+        // Mark all existing sessions as left and broadcast leave events
+        for (const session of existingSessions.rows) {
+          await query(
+            `UPDATE voice_sessions SET left_at = NOW() WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
+            [session.channel_id, userId]
+          );
+
+          // Broadcast leave to old channel's guild
+          if (session.guild_id) {
+            socket.to(`guild:${session.guild_id}`).emit('voice.user_left', {
+              user_id: userId,
+              channel_id: session.channel_id,
+            });
+          }
+          socket.to(`channel:${session.channel_id}`).emit('voice.user_left', {
+            user_id: userId,
+            channel_id: session.channel_id,
+          });
+          socket.leave(`voice:${session.channel_id}`);
+          logger.info(`[Voice] Cleared old session in channel ${session.channel_id}`);
+        }
 
         // Now insert fresh session
         const result = await query(
