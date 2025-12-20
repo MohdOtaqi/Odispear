@@ -129,7 +129,10 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (callObjectRef.current) {
         try {
           await callObjectRef.current.leave();
-          await callObjectRef.current.destroy();
+          // Check if still exists after leave() before calling destroy()
+          if (callObjectRef.current) {
+            await callObjectRef.current.destroy();
+          }
         } catch (e) {
           console.warn('Error leaving previous channel:', e);
         }
@@ -400,6 +403,8 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
 
       // 6. Enable noise cancellation (Krisp-powered, same as Discord)
+      // Note: Daily's RNN noise cancellation requires Chrome, Firefox, or Edge 96+
+      // If not supported, we fall back to our custom audio processor
       try {
         await co.updateInputSettings({
           audio: {
@@ -408,10 +413,11 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             },
           },
         });
-        console.log('[Voice] Noise cancellation enabled');
+        console.log('[Voice] Daily RNN noise cancellation enabled (Krisp-powered)');
       } catch (ncError) {
-        console.warn('[Voice] Noise cancellation not available:', ncError);
-        // Fall back to browser's built-in noise suppression
+        console.warn('[Voice] Daily RNN noise cancellation not available:', ncError);
+        console.log('[Voice] Using custom noise suppression as fallback');
+        // Our custom audioProcessor provides aggressive noise gate + browser noise suppression
       }
 
       setChannelId(channelIdParam);
