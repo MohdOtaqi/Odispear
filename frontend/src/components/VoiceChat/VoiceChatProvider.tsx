@@ -477,12 +477,16 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       setIsDeafened(newDeafenedState);
 
-      // Also mute self when deafened
-      if (newDeafenedState && callObjectRef.current.localAudio()) {
-        callObjectRef.current.setLocalAudio(false);
+      if (newDeafenedState) {
+        // When deafening, also mute self
+        if (callObjectRef.current.localAudio()) {
+          callObjectRef.current.setLocalAudio(false);
+        }
+        toast.success('Deafened');
+      } else {
+        // When undeafening, restore audio (user can choose to unmute separately)
+        toast.success('Undeafened');
       }
-
-      toast.success(newDeafenedState ? 'Deafened' : 'Undeafened');
     }
   }, [isDeafened, participants]);
 
