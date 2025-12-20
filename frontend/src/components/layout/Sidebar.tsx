@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { UserProfileModal } from '../UserProfileModal';
 import { Hash, Volume2, Calendar, Plus, ChevronDown, ChevronRight, MicOff, Mic, Headphones, Settings, PhoneOff, Signal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGuildStore } from '../../store/guildStore';
@@ -77,7 +78,8 @@ const VoiceChannelButton = React.memo<{
   users: VoiceUser[];
   onJoin: () => void;
   isConnected: boolean;
-}>(({ channel, isActive, users, onJoin, isConnected }) => {
+  onUserClick?: (userId: string) => void;
+}>(({ channel, isActive, users, onJoin, isConnected, onUserClick }) => {
   return (
     <div className="space-y-0.5">
       <button
@@ -114,9 +116,10 @@ const VoiceChannelButton = React.memo<{
       {users.length > 0 && (
         <div className="ml-3 pl-3 border-l-2 border-mot-gold/30 space-y-0.5">
           {users.map((user) => (
-            <div
+            <button
               key={user.id}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm hover:bg-white/5 transition-colors group/user"
+              onClick={() => onUserClick?.(user.id)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm hover:bg-white/5 transition-colors group/user cursor-pointer text-left"
             >
               {/* Avatar with online ring */}
               <div className="relative">
@@ -148,7 +151,7 @@ const VoiceChannelButton = React.memo<{
                   <MicOff className="h-3 w-3 text-red-400" />
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -175,6 +178,7 @@ export const Sidebar = React.memo<SidebarProps>(({
   // Merge store users with prop-based users (fallback)
   const mergedVoiceUsers = { ...voiceChannelUsers, ...storeVoiceUsers };
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Organize channels by category
   const { categories, uncategorizedText, uncategorizedVoice } = useMemo(() => {
@@ -247,6 +251,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                         users={mergedVoiceUsers[channel.id] || []}
                         onJoin={() => onVoiceChannelJoin?.(channel.id)}
                         isConnected={isConnected && connectedVoiceChannelId === channel.id}
+                        onUserClick={setSelectedUserId}
                       />
                     ) : (
                       <ChannelButton
@@ -321,6 +326,7 @@ export const Sidebar = React.memo<SidebarProps>(({
                   users={mergedVoiceUsers[channel.id] || []}
                   onJoin={() => onVoiceChannelJoin?.(channel.id)}
                   isConnected={isConnected && connectedVoiceChannelId === channel.id}
+                  onUserClick={setSelectedUserId}
                 />
               ))}
             </div>
@@ -404,6 +410,15 @@ export const Sidebar = React.memo<SidebarProps>(({
             </button>
           </Tooltip>
         </div>
+      )}
+
+      {/* User Profile Modal for voice channel users */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          guildId={currentGuild?.id}
+          onClose={() => setSelectedUserId(null)}
+        />
       )}
     </div>
   );
