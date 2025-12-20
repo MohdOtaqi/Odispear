@@ -29,21 +29,30 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
   voiceChannelUsers: {},
 
   addUser: (channelId, user) => {
+    console.log('[VoiceStore] addUser called:', { channelId, userId: user.id, username: user.username });
     set((state) => {
       // First, remove the user from ALL channels (prevents duplicate appearances)
       const cleanedChannels: Record<string, VoiceUser[]> = {};
+      let removedFromChannels: string[] = [];
       for (const [chId, users] of Object.entries(state.voiceChannelUsers)) {
+        const hadUser = users.some(u => u.id === user.id);
         cleanedChannels[chId] = users.filter(u => u.id !== user.id);
+        if (hadUser && chId !== channelId) {
+          removedFromChannels.push(chId);
+        }
       }
+      console.log('[VoiceStore] Removed user from channels:', removedFromChannels);
 
       // Now add the user to the new channel
       const currentUsers = cleanedChannels[channelId] || [];
-      return {
+      const newState = {
         voiceChannelUsers: {
           ...cleanedChannels,
           [channelId]: [...currentUsers, user],
         },
       };
+      console.log('[VoiceStore] New state:', Object.keys(newState.voiceChannelUsers).map(k => `${k}: ${newState.voiceChannelUsers[k].length} users`));
+      return newState;
     });
   },
 
@@ -99,7 +108,24 @@ export const useVoiceUsersStore = create<VoiceUsersState>((set, get) => ({
     try {
       const response = await api.get(`/voice/guilds/${guildId}/users`);
       console.log('[VoiceStore] Fetched voice users for guild:', guildId, response.data);
-      set({ voiceChannelUsers: response.data });
+
+      // IMPORTANT: Merge with existing state instead of replacing
+      // This prevents stale API data from overwriting socket-updated clean state
+      set((state) => {
+        const newState = { ...state.voiceChannelUsers };
+
+        // Only add data for channels we don't already have data for
+        // Socket events should take priority over API data
+        for (const [channelId, users] of Object.entries(response.data as Record<string, VoiceUser[]>)) {
+          // If we already have users for this channel from sockets, don't overwrite
+          if (!newState[channelId] || newState[channelId].length === 0) {
+            newState[channelId] = users;
+          }
+        }
+
+        console.log('[VoiceStore] Merged state (not replaced):', Object.keys(newState).map(k => `${k}: ${newState[k]?.length || 0} users`));
+        return { voiceChannelUsers: newState };
+      });
     } catch (error) {
       console.error('[VoiceStore] Failed to fetch voice users:', error);
     }
