@@ -3,6 +3,7 @@ import Daily, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
 import { voiceAPI } from '../../lib/voiceAPI';
 import { socketManager } from '../../lib/socket';
 import { destroyRNNoise } from '../../lib/rnnNoiseProcessor';
+import { createEdgeNoiseReducedStream, isEdgeBrowser } from '../../lib/edgeNoiseProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { playJoinSound, playLeaveSound, playMuteSound, playUnmuteSound, playDeafenSound, playUndeafenSound, playConnectSound, playDisconnectSound } from '../../lib/voiceSounds';
@@ -207,6 +208,25 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         // Play connected sound
         playConnectSound();
+
+        // Apply Edge-specific noise reduction if on Edge browser
+        if (isEdgeBrowser()) {
+          try {
+            const rawStream = await navigator.mediaDevices.getUserMedia({
+              audio: true,
+              video: false,
+            });
+            const processedStream = await createEdgeNoiseReducedStream(rawStream);
+            const audioTrack = processedStream.getAudioTracks()[0];
+            if (audioTrack && callObjectRef.current) {
+              await callObjectRef.current.setInputDevicesAsync({ audioSource: audioTrack });
+              console.log('[Voice] Edge noise reduction applied!');
+              toast.success('Noise reduction enabled', { duration: 2000 });
+            }
+          } catch (err) {
+            console.warn('[Voice] Edge noise reduction failed:', err);
+          }
+        }
       });
 
       co.on('left-meeting', () => {
