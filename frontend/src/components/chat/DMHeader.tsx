@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Phone, Video, Pin, Users, UserCircle, MoreVertical, Bell, BellOff, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Phone, Video, Pin, Users, UserCircle, MoreVertical, Bell, BellOff, Search, Sparkles } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { Tooltip } from '../ui/Tooltip';
 import { UserProfileModal } from '../UserProfileModal';
@@ -28,6 +29,30 @@ interface DMHeaderProps {
   onStartCall?: (type: 'voice' | 'video') => void;
 }
 
+const HeaderButton = ({ tooltip, onClick, children, isActive, danger }: {
+  tooltip: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+  isActive?: boolean;
+  danger?: boolean;
+}) => (
+  <Tooltip content={tooltip} position="bottom">
+    <motion.button
+      onClick={onClick}
+      className={`p-2 rounded-xl transition-colors ${isActive
+          ? 'text-mot-gold bg-mot-gold/10'
+          : danger
+            ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
+            : 'text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10'
+        }`}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+    >
+      {children}
+    </motion.button>
+  </Tooltip>
+);
+
 export const DMHeader: React.FC<DMHeaderProps> = ({ channel, onStartCall }) => {
   const { user } = useAuthStore();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -36,14 +61,13 @@ export const DMHeader: React.FC<DMHeaderProps> = ({ channel, onStartCall }) => {
   const [showCallModal, setShowCallModal] = useState(false);
   const [callWithVideo, setCallWithVideo] = useState(false);
 
-  // Find the other participant (not the current user)
   const otherParticipant = channel.participants?.find(
     (p) => (p.id !== user?.id && p.user_id !== user?.id)
   ) || channel.participants?.[0];
 
   const isGroupDM = channel.type === 'group_dm' || (channel.participants?.length || 0) > 2;
-  const displayName = isGroupDM 
-    ? channel.name || 'Group DM' 
+  const displayName = isGroupDM
+    ? channel.name || 'Group DM'
     : otherParticipant?.display_name || otherParticipant?.username || 'Unknown';
 
   const handleOpenProfile = () => {
@@ -70,41 +94,67 @@ export const DMHeader: React.FC<DMHeaderProps> = ({ channel, onStartCall }) => {
     toast(muted ? 'Unmuted conversation' : 'Muted conversation', { icon: muted ? '🔔' : '🔕' });
   };
 
+  const statusColors = {
+    online: 'bg-green-500',
+    idle: 'bg-amber-500',
+    dnd: 'bg-red-500',
+    offline: 'bg-gray-500'
+  };
+
   return (
     <>
-      <div className="h-12 px-4 flex items-center justify-between border-b border-mot-border bg-mot-surface shadow-sm">
+      <motion.div
+        className="h-14 px-4 flex items-center justify-between border-b border-mot-border bg-mot-surface/80 backdrop-blur-md"
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
         {/* Left side - User info */}
         <div className="flex items-center flex-1 min-w-0">
           {isGroupDM ? (
-            <div className="w-8 h-8 rounded-full bg-mot-gold/20 flex items-center justify-center mr-3">
-              <Users className="h-4 w-4 text-mot-gold" />
-            </div>
+            <motion.div
+              className="w-10 h-10 rounded-xl bg-gradient-to-br from-mot-gold/30 to-amber-500/30 flex items-center justify-center mr-3"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+            >
+              <Users className="h-5 w-5 text-mot-gold" />
+            </motion.div>
           ) : (
-            <button
+            <motion.button
               onClick={handleOpenProfile}
-              className="flex items-center hover:opacity-80 transition-opacity"
+              className="flex items-center"
+              whileHover={{ scale: 1.05 }}
             >
               <Avatar
                 src={otherParticipant?.avatar_url}
                 alt={displayName}
-                size="sm"
+                size="md"
                 status={otherParticipant?.status}
                 fallback={displayName.charAt(0)}
+                ring
+                ringColor="rgba(212, 175, 55, 0.3)"
               />
-            </button>
+            </motion.button>
           )}
-          
+
           <div className="ml-3 min-w-0">
-            <button
+            <motion.button
               onClick={handleOpenProfile}
-              className="font-semibold text-white hover:underline truncate block"
+              className="font-semibold text-white hover:text-mot-gold truncate block transition-colors"
+              whileHover={{ x: 2 }}
             >
               {displayName}
-            </button>
+            </motion.button>
             {!isGroupDM && otherParticipant?.status && (
-              <span className="text-xs text-gray-400 capitalize">
-                {otherParticipant.status === 'dnd' ? 'Do Not Disturb' : otherParticipant.status}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <motion.span
+                  className={`w-2 h-2 rounded-full ${statusColors[otherParticipant.status]}`}
+                  animate={otherParticipant.status === 'online' ? { scale: [1, 1.2, 1] } : undefined}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+                <span className="text-xs text-gray-400 capitalize">
+                  {otherParticipant.status === 'dnd' ? 'Do Not Disturb' : otherParticipant.status}
+                </span>
+              </div>
             )}
             {isGroupDM && (
               <span className="text-xs text-gray-400">
@@ -115,82 +165,85 @@ export const DMHeader: React.FC<DMHeaderProps> = ({ channel, onStartCall }) => {
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-1">
-          <Tooltip content="Start Voice Call" position="bottom">
-            <button
-              onClick={handleVoiceCall}
-              className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors"
-            >
-              <Phone className="h-5 w-5" />
-            </button>
-          </Tooltip>
+        <motion.div
+          className="flex items-center gap-1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <HeaderButton tooltip="Start Voice Call" onClick={handleVoiceCall}>
+            <Phone className="h-5 w-5" />
+          </HeaderButton>
 
-          <Tooltip content="Start Video Call" position="bottom">
-            <button
-              onClick={handleVideoCall}
-              className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors"
-            >
-              <Video className="h-5 w-5" />
-            </button>
-          </Tooltip>
+          <HeaderButton tooltip="Start Video Call" onClick={handleVideoCall}>
+            <Video className="h-5 w-5" />
+          </HeaderButton>
 
           <div className="w-px h-6 bg-mot-border mx-1" />
 
-          <Tooltip content="Pinned Messages" position="bottom">
-            <button className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors">
-              <Pin className="h-5 w-5" />
-            </button>
-          </Tooltip>
+          <HeaderButton tooltip="Pinned Messages">
+            <Pin className="h-5 w-5" />
+          </HeaderButton>
 
           {!isGroupDM && (
-            <Tooltip content="View Profile" position="bottom">
-              <button
-                onClick={handleOpenProfile}
-                className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors"
-              >
-                <UserCircle className="h-5 w-5" />
-              </button>
-            </Tooltip>
+            <HeaderButton tooltip="View Profile" onClick={handleOpenProfile}>
+              <UserCircle className="h-5 w-5" />
+            </HeaderButton>
           )}
 
           {isGroupDM && (
-            <Tooltip content="Show Members" position="bottom">
-              <button className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors">
-                <Users className="h-5 w-5" />
-              </button>
-            </Tooltip>
+            <HeaderButton tooltip="Show Members">
+              <Users className="h-5 w-5" />
+            </HeaderButton>
           )}
 
-          <Tooltip content="Search" position="bottom">
-            <button className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors">
-              <Search className="h-5 w-5" />
-            </button>
-          </Tooltip>
+          <HeaderButton tooltip="Search">
+            <Search className="h-5 w-5" />
+          </HeaderButton>
 
-          <Tooltip content={muted ? 'Unmute Conversation' : 'Mute Conversation'} position="bottom">
-            <button
-              onClick={toggleMute}
-              className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors"
-            >
-              {muted ? <BellOff className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
-            </button>
-          </Tooltip>
+          <HeaderButton
+            tooltip={muted ? 'Unmute Conversation' : 'Mute Conversation'}
+            onClick={toggleMute}
+            isActive={muted}
+          >
+            <AnimatePresence mode="wait">
+              {muted ? (
+                <motion.div
+                  key="muted"
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                >
+                  <BellOff className="h-5 w-5" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="unmuted"
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                >
+                  <Bell className="h-5 w-5" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </HeaderButton>
 
-          <Tooltip content="More Options" position="bottom">
-            <button className="p-2 text-gray-400 hover:text-mot-gold hover:bg-mot-gold/10 rounded-md transition-colors">
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </Tooltip>
-        </div>
-      </div>
+          <HeaderButton tooltip="More Options">
+            <MoreVertical className="h-5 w-5" />
+          </HeaderButton>
+        </motion.div>
+      </motion.div>
 
       {/* Profile Modal */}
-      {showProfileModal && selectedUserId && (
-        <UserProfileModal
-          userId={selectedUserId}
-          onClose={() => setShowProfileModal(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showProfileModal && selectedUserId && (
+          <UserProfileModal
+            userId={selectedUserId}
+            onClose={() => setShowProfileModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Call Modal */}
       <DMCallModal
