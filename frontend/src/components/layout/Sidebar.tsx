@@ -178,10 +178,10 @@ export const Sidebar = React.memo<SidebarProps>(({
   const { isConnected, channelId: connectedVoiceChannelId, localParticipant, toggleMute, toggleDeafen, leaveChannel, isDeafened } = useVoiceChat();
 
   // Get voice users from the global store (populated by WebSocket events)
-  // This is the ONLY source of truth - don't use props as they may be stale
+  // IMPORTANT: Only use store state - don't merge with props which can have stale data
   const storeVoiceUsers = useVoiceUsersStore(state => state.voiceChannelUsers);
 
-  // Use ONLY store users - props are deprecated and may contain stale data
+  // Use only store users - props were causing stale data issues
   const mergedVoiceUsers = storeVoiceUsers;
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
