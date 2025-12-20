@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import Daily, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
 import { voiceAPI } from '../../lib/voiceAPI';
 import { socketManager } from '../../lib/socket';
-import { createRNNoiseSuppressedStream, destroyRNNoise } from '../../lib/rnnNoiseProcessor';
+import { destroyRNNoise } from '../../lib/rnnNoiseProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { playJoinSound, playLeaveSound, playMuteSound, playUnmuteSound, playDeafenSound, playUndeafenSound, playConnectSound, playDisconnectSound } from '../../lib/voiceSounds';
@@ -369,46 +369,7 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       });
 
-      // 5. Detect browser to determine noise cancellation strategy
-      const isEdge = /Edg/.test(navigator.userAgent);
-      const isChrome = /Chrome/.test(navigator.userAgent) && !isEdge;
-      
-      console.log(`[Voice] Browser detection: Edge=${isEdge}, Chrome=${isChrome}`);
-
-      // 6. PRE-PROCESS AUDIO before joining
-      // For Edge and other browsers, use our custom processing
-      // For Chrome/Firefox, let Daily.co handle it with Krisp
-      if (isEdge || (!isChrome && !/Firefox/.test(navigator.userAgent))) {
-        try {
-          console.log('[Voice] Pre-processing audio with custom noise suppression (Edge-optimized)...');
-
-          // Get a raw audio stream
-          const rawStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-            video: false,
-          });
-
-          // Apply our aggressive noise processing
-          const processedStream = await createRNNoiseSuppressedStream(rawStream);
-          const audioTrack = processedStream.getAudioTracks()[0];
-
-          if (audioTrack) {
-            // Set the processed audio as input BEFORE joining
-            await co.setInputDevicesAsync({
-              audioSource: audioTrack,
-            });
-            console.log('[Voice] ✅ Custom noise suppression active (bypassing Daily processor)');
-          }
-        } catch (preprocessError) {
-          console.warn('[Voice] Audio preprocessing failed, using default:', preprocessError);
-        }
-      }
-
-      // 7. Join the meeting
+      // 5. Join the meeting first with default audio
       await co.join({
         url: roomUrl,
         token: token,
@@ -416,23 +377,20 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         startVideoOff: true,
       });
 
-      // 8. Enable Daily's RNN noise cancellation (Krisp-powered) for Chrome/Firefox only
-      // Skip for Edge since it's not supported and we're using custom processing
-      if (!isEdge && (isChrome || /Firefox/.test(navigator.userAgent))) {
-        try {
-          await co.updateInputSettings({
-            audio: {
-              processor: {
-                type: 'noise-cancellation',
-              },
+      // 6. Enable Daily's Krisp-powered noise cancellation for ALL browsers
+      // Let Daily.co handle it - this works on Brave/Chrome/Firefox and potentially Edge too
+      try {
+        await co.updateInputSettings({
+          audio: {
+            processor: {
+              type: 'noise-cancellation',
             },
-          });
-          console.log('[Voice] Daily RNN noise cancellation enabled (Krisp-powered)');
-        } catch (ncError) {
-          console.warn('[Voice] Daily RNN not available, falling back to browser NS:', ncError);
-        }
-      } else {
-        console.log('[Voice] Using custom noise suppression (Edge browser)');
+          },
+        });
+        console.log('[Voice] Daily.co Krisp noise cancellation enabled');
+      } catch (ncError) {
+        console.warn('[Voice] Daily.co noise cancellation not supported on this browser:', ncError);
+        console.log('[Voice] Falling back to browser built-in noise suppression');
       }
 
       setChannelId(channelIdParam);
