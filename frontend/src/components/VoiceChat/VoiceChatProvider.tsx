@@ -208,18 +208,24 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // Play connected sound
         playConnectSound();
 
-        // Apply noise suppression quickly without blocking
+        // FORCE aggressive noise suppression for ALL browsers
+        // This runs immediately (no delay) and replaces the audio track
         setTimeout(async () => {
           try {
+            console.log('[Voice] Applying FORCED aggressive noise suppression...');
+
+            // Get a fresh audio stream with browser noise suppression first
             const rawStream = await navigator.mediaDevices.getUserMedia({
               audio: {
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true,
+                sampleRate: 48000,
               },
               video: false,
             });
 
+            // Apply our custom aggressive noise processing
             const processedStream = await createNoiseSuppressedStream(rawStream);
             const audioTrack = processedStream.getAudioTracks()[0];
 
@@ -227,11 +233,15 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               await callObjectRef.current.setInputDevicesAsync({
                 audioSource: audioTrack,
               });
+              console.log('[Voice] ✅ FORCED aggressive noise suppression ACTIVE for this browser');
+            } else {
+              console.warn('[Voice] Could not set audio track - callObject or track missing');
             }
           } catch (err) {
-            console.warn('[Voice] Could not enable noise suppression:', err);
+            console.error('[Voice] Failed to enable forced noise suppression:', err);
+            // Even if this fails, the browser's built-in noise suppression should still work
           }
-        }, 200);
+        }, 100); // Reduced delay from 200ms to 100ms
       });
 
       co.on('left-meeting', () => {
