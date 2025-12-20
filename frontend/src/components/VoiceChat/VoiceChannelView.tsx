@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Volume2, Mic, MicOff, Headphones, Video, Monitor, Users, PhoneOff, Settings, VolumeX, ChevronDown, X, Maximize2 } from 'lucide-react';
 import { useVoiceChat, RESOLUTION_OPTIONS, FPS_OPTIONS, ScreenShareSettings } from './VoiceChatProvider';
 import { useAuthStore } from '../../store/authStore';
+import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 
 // Component to render a participant's video
-const ParticipantVideo: React.FC<{ sessionId: string; isScreen?: boolean; isLocal?: boolean; getCallObject: () => any; className?: string }> = ({ 
-  sessionId, 
+const ParticipantVideo: React.FC<{ sessionId: string; isScreen?: boolean; isLocal?: boolean; getCallObject: () => any; className?: string }> = ({
+  sessionId,
   isScreen = false,
   isLocal = false,
   getCallObject,
@@ -27,10 +28,10 @@ const ParticipantVideo: React.FC<{ sessionId: string; isScreen?: boolean; isLoca
       // Get the correct track based on whether it's screen share or camera
       const trackKey = isScreen ? 'screenVideo' : 'video';
       const tracks = participant.tracks?.[trackKey];
-      
+
       // Try multiple track sources
       const track = tracks?.track || tracks?.persistentTrack;
-      
+
       if (track && track.readyState === 'live') {
         if (videoRef.current.srcObject !== null) {
           const currentStream = videoRef.current.srcObject as MediaStream;
@@ -49,7 +50,7 @@ const ParticipantVideo: React.FC<{ sessionId: string; isScreen?: boolean; isLoca
 
     // Initial update with slight delay for local tracks
     setTimeout(updateVideo, isLocal ? 200 : 50);
-    
+
     // Retry periodically until track is available (for local video which may take time)
     if (isLocal) {
       retryRef.current = setInterval(updateVideo, 500);
@@ -64,20 +65,20 @@ const ParticipantVideo: React.FC<{ sessionId: string; isScreen?: boolean; isLoca
 
     // Listen for track updates
     const handleTrackStarted = (event: any) => {
-      const isMatchingParticipant = isLocal 
-        ? event.participant?.local === true 
+      const isMatchingParticipant = isLocal
+        ? event.participant?.local === true
         : event.participant?.session_id === sessionId;
-        
+
       if (isMatchingParticipant) {
         setTimeout(updateVideo, 100);
       }
     };
 
     const handleParticipantUpdated = (event: any) => {
-      const isMatchingParticipant = isLocal 
-        ? event.participant?.local === true 
+      const isMatchingParticipant = isLocal
+        ? event.participant?.local === true
         : event.participant?.session_id === sessionId;
-        
+
       if (isMatchingParticipant) {
         updateVideo();
       }
@@ -137,25 +138,30 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
   onLeave,
 }) => {
   const { user } = useAuthStore();
-  const { 
-    isConnected, 
-    channelId: currentChannelId, 
-    localParticipant, 
-    isDeafened, 
-    toggleMute, 
-    toggleDeafen, 
+
+  // Get voice users from store to look up avatar URLs
+  const voiceChannelUsersMap = useVoiceUsersStore(state => state.voiceChannelUsers);
+  const channelVoiceUsers = voiceChannelUsersMap[channelId] || [];
+
+  const {
+    isConnected,
+    channelId: currentChannelId,
+    localParticipant,
+    isDeafened,
+    toggleMute,
+    toggleDeafen,
     toggleVideo,
     toggleScreenShare,
     isVideoEnabled,
     isScreenSharing,
     screenShareParticipant,
-    speakingParticipants, 
+    speakingParticipants,
     participants,
     getCallObject,
     screenShareSettings,
     setScreenShareSettings
   } = useVoiceChat();
-  
+
   const [showScreenShareSettings, setShowScreenShareSettings] = useState(false);
   const [expandedVideo, setExpandedVideo] = useState<{ sessionId: string; username: string; isLocal: boolean } | null>(null);
   const [isScreenShareMaximized, setIsScreenShareMaximized] = useState(false);
@@ -163,36 +169,42 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
   const isMuted = localParticipant?.audio === false;
   const isSpeaking = localParticipant?.session_id ? speakingParticipants.has(localParticipant.session_id) : false;
 
+  // Helper to find avatar_url from voiceUsersStore
+  const findAvatarUrl = (userId: string) => {
+    const voiceUser = channelVoiceUsers.find(u => u.id === userId);
+    return voiceUser?.avatar_url;
+  };
+
   // Build the list of users from participants
-  const allUsers = isInThisChannel && user 
+  const allUsers = isInThisChannel && user
     ? [
-        { 
-          id: user.id, 
-          username: user.username, 
-          avatar_url: user.avatar_url, 
-          muted: isMuted, 
-          deafened: isDeafened, 
-          speaking: isSpeaking,
-          session_id: localParticipant?.session_id,
-          hasVideo: isVideoEnabled,
-          hasScreen: isScreenSharing,
-          isLocal: true
-        }, 
-        ...participants.filter(p => !p.local).map(p => ({
-          id: p.user_id || p.session_id,
-          username: p.user_name || 'User',
-          avatar_url: undefined,
-          muted: !p.audio,
-          deafened: false,
-          speaking: speakingParticipants.has(p.session_id),
-          session_id: p.session_id,
-          hasVideo: p.video === true,
-          hasScreen: p.screen === true,
-          isLocal: false
-        }))
-      ]
+      {
+        id: user.id,
+        username: user.username,
+        avatar_url: user.avatar_url,
+        muted: isMuted,
+        deafened: isDeafened,
+        speaking: isSpeaking,
+        session_id: localParticipant?.session_id,
+        hasVideo: isVideoEnabled,
+        hasScreen: isScreenSharing,
+        isLocal: true
+      },
+      ...participants.filter(p => !p.local).map(p => ({
+        id: p.user_id || p.session_id,
+        username: p.user_name || 'User',
+        avatar_url: findAvatarUrl(p.user_id || p.session_id),
+        muted: !p.audio,
+        deafened: false,
+        speaking: speakingParticipants.has(p.session_id),
+        session_id: p.session_id,
+        hasVideo: p.video === true,
+        hasScreen: p.screen === true,
+        isLocal: false
+      }))
+    ]
     : connectedUsers;
-  
+
   // Check if local user is the one screen sharing
   const isLocalScreenSharing = isScreenSharing && screenShareParticipant === localParticipant?.session_id;
 
@@ -208,17 +220,17 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
       {(screenShareParticipant || isScreenSharing) && (
         <div className={`${isScreenShareMaximized ? 'fixed inset-0 z-50' : 'flex-1'} flex items-center justify-center bg-black`}>
           <div className={`relative ${isScreenShareMaximized ? 'w-full h-full' : 'w-full h-full'} overflow-hidden`}>
-            <ParticipantVideo 
-              sessionId={screenShareParticipant || localParticipant?.session_id || ''} 
+            <ParticipantVideo
+              sessionId={screenShareParticipant || localParticipant?.session_id || ''}
               isScreen={true}
               isLocal={isLocalScreenSharing || (!screenShareParticipant && isScreenSharing)}
-              getCallObject={getCallObject} 
+              getCallObject={getCallObject}
             />
             <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-black/70 rounded-lg flex items-center gap-2 z-10">
               <Monitor className="w-4 h-4 text-mot-gold" />
               <span className="text-white text-sm">
-                {isLocalScreenSharing || (!screenShareParticipant && isScreenSharing) 
-                  ? 'You are sharing' 
+                {isLocalScreenSharing || (!screenShareParticipant && isScreenSharing)
+                  ? 'You are sharing'
                   : `${allUsers.find(u => u.session_id === screenShareParticipant)?.username || 'Someone'} is sharing`}
               </span>
             </div>
@@ -245,21 +257,20 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                 username: voiceUser.username,
                 isLocal: voiceUser.isLocal
               })}
-              className={`relative ${screenShareParticipant || isScreenSharing ? 'w-32 h-24' : 'w-[280px] h-[200px]'} rounded-xl overflow-hidden transition-all cursor-pointer hover:scale-105 ${
-                voiceUser.speaking 
-                  ? 'ring-4 ring-green-500 shadow-lg shadow-green-500/30' 
-                  : 'ring-2 ring-mot-border hover:ring-mot-gold'
-              }`}
+              className={`relative ${screenShareParticipant || isScreenSharing ? 'w-32 h-24' : 'w-[280px] h-[200px]'} rounded-xl overflow-hidden transition-all cursor-pointer hover:scale-105 ${voiceUser.speaking
+                ? 'ring-4 ring-green-500 shadow-lg shadow-green-500/30'
+                : 'ring-2 ring-mot-border hover:ring-mot-gold'
+                }`}
               style={{
                 background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
               }}
             >
               {/* Video Feed */}
               {voiceUser.hasVideo && voiceUser.session_id && (
-                <ParticipantVideo 
+                <ParticipantVideo
                   sessionId={voiceUser.session_id}
                   isLocal={voiceUser.isLocal}
-                  getCallObject={getCallObject} 
+                  getCallObject={getCallObject}
                 />
               )}
 
@@ -267,12 +278,11 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
               {!voiceUser.hasVideo && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className={`relative ${voiceUser.speaking ? 'animate-pulse' : ''}`}>
-                    <div className={`${screenShareParticipant ? 'w-12 h-12' : 'w-24 h-24'} rounded-full overflow-hidden border-4 ${
-                      voiceUser.speaking ? 'border-green-500' : 'border-mot-gold/30'
-                    }`}>
+                    <div className={`${screenShareParticipant ? 'w-12 h-12' : 'w-24 h-24'} rounded-full overflow-hidden border-4 ${voiceUser.speaking ? 'border-green-500' : 'border-mot-gold/30'
+                      }`}>
                       <div className="w-full h-full bg-gradient-to-br from-mot-gold to-mot-gold-dark flex items-center justify-center">
                         {voiceUser.avatar_url ? (
-                          <img 
+                          <img
                             src={voiceUser.avatar_url.startsWith('http') ? voiceUser.avatar_url : `${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://n0tmot.com/api' : 'http://localhost:5000')}${voiceUser.avatar_url}`}
                             alt={voiceUser.username}
                             className="w-full h-full object-cover"
@@ -287,7 +297,7 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                         </div>
                       </div>
                     </div>
-                  
+
                     {/* Mute/Deafen indicators */}
                     {(voiceUser.muted || voiceUser.deafened) && (
                       <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
@@ -348,11 +358,10 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
           {/* Mute */}
           <button
             onClick={toggleMute}
-            className={`p-3 rounded-full transition-colors ${
-              isMuted 
-                ? 'bg-white/10 text-white' 
-                : 'hover:bg-white/10 text-gray-400 hover:text-white'
-            }`}
+            className={`p-3 rounded-full transition-colors ${isMuted
+              ? 'bg-white/10 text-white'
+              : 'hover:bg-white/10 text-gray-400 hover:text-white'
+              }`}
             title={isMuted ? 'Unmute' : 'Mute'}
           >
             <div className="relative">
@@ -368,11 +377,10 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
           {/* Deafen */}
           <button
             onClick={toggleDeafen}
-            className={`p-3 rounded-full transition-colors ${
-              isDeafened 
-                ? 'bg-white/10 text-white' 
-                : 'hover:bg-white/10 text-gray-400 hover:text-white'
-            }`}
+            className={`p-3 rounded-full transition-colors ${isDeafened
+              ? 'bg-white/10 text-white'
+              : 'hover:bg-white/10 text-gray-400 hover:text-white'
+              }`}
             title={isDeafened ? 'Undeafen' : 'Deafen'}
           >
             <div className="relative">
@@ -388,11 +396,10 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
           {/* Video */}
           <button
             onClick={toggleVideo}
-            className={`p-3 rounded-full transition-colors ${
-              isVideoEnabled 
-                ? 'bg-mot-gold text-mot-black' 
-                : 'hover:bg-white/10 text-gray-400 hover:text-white'
-            }`}
+            className={`p-3 rounded-full transition-colors ${isVideoEnabled
+              ? 'bg-mot-gold text-mot-black'
+              : 'hover:bg-white/10 text-gray-400 hover:text-white'
+              }`}
             title={isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}
           >
             <div className="relative">
@@ -410,28 +417,26 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
             <div className="flex items-center">
               <button
                 onClick={toggleScreenShare}
-                className={`p-3 rounded-l-full transition-colors ${
-                  isScreenSharing 
-                    ? 'bg-mot-gold text-mot-black' 
-                    : 'hover:bg-white/10 text-gray-400 hover:text-white'
-                }`}
+                className={`p-3 rounded-l-full transition-colors ${isScreenSharing
+                  ? 'bg-mot-gold text-mot-black'
+                  : 'hover:bg-white/10 text-gray-400 hover:text-white'
+                  }`}
                 title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
               >
                 <Monitor className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setShowScreenShareSettings(!showScreenShareSettings)}
-                className={`p-3 rounded-r-full border-l border-white/10 transition-colors ${
-                  showScreenShareSettings 
-                    ? 'bg-white/20 text-white' 
-                    : 'hover:bg-white/10 text-gray-400 hover:text-white'
-                }`}
+                className={`p-3 rounded-r-full border-l border-white/10 transition-colors ${showScreenShareSettings
+                  ? 'bg-white/20 text-white'
+                  : 'hover:bg-white/10 text-gray-400 hover:text-white'
+                  }`}
                 title="Screen share settings"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
             </div>
-            
+
             {/* Screen Share Settings Dropdown */}
             {showScreenShareSettings && (
               <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-[#1e1f22] rounded-lg shadow-xl border border-white/10 p-4 z-50">
@@ -439,15 +444,15 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                   <Settings className="w-4 h-4" />
                   Screen Share Quality
                 </h4>
-                
+
                 {/* Resolution */}
                 <div className="mb-3">
                   <label className="text-xs text-gray-400 mb-1.5 block">Resolution</label>
                   <select
                     value={screenShareSettings.resolution}
-                    onChange={(e) => setScreenShareSettings({ 
-                      ...screenShareSettings, 
-                      resolution: e.target.value as ScreenShareSettings['resolution'] 
+                    onChange={(e) => setScreenShareSettings({
+                      ...screenShareSettings,
+                      resolution: e.target.value as ScreenShareSettings['resolution']
                     })}
                     className="w-full bg-[#2b2d31] text-white text-sm rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-mot-gold"
                   >
@@ -456,14 +461,14 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                     ))}
                   </select>
                 </div>
-                
+
                 {/* FPS */}
                 <div className="mb-3">
                   <label className="text-xs text-gray-400 mb-1.5 block">Frame Rate</label>
                   <select
                     value={screenShareSettings.fps}
-                    onChange={(e) => setScreenShareSettings({ 
-                      ...screenShareSettings, 
+                    onChange={(e) => setScreenShareSettings({
+                      ...screenShareSettings,
                       fps: e.target.value === 'max' ? 'max' : Number(e.target.value) as ScreenShareSettings['fps']
                     })}
                     className="w-full bg-[#2b2d31] text-white text-sm rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-mot-gold"
@@ -473,7 +478,7 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                     ))}
                   </select>
                 </div>
-                
+
                 <p className="text-xs text-gray-500 mt-2">
                   Settings apply when you start sharing
                 </p>
@@ -507,18 +512,18 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
 
       {/* Expanded Video Modal */}
       {expandedVideo && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-8"
           onClick={() => setExpandedVideo(null)}
         >
-          <div 
+          <div
             className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden ring-4 ring-mot-gold"
             onClick={(e) => e.stopPropagation()}
           >
-            <ParticipantVideo 
+            <ParticipantVideo
               sessionId={expandedVideo.sessionId}
               isLocal={expandedVideo.isLocal}
-              getCallObject={getCallObject} 
+              getCallObject={getCallObject}
             />
             <div className="absolute bottom-4 left-4 px-4 py-2 bg-black/70 rounded-lg">
               <span className="text-white font-medium">{expandedVideo.username}</span>
