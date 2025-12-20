@@ -364,7 +364,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
       const dmChannel = dmResponse.data;
 
       // Send the invite link as a message
-      await api.post(`/channels/${dmChannel.id}/messages`, {
+      await api.post(`/dm/${dmChannel.id}/messages`, {
         content: `Hey! I'd like to invite you to join **${guildToInvite.name}**! 🎉\n\n${inviteUrl}`
       });
 
