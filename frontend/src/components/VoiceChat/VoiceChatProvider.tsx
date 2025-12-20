@@ -5,6 +5,7 @@ import { socketManager } from '../../lib/socket';
 import { createNoiseSuppressedStream, destroyRNNoise } from '../../lib/audioProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
+import { playJoinSound, playLeaveSound, playMuteSound, playUnmuteSound, playDeafenSound, playUndeafenSound, playConnectSound, playDisconnectSound } from '../../lib/voiceSounds';
 import toast from 'react-hot-toast';
 
 // Screen share quality presets
@@ -87,6 +88,7 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [participants, setParticipants] = useState<DailyParticipant[]>([]);
   const [localParticipant, setLocalParticipant] = useState<DailyParticipant | null>(null);
   const [isDeafened, setIsDeafened] = useState(false);
+  const [muteStateBeforeDeafen, setMuteStateBeforeDeafen] = useState<boolean | null>(null); // null = not deafening, true = was muted, false = was unmuted
   const [speakingParticipants, setSpeakingParticipants] = useState<Set<string>>(new Set());
   const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -200,6 +202,9 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setLocalParticipant(e.participants.local);
         toast.success(`Joined ${channelName}`);
 
+        // Play connected sound
+        playConnectSound();
+
         // Apply noise suppression quickly without blocking
         setTimeout(async () => {
           try {
@@ -240,6 +245,11 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       co.on('participant-joined', (e) => {
         console.log('[Voice] Participant joined:', e.participant);
         setParticipants((prev) => [...prev, e.participant]);
+
+        // Play join sound when someone else joins (not when we join)
+        if (!e.participant.local) {
+          playJoinSound();
+        }
       });
 
       co.on('participant-left', (e) => {
@@ -257,6 +267,11 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
           return prev;
         });
+
+        // Play leave sound when someone else leaves
+        if (!e.participant.local) {
+          playLeaveSound();
+        }
       });
 
       co.on('participant-updated', (e) => {
@@ -466,15 +481,31 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (currentUser) {
         useVoiceUsersStore.getState().removeUser(currentChannelId, currentUser.id);
       }
+
+      // Play disconnect sound
+      playDisconnectSound();
     }
   }, [channelId]);
 
   const toggleMute = useCallback(() => {
     if (callObjectRef.current) {
-      const isMuted = callObjectRef.current.localAudio();
-      callObjectRef.current.setLocalAudio(!isMuted);
+      // Block unmuting while deafened - user must undeafen first
+      if (isDeafened) {
+        toast.error('Undeafen first to unmute');
+        return;
+      }
+
+      const isCurrentlyMuted = !callObjectRef.current.localAudio();
+      callObjectRef.current.setLocalAudio(isCurrentlyMuted);
+
+      // Play appropriate sound
+      if (isCurrentlyMuted) {
+        playUnmuteSound();
+      } else {
+        playMuteSound();
+      }
     }
-  }, []);
+  }, [isDeafened]);
 
   const toggleDeafen = useCallback(() => {
     if (callObjectRef.current) {
@@ -495,20 +526,36 @@ export const VoiceChatProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       }
 
-      setIsDeafened(newDeafenedState);
-
       if (newDeafenedState) {
-        // When deafening, also mute self
-        if (callObjectRef.current.localAudio()) {
+        // DEAFENING: Save current mute state before forcing mute
+        const currentlyUnmuted = callObjectRef.current.localAudio();
+        setMuteStateBeforeDeafen(!currentlyUnmuted); // true = was muted, false = was unmuted
+
+        // Force mute when deafening
+        if (currentlyUnmuted) {
           callObjectRef.current.setLocalAudio(false);
         }
+
+        playDeafenSound();
         toast.success('Deafened');
       } else {
-        // When undeafening, restore audio (user can choose to unmute separately)
+        // UNDEAFENING: Restore previous mute state
+        if (muteStateBeforeDeafen !== null) {
+          // Restore to previous mute state (if was unmuted before deafen, unmute now)
+          if (!muteStateBeforeDeafen) {
+            callObjectRef.current.setLocalAudio(true);
+          }
+          // If was muted before, stay muted (don't need to do anything)
+        }
+        setMuteStateBeforeDeafen(null);
+
+        playUndeafenSound();
         toast.success('Undeafened');
       }
+
+      setIsDeafened(newDeafenedState);
     }
-  }, [isDeafened, participants]);
+  }, [isDeafened, participants, muteStateBeforeDeafen]);
 
   const toggleVideo = useCallback(async () => {
     if (callObjectRef.current) {
