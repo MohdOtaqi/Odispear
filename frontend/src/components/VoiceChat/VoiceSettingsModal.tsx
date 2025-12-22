@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Mic, Volume2, Speaker } from 'lucide-react';
 import { useVoiceChat } from './LiveKitProvider';
+import { autoDetectSensitivity } from '../../hooks/useVoiceActivityDetection';
+import { VoiceMode } from '../../hooks/usePushToTalk';
 
 interface VoiceSettingsModalProps {
   onClose: () => void;
@@ -20,6 +22,37 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
   const [localInputVolume, setLocalInputVolume] = useState(settings.inputVolume * 100 || 100);
   const [localOutputVolume, setLocalOutputVolume] = useState(settings.outputVolume * 100 || 100);
   const testAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // PTT/VAD Settings
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>(() =>
+    (localStorage.getItem('voiceMode') as VoiceMode) || 'voice_activity'
+  );
+  const [pttKeybind, setPttKeybind] = useState<string>(() =>
+    localStorage.getItem('pttKeybind') || 'Space'
+  );
+  const [pttReleaseDelay, setPttReleaseDelay] = useState<number>(() =>
+    Number(localStorage.getItem('pttReleaseDelay')) || 100
+  );
+  const [vadSensitivity, setVadSensitivity] = useState<number>(() =>
+    Number(localStorage.getItem('vadSensitivity')) || 50
+  );
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+
+  // Auto-detect VAD sensitivity
+  const handleAutoDetectSensitivity = async () => {
+    setIsAutoDetecting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recommended = await autoDetectSensitivity(stream);
+      setVadSensitivity(recommended);
+      localStorage.setItem('vadSensitivity', String(recommended));
+      stream.getTracks().forEach(t => t.stop());
+    } catch (error) {
+      console.error('Failed to auto-detect sensitivity:', error);
+    } finally {
+      setIsAutoDetecting(false);
+    }
+  };
 
   useEffect(() => {
     loadDevices();
@@ -262,39 +295,179 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
             </div>
           )}
 
-          {/* Voice Settings Tab */}
+          {/* Voice Settings Tab - PTT/VAD Controls */}
           {activeTab === 'voice' && (
             <div className="space-y-6">
+              {/* Voice Input Mode */}
+              <div className="p-4 bg-neutral-800 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-3">Input Mode</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('voiceMode', 'voice_activity');
+                      setVoiceMode('voice_activity');
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${voiceMode === 'voice_activity'
+                      ? 'border-purple-500 bg-purple-500/20'
+                      : 'border-neutral-700 bg-neutral-850 hover:border-neutral-600'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Volume2 className="w-5 h-5 text-purple-400" />
+                      <span className="font-semibold text-white">Voice Activity</span>
+                    </div>
+                    <p className="text-xs text-neutral-400 text-left">
+                      Automatically transmit when you speak
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('voiceMode', 'push_to_talk');
+                      setVoiceMode('push_to_talk');
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${voiceMode === 'push_to_talk'
+                      ? 'border-purple-500 bg-purple-500/20'
+                      : 'border-neutral-700 bg-neutral-850 hover:border-neutral-600'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Mic className="w-5 h-5 text-purple-400" />
+                      <span className="font-semibold text-white">Push to Talk</span>
+                    </div>
+                    <p className="text-xs text-neutral-400 text-left">
+                      Hold a key to transmit audio
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* PTT Settings - Only show when PTT mode selected */}
+              {voiceMode === 'push_to_talk' && (
+                <div className="p-4 bg-neutral-800 rounded-lg space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Push to Talk Settings</h3>
+
+                  {/* Keybind */}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-300 mb-2">
+                      Shortcut Key
+                    </label>
+                    <select
+                      value={pttKeybind}
+                      onChange={(e) => {
+                        setPttKeybind(e.target.value);
+                        localStorage.setItem('pttKeybind', e.target.value);
+                      }}
+                      className="w-full bg-neutral-700 border border-neutral-600 rounded-lg px-4 py-2.5 text-white focus:border-purple-500 focus:outline-none"
+                    >
+                      <option value="Space">Space</option>
+                      <option value="KeyV">V</option>
+                      <option value="KeyT">T</option>
+                      <option value="KeyG">G</option>
+                      <option value="ControlLeft">Left Ctrl</option>
+                      <option value="ControlRight">Right Ctrl</option>
+                      <option value="ShiftLeft">Left Shift</option>
+                      <option value="Backquote">` (Backtick)</option>
+                      <option value="CapsLock">Caps Lock</option>
+                    </select>
+                    <p className="text-xs text-neutral-500 mt-1.5">
+                      Hold this key to transmit audio
+                    </p>
+                  </div>
+
+                  {/* Release Delay */}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-300 mb-2">
+                      Release Delay: {pttReleaseDelay}ms
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="500"
+                      step="50"
+                      value={pttReleaseDelay}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        setPttReleaseDelay(value);
+                        localStorage.setItem('pttReleaseDelay', String(value));
+                      }}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-neutral-500 mt-1.5">
+                      How long to keep transmitting after releasing the key
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* VAD Settings - Only show when Voice Activity mode selected */}
+              {voiceMode === 'voice_activity' && (
+                <div className="p-4 bg-neutral-800 rounded-lg space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Voice Activity Settings</h3>
+
+                  {/* Sensitivity */}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-300 mb-2">
+                      Sensitivity: {vadSensitivity}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={vadSensitivity}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        setVadSensitivity(value);
+                        localStorage.setItem('vadSensitivity', String(value));
+                      }}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-neutral-500 mt-1">
+                      <span>Quiet environment</span>
+                      <span>Noisy environment</span>
+                    </div>
+                  </div>
+
+                  {/* Auto Sensitivity Button */}
+                  <button
+                    onClick={handleAutoDetectSensitivity}
+                    disabled={isAutoDetecting}
+                    className="w-full py-2.5 px-4 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-700 disabled:text-neutral-500 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isAutoDetecting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                        Detecting...
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4" />
+                        Auto-Detect Sensitivity
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-neutral-500 text-center">
+                    Analyzes your environment for 2 seconds to find the optimal setting
+                  </p>
+                </div>
+              )}
+
               {/* Audio Quality Info */}
               <div className="p-4 bg-neutral-800 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Voice Quality</h3>
-                <p className="text-sm text-neutral-400">
-                  LiveKit automatically optimizes audio quality based on your connection.
-                </p>
-              </div>
-
-              {/* Noise Suppression Info */}
-              <div className="p-4 bg-neutral-800 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Noise Suppression</h3>
-                <p className="text-sm text-neutral-400">
-                  Professional-grade noise suppression with noise gate removes background noise.
-                </p>
-              </div>
-
-              {/* Echo Cancellation Info */}
-              <div className="p-4 bg-neutral-800 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Echo Cancellation</h3>
-                <p className="text-sm text-neutral-400">
-                  Echo cancellation is enabled by default to prevent audio feedback.
-                </p>
-              </div>
-
-              {/* Auto Gain Control Info */}
-              <div className="p-4 bg-neutral-800 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Automatic Gain Control</h3>
-                <p className="text-sm text-neutral-400">
-                  Your microphone sensitivity is automatically adjusted for optimal volume.
-                </p>
+                <h3 className="text-lg font-semibold text-white mb-2">Audio Processing</h3>
+                <div className="space-y-2 text-sm text-neutral-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>Noise suppression with noise gate</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>Echo cancellation enabled</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>Automatic gain control</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
