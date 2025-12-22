@@ -9,7 +9,7 @@ interface VoiceSettingsModalProps {
 type TabType = 'devices' | 'voice';
 
 export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose }) => {
-  const { settings, setInputVolume, setOutputVolume, setInputDevice, setOutputDevice, getCallObject } = useVoiceChat();
+  const { settings, setInputVolume, setOutputVolume, setInputDevice, setOutputDevice } = useVoiceChat();
   const [activeTab, setActiveTab] = useState<TabType>('devices');
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([]);
@@ -47,17 +47,14 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
     setSelectedMic(deviceId);
     localStorage.setItem('selectedMicId', deviceId);
 
-    // Apply to Daily.co call if connected
-    const callObject = getCallObject();
-    if (callObject) {
-      try {
-        await callObject.setInputDevicesAsync({
-          audioDeviceId: deviceId === 'default' ? undefined : deviceId
-        });
-        console.log('[Voice] Microphone changed to:', deviceId);
-      } catch (error) {
-        console.error('Failed to change microphone:', error);
+    // Apply to LiveKit using the context function
+    try {
+      if (deviceId !== 'default') {
+        await setInputDevice(deviceId);
       }
+      console.log('[Voice] Microphone changed to:', deviceId);
+    } catch (error) {
+      console.error('Failed to change microphone:', error);
     }
   };
 
@@ -65,17 +62,14 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
     setSelectedSpeaker(deviceId);
     localStorage.setItem('selectedSpeakerId', deviceId);
 
-    // Apply to Daily.co call if connected
-    const callObject = getCallObject();
-    if (callObject) {
-      try {
-        await callObject.setOutputDeviceAsync({
-          outputDeviceId: deviceId === 'default' ? undefined : deviceId
-        });
-        console.log('[Voice] Speaker changed to:', deviceId);
-      } catch (error) {
-        console.error('Failed to change speaker:', error);
+    // Apply to LiveKit using the context function
+    try {
+      if (deviceId !== 'default') {
+        await setOutputDevice(deviceId);
       }
+      console.log('[Voice] Speaker changed to:', deviceId);
+    } catch (error) {
+      console.error('Failed to change speaker:', error);
     }
 
     // Also update any existing audio elements
@@ -154,8 +148,8 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${activeTab === tab.id
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-neutral-400 hover:text-neutral-300'
+                ? 'border-purple-500 text-purple-400'
+                : 'border-transparent text-neutral-400 hover:text-neutral-300'
                 }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -212,8 +206,8 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
                 <button
                   onClick={handleMicTest}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${testingMic
-                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
                     }`}
                 >
                   {testingMic ? 'Stop Test' : 'Test Microphone'}
@@ -275,7 +269,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
               <div className="p-4 bg-neutral-800 rounded-lg">
                 <h3 className="text-lg font-semibold text-white mb-2">Voice Quality</h3>
                 <p className="text-sm text-neutral-400">
-                  Daily.co automatically optimizes audio quality based on your connection.
+                  LiveKit automatically optimizes audio quality based on your connection.
                 </p>
               </div>
 
@@ -283,7 +277,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
               <div className="p-4 bg-neutral-800 rounded-lg">
                 <h3 className="text-lg font-semibold text-white mb-2">Noise Suppression</h3>
                 <p className="text-sm text-neutral-400">
-                  Daily.co includes automatic noise suppression to remove background noise.
+                  Professional-grade noise suppression with noise gate removes background noise.
                 </p>
               </div>
 
@@ -291,7 +285,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
               <div className="p-4 bg-neutral-800 rounded-lg">
                 <h3 className="text-lg font-semibold text-white mb-2">Echo Cancellation</h3>
                 <p className="text-sm text-neutral-400">
-                  Echo cancellation is enabled by default in your browser and Daily.co.
+                  Echo cancellation is enabled by default to prevent audio feedback.
                 </p>
               </div>
 
@@ -299,7 +293,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
               <div className="p-4 bg-neutral-800 rounded-lg">
                 <h3 className="text-lg font-semibold text-white mb-2">Automatic Gain Control</h3>
                 <p className="text-sm text-neutral-400">
-                  Your microphone sensitivity is automatically adjusted by Daily.co.
+                  Your microphone sensitivity is automatically adjusted for optimal volume.
                 </p>
               </div>
             </div>

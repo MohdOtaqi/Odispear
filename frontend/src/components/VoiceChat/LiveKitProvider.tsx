@@ -168,7 +168,29 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ];
 
         setParticipants(allParticipants);
+        setLocalParticipant(roomRef.current.localParticipant);
     }, []);
+
+    // Sync mute state from actual track state (source of truth)
+    const syncMuteStateFromTrack = useCallback(() => {
+        if (!roomRef.current) return;
+
+        const localP = roomRef.current.localParticipant;
+        // isMicrophoneEnabled is TRUE when NOT muted
+        const actuallyMuted = !localP.isMicrophoneEnabled;
+
+        console.log('[LiveKit] Syncing mute state - isMicrophoneEnabled:', localP.isMicrophoneEnabled, 'actuallyMuted:', actuallyMuted);
+
+        setIsMuted(actuallyMuted);
+
+        // Update voice store
+        if (channelId) {
+            const currentUser = useAuthStore.getState().user;
+            if (currentUser) {
+                useVoiceUsersStore.getState().updateUserState(channelId, currentUser.id, { muted: actuallyMuted });
+            }
+        }
+    }, [channelId]);
 
     // Join a voice channel
     const joinChannel = useCallback(async (channelIdParam: string, channelName: string) => {
@@ -204,6 +226,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 console.log('[LiveKit] Connected to room');
                 setIsConnected(true);
                 setIsConnecting(false);
+                setLocalParticipant(roomInstance.localParticipant);
                 updateParticipants();
                 playConnectSound();
                 toast.success(`Joined ${channelName}`);
@@ -215,6 +238,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 setChannelId(null);
                 setRoomName(null);
                 setParticipants([]);
+                setLocalParticipant(null);
                 playDisconnectSound();
             });
 
@@ -223,11 +247,12 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 updateParticipants();
                 playJoinSound();
 
-                // Add to voice store
+                // Add to voice store - default to UNMUTED since their track hasn't published yet
+                // Actual state will be set once we receive their audio track in TrackSubscribed
                 useVoiceUsersStore.getState().addUser(channelIdParam, {
                     id: participant.identity,
                     username: participant.name || participant.identity,
-                    muted: false,
+                    muted: false, // Default to unmuted - will be updated when track arrives
                     deafened: false,
                 });
             });
@@ -244,6 +269,41 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             roomInstance.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
                 const speakerIds = new Set(speakers.map(s => s.identity));
                 setSpeakingParticipants(speakerIds);
+            });
+
+            // Listen for track mute/unmute changes (for ALL participants including local)
+            roomInstance.on(RoomEvent.TrackMuted, (publication, participant) => {
+                console.log('[LiveKit] Track muted for:', participant.identity, 'isLocal:', participant === roomInstance.localParticipant);
+                updateParticipants();
+
+                // Sync state for local participant
+                if (participant === roomInstance.localParticipant) {
+                    setIsMuted(true);
+                    const currentUser = useAuthStore.getState().user;
+                    if (currentUser && channelIdParam) {
+                        useVoiceUsersStore.getState().updateUserState(channelIdParam, currentUser.id, { muted: true });
+                    }
+                } else {
+                    // Update voice store for remote participant
+                    useVoiceUsersStore.getState().updateUserState(channelIdParam, participant.identity, { muted: true });
+                }
+            });
+
+            roomInstance.on(RoomEvent.TrackUnmuted, (publication, participant) => {
+                console.log('[LiveKit] Track unmuted for:', participant.identity, 'isLocal:', participant === roomInstance.localParticipant);
+                updateParticipants();
+
+                // Sync state for local participant
+                if (participant === roomInstance.localParticipant) {
+                    setIsMuted(false);
+                    const currentUser = useAuthStore.getState().user;
+                    if (currentUser && channelIdParam) {
+                        useVoiceUsersStore.getState().updateUserState(channelIdParam, currentUser.id, { muted: false });
+                    }
+                } else {
+                    // Update voice store for remote participant
+                    useVoiceUsersStore.getState().updateUserState(channelIdParam, participant.identity, { muted: false });
+                }
             });
 
             roomInstance.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
@@ -289,6 +349,9 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             await roomInstance.localParticipant.publishTrack(localAudioTrack);
             console.log('[LiveKit] ✅ Published audio track with noise suppression');
 
+            // Ensure initial mute state is synced (track starts unmuted)
+            setIsMuted(false);
+
             setChannelId(channelIdParam);
             setRoomName(room);
 
@@ -303,7 +366,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     id: currentUser.id,
                     username: currentUser.username,
                     avatar_url: currentUser.avatar_url,
-                    muted: false,
+                    muted: false, // Track starts unmuted
                     deafened: false,
                 });
             }
@@ -350,41 +413,67 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsDeafened(false);
     }, [channelId]);
 
-    // Toggle mute
-    const toggleMute = useCallback(() => {
-        if (!roomRef.current) return;
+    // Toggle mute - directly control the underlying MediaStreamTrack
+    const toggleMute = useCallback(async () => {
+        if (!roomRef.current) {
+            console.warn('[LiveKit] toggleMute: No room');
+            return;
+        }
 
         const newMuted = !isMuted;
-        roomRef.current.localParticipant.audioTrackPublications.forEach((pub) => {
-            if (pub.track) {
-                pub.track.mute();
+        console.log('[LiveKit] toggleMute: isMuted=', isMuted, 'newMuted=', newMuted);
+
+        try {
+            // Method 1: Control the underlying MediaStreamTrack directly
+            if (processedTrackRef.current) {
+                const mediaTrack = processedTrackRef.current.mediaStreamTrack;
+                if (mediaTrack) {
+                    // Setting enabled to false stops audio transmission
+                    mediaTrack.enabled = !newMuted;
+                    console.log('[LiveKit] MediaStreamTrack.enabled set to:', !newMuted);
+                }
+
+                // Also call mute/unmute on the LiveKit track for proper signaling
                 if (newMuted) {
-                    (pub.track as LocalAudioTrack).mute();
+                    await processedTrackRef.current.mute();
                 } else {
-                    (pub.track as LocalAudioTrack).unmute();
+                    await processedTrackRef.current.unmute();
                 }
             }
-        });
 
-        setIsMuted(newMuted);
-
-        if (newMuted) {
-            playMuteSound();
-            toast('Microphone muted', { icon: '🔇' });
-        } else {
-            playUnmuteSound();
-            toast('Microphone unmuted', { icon: '🎤' });
-        }
-
-        // Update voice store
-        if (channelId) {
-            const currentUser = useAuthStore.getState().user;
-            if (currentUser) {
-                useVoiceUsersStore.getState().updateUserState(channelId, currentUser.id, { muted: newMuted });
+            // Method 2: Also use setMicrophoneEnabled as backup signaling
+            try {
+                await roomRef.current.localParticipant.setMicrophoneEnabled(!newMuted);
+            } catch (e) {
+                // This may fail for custom tracks, that's OK
+                console.log('[LiveKit] setMicrophoneEnabled fallback:', e);
             }
-        }
 
-        socketManager.updateVoiceState({ muted: newMuted });
+            // Update React state
+            setIsMuted(newMuted);
+
+            if (newMuted) {
+                playMuteSound();
+                toast('Microphone muted', { icon: '🔇' });
+            } else {
+                playUnmuteSound();
+                toast('Microphone unmuted', { icon: '🎤' });
+            }
+
+            // Update voice store
+            if (channelId) {
+                const currentUser = useAuthStore.getState().user;
+                if (currentUser) {
+                    useVoiceUsersStore.getState().updateUserState(channelId, currentUser.id, { muted: newMuted });
+                }
+            }
+
+            socketManager.updateVoiceState({ muted: newMuted });
+            console.log('[LiveKit] Mute toggle complete. Audio should be:', newMuted ? 'MUTED' : 'ACTIVE');
+        } catch (error) {
+            console.error('[LiveKit] Failed to toggle mute:', error);
+            toast.error('Failed to toggle microphone');
+        }
     }, [isMuted, channelId]);
 
     // Toggle deafen
@@ -431,10 +520,33 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
         socketManager.updateVoiceState({ deafened: newDeafened });
     }, [isDeafened, isMuted, channelId, toggleMute]);
 
-    // Toggle video (placeholder)
-    const toggleVideo = useCallback(() => {
-        setIsVideoEnabled(prev => !prev);
-    }, []);
+    // Toggle video - enable/disable camera
+    const toggleVideo = useCallback(async () => {
+        if (!roomRef.current) {
+            console.warn('[LiveKit] toggleVideo: No room');
+            return;
+        }
+
+        const newVideoEnabled = !isVideoEnabled;
+        console.log('[LiveKit] toggleVideo: isVideoEnabled=', isVideoEnabled, 'newVideoEnabled=', newVideoEnabled);
+
+        try {
+            // Use LiveKit's built-in camera control
+            await roomRef.current.localParticipant.setCameraEnabled(newVideoEnabled);
+            setIsVideoEnabled(newVideoEnabled);
+
+            if (newVideoEnabled) {
+                toast('Camera enabled', { icon: '📹' });
+            } else {
+                toast('Camera disabled', { icon: '📷' });
+            }
+
+            console.log('[LiveKit] Video toggle complete. Camera is:', newVideoEnabled ? 'ON' : 'OFF');
+        } catch (error) {
+            console.error('[LiveKit] Failed to toggle video:', error);
+            toast.error('Failed to toggle camera');
+        }
+    }, [isVideoEnabled]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -466,12 +578,96 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
         toggleMute,
         toggleDeafen,
         toggleVideo,
-        toggleScreenShare: () => setIsScreenSharing(prev => !prev), // Placeholder
+        toggleScreenShare: async () => {
+            if (!roomRef.current) {
+                console.warn('[LiveKit] toggleScreenShare: No room');
+                return;
+            }
+
+            const newScreenSharing = !isScreenSharing;
+            console.log('[LiveKit] toggleScreenShare: isScreenSharing=', isScreenSharing, 'newScreenSharing=', newScreenSharing);
+
+            try {
+                if (newScreenSharing) {
+                    await roomRef.current.localParticipant.setScreenShareEnabled(true, {
+                        audio: true,
+                        video: {
+                            resolution: { width: 1920, height: 1080 },
+                            frameRate: 30,
+                        },
+                        contentHint: 'detail',
+                    });
+                    toast('Screen sharing started', { icon: '🖥️' });
+                } else {
+                    await roomRef.current.localParticipant.setScreenShareEnabled(false);
+                    toast('Screen sharing stopped', { icon: '🖥️' });
+                }
+                setIsScreenSharing(newScreenSharing);
+                console.log('[LiveKit] Screen share:', newScreenSharing ? 'STARTED' : 'STOPPED');
+            } catch (error: any) {
+                if (error.name === 'NotAllowedError') {
+                    console.log('[LiveKit] Screen share cancelled by user');
+                } else {
+                    console.error('[LiveKit] Failed to toggle screen share:', error);
+                    toast.error('Failed to share screen');
+                }
+            }
+        },
         settings,
         setInputVolume: (volume: number) => setSettings(s => ({ ...s, inputVolume: volume })),
         setOutputVolume: (volume: number) => setSettings(s => ({ ...s, outputVolume: volume })),
-        setInputDevice: async () => { }, // Placeholder
-        setOutputDevice: async () => { }, // Placeholder
+        setInputDevice: async (deviceId: string) => {
+            if (!roomRef.current) return;
+            try {
+                if (processedTrackRef.current) {
+                    await roomRef.current.localParticipant.unpublishTrack(processedTrackRef.current);
+                    processedTrackRef.current.stop();
+                    processedTrackRef.current = null;
+                }
+                destroyRNNoise();
+
+                const rawStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        deviceId: { exact: deviceId },
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    },
+                });
+
+                const processedStream = await createRNNoiseSuppressedStream(rawStream);
+                const audioTrack = processedStream.getAudioTracks()[0];
+                const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
+                processedTrackRef.current = localAudioTrack;
+
+                if (isMuted) {
+                    localAudioTrack.mute();
+                }
+
+                await roomRef.current.localParticipant.publishTrack(localAudioTrack);
+                console.log('[LiveKit] ✅ Switched to input device:', deviceId);
+                toast.success('Microphone changed');
+            } catch (error) {
+                console.error('[LiveKit] Failed to switch input device:', error);
+                toast.error('Failed to switch microphone');
+            }
+        },
+        setOutputDevice: async (deviceId: string) => {
+            if (roomRef.current) {
+                const audioElements = document.querySelectorAll<HTMLAudioElement>('[id^="audio-"]');
+                for (const audioEl of audioElements) {
+                    try {
+                        if (audioEl.setSinkId) {
+                            await audioEl.setSinkId(deviceId);
+                        }
+                    } catch (e) {
+                        console.warn('[LiveKit] Could not set output device for', audioEl.id, e);
+                    }
+                }
+                console.log('[LiveKit] ✅ Switched to output device:', deviceId);
+                toast.success('Speaker changed');
+            }
+        },
         getRoom: () => roomRef.current,
     };
 

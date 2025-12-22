@@ -4,112 +4,74 @@ import { useVoiceChat, RESOLUTION_OPTIONS, FPS_OPTIONS, ScreenShareSettings } fr
 import { useAuthStore } from '../../store/authStore';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { UserProfileModal } from '../UserProfileModal';
+import { Track, Participant } from 'livekit-client';
 
-// Component to render a participant's video
-const ParticipantVideo: React.FC<{ sessionId: string; isScreen?: boolean; isLocal?: boolean; getCallObject: () => any; className?: string }> = ({
-  sessionId,
+// Component to render a participant's video using LiveKit
+const ParticipantVideo: React.FC<{
+  participant: Participant;
+  isScreen?: boolean;
+  isLocal?: boolean;
+  className?: string
+}> = ({
+  participant,
   isScreen = false,
   isLocal = false,
-  getCallObject,
   className
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const retryRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const callObject = getCallObject();
-    if (!callObject || !videoRef.current) return;
-
-    const updateVideo = () => {
-      // For local participant, use 'local' key; for remote, use session_id
-      const participantKey = isLocal ? 'local' : sessionId;
-      const participant = callObject.participants()[participantKey];
+    useEffect(() => {
       if (!participant || !videoRef.current) return;
 
-      // Get the correct track based on whether it's screen share or camera
-      const trackKey = isScreen ? 'screenVideo' : 'video';
-      const tracks = participant.tracks?.[trackKey];
+      const attachTrack = () => {
+        // Get the correct track based on whether it's screen share or camera
+        const trackSource = isScreen ? Track.Source.ScreenShare : Track.Source.Camera;
 
-      // Try multiple track sources
-      const track = tracks?.track || tracks?.persistentTrack;
+        participant.videoTrackPublications.forEach((publication) => {
+          if (publication.track && publication.source === trackSource) {
+            publication.track.attach(videoRef.current!);
+          }
+        });
+      };
 
-      if (track && track.readyState === 'live') {
-        if (videoRef.current.srcObject !== null) {
-          const currentStream = videoRef.current.srcObject as MediaStream;
-          const currentTrack = currentStream.getVideoTracks()[0];
-          if (currentTrack?.id === track.id) return; // Same track, skip
+      // Attach track initially
+      attachTrack();
+
+      // Listen for track subscribed/published events
+      const handleTrackSubscribed = () => attachTrack();
+      const handleTrackUnsubscribed = () => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
         }
-        videoRef.current.srcObject = new MediaStream([track]);
-        videoRef.current.play().catch(console.error);
-        // Clear retry interval once we have a valid track
-        if (retryRef.current) {
-          clearInterval(retryRef.current);
-          retryRef.current = null;
-        }
-      }
-    };
+      };
 
-    // Initial update with slight delay for local tracks
-    setTimeout(updateVideo, isLocal ? 200 : 50);
+      participant.on('trackSubscribed', handleTrackSubscribed);
+      participant.on('trackPublished', handleTrackSubscribed);
+      participant.on('trackUnsubscribed', handleTrackUnsubscribed);
 
-    // Retry periodically until track is available (for local video which may take time)
-    if (isLocal) {
-      retryRef.current = setInterval(updateVideo, 500);
-      // Stop retrying after 5 seconds
-      setTimeout(() => {
-        if (retryRef.current) {
-          clearInterval(retryRef.current);
-          retryRef.current = null;
-        }
-      }, 5000);
-    }
+      return () => {
+        participant.off('trackSubscribed', handleTrackSubscribed);
+        participant.off('trackPublished', handleTrackSubscribed);
+        participant.off('trackUnsubscribed', handleTrackUnsubscribed);
+        // Detach tracks
+        participant.videoTrackPublications.forEach((publication) => {
+          if (publication.track) {
+            publication.track.detach(videoRef.current!);
+          }
+        });
+      };
+    }, [participant, isScreen]);
 
-    // Listen for track updates
-    const handleTrackStarted = (event: any) => {
-      const isMatchingParticipant = isLocal
-        ? event.participant?.local === true
-        : event.participant?.session_id === sessionId;
-
-      if (isMatchingParticipant) {
-        setTimeout(updateVideo, 100);
-      }
-    };
-
-    const handleParticipantUpdated = (event: any) => {
-      const isMatchingParticipant = isLocal
-        ? event.participant?.local === true
-        : event.participant?.session_id === sessionId;
-
-      if (isMatchingParticipant) {
-        updateVideo();
-      }
-    };
-
-    callObject.on('track-started', handleTrackStarted);
-    callObject.on('participant-updated', handleParticipantUpdated);
-
-    return () => {
-      callObject.off('track-started', handleTrackStarted);
-      callObject.off('participant-updated', handleParticipantUpdated);
-      if (retryRef.current) {
-        clearInterval(retryRef.current);
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    };
-  }, [sessionId, isScreen, isLocal, getCallObject]);
-
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted
-      className={className || `absolute inset-0 w-full h-full ${isScreen ? 'object-contain' : 'object-cover'} bg-black`}
-    />
-  );
-};
+    return (
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={className || `absolute inset-0 w-full h-full ${isScreen ? 'object-contain' : 'object-cover'} bg-black`}
+      />
+    );
+  };
 
 interface VoiceUser {
   id: string;
@@ -251,7 +213,7 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
     : connectedUsers;
 
   // Check if local user is the one screen sharing
-  const isLocalScreenSharing = isScreenSharing && screenShareParticipant === localParticipant?.session_id;
+  const isLocalScreenSharing = isScreenSharing && screenShareParticipant === localParticipant?.identity;
 
   return (
     <div className="flex-1 flex flex-col bg-mot-background relative">
@@ -266,10 +228,9 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
         <div className={`${isScreenShareMaximized ? 'fixed inset-0 z-50' : 'flex-1'} flex items-center justify-center bg-black`}>
           <div className={`relative ${isScreenShareMaximized ? 'w-full h-full' : 'w-full h-full'} overflow-hidden`}>
             <ParticipantVideo
-              sessionId={screenShareParticipant || localParticipant?.session_id || ''}
+              participant={localParticipant || participants.find(p => p.identity === screenShareParticipant)!}
               isScreen={true}
               isLocal={isLocalScreenSharing || (!screenShareParticipant && isScreenSharing)}
-              getCallObject={getCallObject}
             />
             <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-black/70 rounded-lg flex items-center gap-2 z-10">
               <Monitor className="w-4 h-4 text-mot-gold" />
@@ -307,21 +268,40 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                 background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
               }}
             >
-              {/* Video Feed */}
-              {voiceUser.hasVideo && voiceUser.session_id && (
-                <ParticipantVideo
-                  sessionId={voiceUser.session_id}
-                  isLocal={voiceUser.isLocal}
-                  getCallObject={getCallObject}
-                />
-              )}
+              {/* Video Feed - show if participant has video enabled */}
+              {voiceUser.hasVideo && (() => {
+                // Find the actual LiveKit Participant object
+                const livekitParticipant = voiceUser.isLocal
+                  ? localParticipant
+                  : participants.find(p => (p.identity || p.sid) === voiceUser.session_id);
+
+                if (livekitParticipant) {
+                  return (
+                    <ParticipantVideo
+                      participant={livekitParticipant}
+                      isScreen={false}
+                      isLocal={voiceUser.isLocal}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  );
+                }
+                return (
+                  <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
+                    <span className="text-gray-400 text-sm">Video loading...</span>
+                  </div>
+                );
+              })()}
 
               {/* User Avatar - Show when no video */}
               {!voiceUser.hasVideo && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className={`relative ${voiceUser.speaking ? 'animate-pulse' : ''}`}>
-                    <div className={`${screenShareParticipant ? 'w-12 h-12' : 'w-24 h-24'} rounded-full overflow-hidden border-4 ${voiceUser.speaking ? 'border-green-500' : 'border-mot-gold/30'
-                      }`}>
+                    <div
+                      className={`${screenShareParticipant ? 'w-12 h-12' : 'w-24 h-24'} rounded-full overflow-hidden border-4 transition-all duration-200 ${voiceUser.speaking
+                        ? 'border-green-400 shadow-[0_0_20px_rgba(74,222,128,0.7),0_0_40px_rgba(74,222,128,0.4)]'
+                        : 'border-mot-gold/30'
+                        }`}
+                    >
                       <div className="w-full h-full bg-gradient-to-br from-mot-gold to-mot-gold-dark flex items-center justify-center">
                         {voiceUser.avatar_url ? (
                           <img
@@ -480,51 +460,112 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
               </button>
             </div>
 
-            {/* Screen Share Settings Dropdown */}
+            {/* Screen Share Settings Dropdown - Glassmorphism Style */}
             {showScreenShareSettings && (
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-[#1e1f22] rounded-lg shadow-xl border border-white/10 p-4 z-50">
-                <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <Settings className="w-4 h-4" />
-                  Screen Share Quality
-                </h4>
-
-                {/* Resolution */}
-                <div className="mb-3">
-                  <label className="text-xs text-gray-400 mb-1.5 block">Resolution</label>
-                  <select
-                    value={screenShareSettings.resolution}
-                    onChange={(e) => setScreenShareSettings({
-                      ...screenShareSettings,
-                      resolution: e.target.value as ScreenShareSettings['resolution']
-                    })}
-                    className="w-full bg-[#2b2d31] text-white text-sm rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-mot-gold"
-                  >
-                    {RESOLUTION_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+              <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-72 bg-gradient-to-b from-[#1a1a2e]/95 to-[#0f0f1a]/98 backdrop-blur-xl rounded-xl shadow-2xl border border-mot-gold/20 overflow-hidden z-50">
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-white/10 bg-mot-gold/5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-mot-gold/20">
+                      <Monitor className="w-4 h-4 text-mot-gold" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">Screen Share Quality</h4>
+                      <p className="text-[10px] text-gray-400">Configure your stream settings</p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* FPS */}
-                <div className="mb-3">
-                  <label className="text-xs text-gray-400 mb-1.5 block">Frame Rate</label>
-                  <select
-                    value={screenShareSettings.fps}
-                    onChange={(e) => setScreenShareSettings({
-                      ...screenShareSettings,
-                      fps: e.target.value === 'max' ? 'max' : Number(e.target.value) as ScreenShareSettings['fps']
-                    })}
-                    className="w-full bg-[#2b2d31] text-white text-sm rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-mot-gold"
-                  >
-                    {FPS_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                <div className="p-4 space-y-4">
+                  {/* Quick Presets */}
+                  <div>
+                    <label className="text-xs text-gray-400 mb-2 block font-medium">Quick Presets</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => setScreenShareSettings({ resolution: '720p', fps: 30 })}
+                        className={`p-2 rounded-lg border text-center transition-all ${screenShareSettings.resolution === '720p' && screenShareSettings.fps === 30
+                            ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <span className="text-xs font-semibold block">720p</span>
+                        <span className="text-[10px] opacity-70">30 FPS</span>
+                      </button>
+                      <button
+                        onClick={() => setScreenShareSettings({ resolution: '1080p', fps: 30 })}
+                        className={`p-2 rounded-lg border text-center transition-all ${screenShareSettings.resolution === '1080p' && screenShareSettings.fps === 30
+                            ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <span className="text-xs font-semibold block">1080p</span>
+                        <span className="text-[10px] opacity-70">30 FPS</span>
+                      </button>
+                      <button
+                        onClick={() => setScreenShareSettings({ resolution: '1080p', fps: 60 })}
+                        className={`p-2 rounded-lg border text-center transition-all relative ${screenShareSettings.resolution === '1080p' && screenShareSettings.fps === 60
+                            ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-mot-gold text-black rounded-full">HD</span>
+                        <span className="text-xs font-semibold block">1080p</span>
+                        <span className="text-[10px] opacity-70">60 FPS</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-white/10" />
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider">or customize</span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+
+                  {/* Resolution */}
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1.5 block font-medium">Resolution</label>
+                    <select
+                      value={screenShareSettings.resolution}
+                      onChange={(e) => setScreenShareSettings({
+                        ...screenShareSettings,
+                        resolution: e.target.value as ScreenShareSettings['resolution']
+                      })}
+                      className="w-full bg-white/5 text-white text-sm rounded-lg px-3 py-2.5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-mot-gold/50 focus:border-mot-gold/50 transition-all cursor-pointer appearance-none"
+                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1rem' }}
+                    >
+                      {RESOLUTION_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* FPS */}
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1.5 block font-medium">Frame Rate</label>
+                    <select
+                      value={screenShareSettings.fps}
+                      onChange={(e) => setScreenShareSettings({
+                        ...screenShareSettings,
+                        fps: e.target.value === 'max' ? 'max' : Number(e.target.value) as ScreenShareSettings['fps']
+                      })}
+                      className="w-full bg-white/5 text-white text-sm rounded-lg px-3 py-2.5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-mot-gold/50 focus:border-mot-gold/50 transition-all cursor-pointer appearance-none"
+                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1rem' }}
+                    >
+                      {FPS_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <p className="text-xs text-gray-500 mt-2">
-                  Settings apply when you start sharing
-                </p>
+                {/* Footer */}
+                <div className="px-4 py-2.5 bg-black/20 border-t border-white/5">
+                  <p className="text-[10px] text-gray-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-mot-gold animate-pulse" />
+                    Settings apply when you start sharing
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -563,11 +604,9 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
             className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden ring-4 ring-mot-gold"
             onClick={(e) => e.stopPropagation()}
           >
-            <ParticipantVideo
-              sessionId={expandedVideo.sessionId}
-              isLocal={expandedVideo.isLocal}
-              getCallObject={getCallObject}
-            />
+            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+              <span className="text-gray-400">Expanded video view</span>
+            </div>
             <div className="absolute bottom-4 left-4 px-4 py-2 bg-black/70 rounded-lg">
               <span className="text-white font-medium">{expandedVideo.username}</span>
             </div>

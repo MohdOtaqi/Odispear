@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { UserProfileModal } from '../UserProfileModal';
-import { Hash, Volume2, Calendar, Plus, ChevronDown, ChevronRight, MicOff, Mic, Headphones, Settings, PhoneOff, Signal } from 'lucide-react';
+import { Hash, Volume2, Calendar, Plus, ChevronDown, ChevronRight, MicOff, Mic, Headphones, Settings, PhoneOff, Signal, Video, Monitor, Wifi } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGuildStore } from '../../store/guildStore';
+import { useAuthStore } from '../../store/authStore';
 import { Tooltip } from '../ui/Tooltip';
 import { Avatar } from '../ui/Avatar';
 import { useVoiceChat } from '../VoiceChat/LiveKitProvider';
@@ -175,7 +176,20 @@ export const Sidebar = React.memo<SidebarProps>(({
   voiceChannelUsers = {},
 }) => {
   const { currentGuild, channels } = useGuildStore();
-  const { isConnected, channelId: connectedVoiceChannelId, localParticipant, toggleMute, toggleDeafen, leaveChannel, isDeafened } = useVoiceChat();
+  const { user } = useAuthStore();
+  const {
+    isConnected,
+    channelId: connectedVoiceChannelId,
+    localParticipant,
+    toggleMute,
+    toggleDeafen,
+    toggleVideo,
+    toggleScreenShare,
+    leaveChannel,
+    isDeafened,
+    isVideoEnabled,
+    isScreenSharing
+  } = useVoiceChat();
 
   // Get voice users from the global store (populated by WebSocket events)
   // IMPORTANT: Only use store state - don't merge with props which can have stale data
@@ -340,69 +354,160 @@ export const Sidebar = React.memo<SidebarProps>(({
         )}
       </div>
 
-      {/* Voice Connected Panel - Shows when in voice */}
+      {/* Voice Connected Panel - Discord-like with Glassmorphism */}
       {isConnected && connectedVoiceChannelId && (
-        <div className="border-t border-white/10 bg-mot-surface-subtle">
-          {/* Voice Status */}
-          <div className="p-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Signal className="h-4 w-4 text-green-400" />
+        <div className="border-t border-mot-gold/20 bg-gradient-to-b from-[#1a1a2e]/95 to-[#0f0f1a]/98 backdrop-blur-xl">
+          {/* Voice Status Header */}
+          <div className="px-3 py-2">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Signal className="h-4 w-4 text-green-400" />
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-green-400">Voice Connected</p>
-                <p className="text-xs text-gray-400 truncate">
-                  {channels.find((c: Channel) => c.id === connectedVoiceChannelId)?.name || 'Voice Channel'} / {currentGuild?.name}
-                </p>
+                <div className="flex items-center gap-1">
+                  <Volume2 className="h-3 w-3 text-gray-500" />
+                  <p className="text-[10px] text-gray-400 truncate">
+                    {channels.find((c: Channel) => c.id === connectedVoiceChannelId)?.name || 'Voice Channel'} / {currentGuild?.name}
+                  </p>
+                </div>
+              </div>
+              {/* Latency indicator */}
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30">
+                <Wifi className="h-3 w-3 text-green-400" />
+                <span className="text-[10px] text-green-400 font-medium">Good</span>
               </div>
             </div>
 
-            {/* Voice Controls */}
-            <div className="flex items-center gap-1">
-              <Tooltip content={localParticipant?.audio === false ? 'Unmute' : 'Mute'} position="top">
+            {/* Voice Controls - Discord Style */}
+            <div className="flex items-center justify-between gap-1 mt-2">
+              {/* Mute */}
+              <Tooltip content={!localParticipant?.isMicrophoneEnabled ? 'Unmute' : 'Mute'} position="top">
                 <button
                   onClick={toggleMute}
                   className={cn(
-                    'flex-1 p-2 rounded-md transition-colors flex items-center justify-center',
-                    localParticipant?.audio === false
-                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                      : 'hover:bg-white/10 text-gray-400 hover:text-white'
+                    'flex-1 p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center relative group',
+                    'bg-white/5 hover:bg-white/10 border border-white/5',
+                    !localParticipant?.isMicrophoneEnabled && 'bg-red-500/20 border-red-500/30 hover:bg-red-500/30'
                   )}
                 >
-                  {localParticipant?.audio === false ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  <Mic className={cn(
+                    'h-4 w-4 transition-colors',
+                    !localParticipant?.isMicrophoneEnabled ? 'text-red-400' : 'text-gray-400 group-hover:text-white'
+                  )} />
+                  {!localParticipant?.isMicrophoneEnabled && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-6 h-0.5 bg-red-400 rotate-45 rounded-full" />
+                    </div>
+                  )}
                 </button>
               </Tooltip>
 
+              {/* Deafen */}
               <Tooltip content={isDeafened ? 'Undeafen' : 'Deafen'} position="top">
                 <button
                   onClick={toggleDeafen}
                   className={cn(
-                    'flex-1 p-2 rounded-md transition-colors flex items-center justify-center',
-                    isDeafened
-                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                      : 'hover:bg-white/10 text-gray-400 hover:text-white'
+                    'flex-1 p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center relative group',
+                    'bg-white/5 hover:bg-white/10 border border-white/5',
+                    isDeafened && 'bg-red-500/20 border-red-500/30 hover:bg-red-500/30'
                   )}
                 >
-                  <Headphones className="h-4 w-4" />
+                  <Headphones className={cn(
+                    'h-4 w-4 transition-colors',
+                    isDeafened ? 'text-red-400' : 'text-gray-400 group-hover:text-white'
+                  )} />
+                  {isDeafened && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-6 h-0.5 bg-red-400 rotate-45 rounded-full" />
+                    </div>
+                  )}
                 </button>
               </Tooltip>
 
-              <Tooltip content="Settings" position="top">
+              {/* Video */}
+              <Tooltip content={isVideoEnabled ? 'Turn Off Camera' : 'Turn On Camera'} position="top">
                 <button
-                  className="flex-1 p-2 rounded-md hover:bg-white/10 text-gray-400 hover:text-white transition-colors flex items-center justify-center"
+                  onClick={toggleVideo}
+                  className={cn(
+                    'flex-1 p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center relative group',
+                    'bg-white/5 hover:bg-white/10 border border-white/5',
+                    isVideoEnabled && 'bg-mot-gold/20 border-mot-gold/30 hover:bg-mot-gold/30'
+                  )}
                 >
-                  <Settings className="h-4 w-4" />
+                  <Video className={cn(
+                    'h-4 w-4 transition-colors',
+                    isVideoEnabled ? 'text-mot-gold' : 'text-gray-400 group-hover:text-white'
+                  )} />
+                  {!isVideoEnabled && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-6 h-0.5 bg-gray-500 rotate-45 rounded-full" />
+                    </div>
+                  )}
                 </button>
               </Tooltip>
 
+              {/* Screen Share */}
+              <Tooltip content={isScreenSharing ? 'Stop Sharing' : 'Share Screen'} position="top">
+                <button
+                  onClick={toggleScreenShare}
+                  className={cn(
+                    'flex-1 p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center relative group',
+                    'bg-white/5 hover:bg-white/10 border border-white/5',
+                    isScreenSharing && 'bg-mot-gold/20 border-mot-gold/30 hover:bg-mot-gold/30'
+                  )}
+                >
+                  <Monitor className={cn(
+                    'h-4 w-4 transition-colors',
+                    isScreenSharing ? 'text-mot-gold' : 'text-gray-400 group-hover:text-white'
+                  )} />
+                </button>
+              </Tooltip>
+
+              {/* Settings */}
+              <Tooltip content="Voice Settings" position="top">
+                <button
+                  className="flex-1 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-all duration-200 flex items-center justify-center group"
+                >
+                  <Settings className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors" />
+                </button>
+              </Tooltip>
+
+              {/* Disconnect */}
               <Tooltip content="Disconnect" position="top">
                 <button
                   onClick={leaveChannel}
-                  className="flex-1 p-2 rounded-md bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center justify-center"
+                  className="flex-1 p-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 transition-all duration-200 flex items-center justify-center group"
                 >
-                  <PhoneOff className="h-4 w-4" />
+                  <PhoneOff className="h-4 w-4 text-red-400 group-hover:text-red-300 transition-colors" />
                 </button>
               </Tooltip>
             </div>
           </div>
+
+          {/* User Profile Section - Discord Style */}
+          {user && (
+            <div className="px-2 py-2 border-t border-white/5 bg-black/20">
+              <div className="flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group">
+                <div className="relative">
+                  <Avatar
+                    src={user.avatar_url}
+                    alt={user.username}
+                    size="sm"
+                    fallback={user.username.charAt(0)}
+                  />
+                  {/* Online status dot */}
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0f0f1a]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{user.username}</p>
+                  <p className="text-[10px] text-gray-500 truncate">Online</p>
+                </div>
+                <Settings className="h-4 w-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
