@@ -317,6 +317,11 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     document.body.appendChild(audioEl);
                     console.log('[LiveKit] Attached audio track for:', participant.identity);
                 }
+                // Detect screen share from remote participants
+                if (track.kind === Track.Kind.Video && track.source === Track.Source.ScreenShare) {
+                    console.log('[LiveKit] Screen share track received from:', participant.identity);
+                    setScreenShareParticipant(participant.identity);
+                }
             });
 
             roomInstance.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
@@ -324,6 +329,11 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     const audioEl = document.getElementById(`audio-${participant.identity}`);
                     if (audioEl) audioEl.remove();
                     track.detach();
+                }
+                // Clean up screen share when remote user stops sharing
+                if (track.kind === Track.Kind.Video && track.source === Track.Source.ScreenShare) {
+                    console.log('[LiveKit] Screen share track removed from:', participant.identity);
+                    setScreenShareParticipant(null);
                 }
             });
 
@@ -600,17 +610,26 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             try {
                 if (newScreenSharing) {
-                    await roomRef.current.localParticipant.setScreenShareEnabled(true, {
-                        audio: true,
-                        video: {
-                            resolution: { width: 1920, height: 1080 },
-                            frameRate: 30,
-                        },
-                        contentHint: 'detail',
+                    // Look up resolution from options
+                    const resOption = RESOLUTION_OPTIONS.find(r => r.value === screenShareSettings.resolution) || RESOLUTION_OPTIONS[1];
+                    const fps = screenShareSettings.fps === 'max' ? 144 : screenShareSettings.fps;
+
+                    console.log('[LiveKit] Screen share settings:', {
+                        resolution: screenShareSettings.resolution,
+                        width: resOption.width,
+                        height: resOption.height,
+                        fps
                     });
+
+                    await roomRef.current.localParticipant.setScreenShareEnabled(true, {
+                        audio: true, // Always enable system audio
+                        contentHint: 'detail',
+                    } as any);
+                    setScreenShareParticipant(roomRef.current.localParticipant.identity);
                     toast('Screen sharing started', { icon: '🖥️' });
                 } else {
                     await roomRef.current.localParticipant.setScreenShareEnabled(false);
+                    setScreenShareParticipant(null);
                     toast('Screen sharing stopped', { icon: '🖥️' });
                 }
                 setIsScreenSharing(newScreenSharing);
