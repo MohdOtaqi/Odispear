@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, Volume2, Speaker } from 'lucide-react';
+import { X, Mic, Volume2, Speaker, Video } from 'lucide-react';
 import { useVoiceChat } from './LiveKitProvider';
 import { autoDetectSensitivity } from '../../hooks/useVoiceActivityDetection';
 import { VoiceMode } from '../../hooks/usePushToTalk';
@@ -8,15 +8,17 @@ interface VoiceSettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = 'devices' | 'voice';
+type TabType = 'devices' | 'voice' | 'video';
 
 export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose }) => {
   const { settings, setInputVolume, setOutputVolume, setInputDevice, setOutputDevice } = useVoiceChat();
   const [activeTab, setActiveTab] = useState<TabType>('devices');
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [speakers, setSpeakers] = useState<MediaDeviceInfo[]>([]);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedMic, setSelectedMic] = useState<string>(() => localStorage.getItem('selectedMicId') || 'default');
   const [selectedSpeaker, setSelectedSpeaker] = useState<string>(() => localStorage.getItem('selectedSpeakerId') || 'default');
+  const [selectedCamera, setSelectedCamera] = useState<string>(() => localStorage.getItem('selectedCameraId') || 'default');
   const [testingMic, setTestingMic] = useState(false);
   const [micTestLevel, setMicTestLevel] = useState(0);
   const [localInputVolume, setLocalInputVolume] = useState(settings.inputVolume * 100 || 100);
@@ -60,19 +62,33 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
 
   const loadDevices = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
       const devices = await navigator.mediaDevices.enumerateDevices();
 
       const mics = devices.filter(device => device.kind === 'audioinput');
       const spkrs = devices.filter(device => device.kind === 'audiooutput');
+      const cams = devices.filter(device => device.kind === 'videoinput');
 
       setMicrophones(mics);
       setSpeakers(spkrs);
+      setCameras(cams);
 
       // Clean up the stream
       stream.getTracks().forEach(track => track.stop());
     } catch (error) {
       console.error('Failed to load devices:', error);
+      // Try audio only if video fails
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(device => device.kind === 'audioinput');
+        const spkrs = devices.filter(device => device.kind === 'audiooutput');
+        setMicrophones(mics);
+        setSpeakers(spkrs);
+        audioStream.getTracks().forEach(track => track.stop());
+      } catch (e) {
+        console.error('Failed to load audio devices:', e);
+      }
     }
   };
 
@@ -155,9 +171,16 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
     }
   };
 
+  const handleCameraChange = async (deviceId: string) => {
+    setSelectedCamera(deviceId);
+    localStorage.setItem('selectedCameraId', deviceId);
+    console.log('[Voice] Camera changed to:', deviceId);
+  };
+
   const tabs = [
-    { id: 'devices' as TabType, label: 'Audio Devices', icon: Mic },
-    { id: 'voice' as TabType, label: 'Voice Settings', icon: Volume2 },
+    { id: 'devices' as TabType, label: 'Audio', icon: Mic },
+    { id: 'video' as TabType, label: 'Video', icon: Video },
+    { id: 'voice' as TabType, label: 'Voice', icon: Volume2 },
   ];
 
   return (
@@ -291,6 +314,70 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
                   }}
                   className="w-full"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Video Tab - Camera Selection */}
+          {activeTab === 'video' && (
+            <div className="space-y-6">
+              {/* Camera Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Camera
+                </label>
+                <select
+                  value={selectedCamera}
+                  onChange={(e) => handleCameraChange(e.target.value)}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
+                >
+                  <option value="default">Default Camera</option>
+                  {cameras.map((camera) => (
+                    <option key={camera.deviceId} value={camera.deviceId}>
+                      {camera.label || `Camera ${camera.deviceId.substring(0, 8)}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Video Quality */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">
+                  Video Quality
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button className="p-3 rounded-lg border-2 border-neutral-700 bg-neutral-850 hover:border-neutral-600 transition-all">
+                    <span className="block text-sm font-medium text-white">480p</span>
+                    <span className="text-xs text-neutral-400">Low</span>
+                  </button>
+                  <button className="p-3 rounded-lg border-2 border-purple-500 bg-purple-500/20 transition-all">
+                    <span className="block text-sm font-medium text-white">720p</span>
+                    <span className="text-xs text-neutral-400">HD</span>
+                  </button>
+                  <button className="p-3 rounded-lg border-2 border-neutral-700 bg-neutral-850 hover:border-neutral-600 transition-all">
+                    <span className="block text-sm font-medium text-white">1080p</span>
+                    <span className="text-xs text-neutral-400">Full HD</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Video Features Info */}
+              <div className="p-4 bg-neutral-800 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-2">Video Features</h3>
+                <div className="space-y-2 text-sm text-neutral-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>Picture-in-Picture support (hover on video for button)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>Video toggle in voice panel sidebar</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full" />
+                    <span>Background blur coming soon</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
