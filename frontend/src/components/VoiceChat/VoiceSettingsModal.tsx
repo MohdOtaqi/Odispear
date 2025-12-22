@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Mic, Volume2, Speaker } from 'lucide-react';
-import { useVoiceChat } from './VoiceChatProvider';
+import { useVoiceChat } from './LiveKitProvider';
 
 interface VoiceSettingsModalProps {
   onClose: () => void;
@@ -29,13 +29,13 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const devices = await navigator.mediaDevices.enumerateDevices();
-      
+
       const mics = devices.filter(device => device.kind === 'audioinput');
       const spkrs = devices.filter(device => device.kind === 'audiooutput');
-      
+
       setMicrophones(mics);
       setSpeakers(spkrs);
-      
+
       // Clean up the stream
       stream.getTracks().forEach(track => track.stop());
     } catch (error) {
@@ -46,7 +46,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
   const handleMicChange = async (deviceId: string) => {
     setSelectedMic(deviceId);
     localStorage.setItem('selectedMicId', deviceId);
-    
+
     // Apply to Daily.co call if connected
     const callObject = getCallObject();
     if (callObject) {
@@ -64,7 +64,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
   const handleSpeakerChange = async (deviceId: string) => {
     setSelectedSpeaker(deviceId);
     localStorage.setItem('selectedSpeakerId', deviceId);
-    
+
     // Apply to Daily.co call if connected
     const callObject = getCallObject();
     if (callObject) {
@@ -77,7 +77,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
         console.error('Failed to change speaker:', error);
       }
     }
-    
+
     // Also update any existing audio elements
     const audioElements = document.querySelectorAll('audio');
     audioElements.forEach((audio: HTMLAudioElement) => {
@@ -97,8 +97,8 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
     setTestingMic(true);
     try {
       const constraints: MediaStreamConstraints = {
-        audio: selectedMic && selectedMic !== 'default' 
-          ? { deviceId: { exact: selectedMic } } 
+        audio: selectedMic && selectedMic !== 'default'
+          ? { deviceId: { exact: selectedMic } }
           : true
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -106,9 +106,9 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
       const analyser = audioContext.createAnalyser();
       const microphone = audioContext.createMediaStreamSource(stream);
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      
+
       microphone.connect(analyser);
-      
+
       const interval = setInterval(() => {
         analyser.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
@@ -153,11 +153,10 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                activeTab === tab.id
+              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${activeTab === tab.id
                   ? 'border-purple-500 text-purple-400'
                   : 'border-transparent text-neutral-400 hover:text-neutral-300'
-              }`}
+                }`}
             >
               <tab.icon className="w-4 h-4" />
               <span className="font-medium text-sm">{tab.label}</span>
@@ -212,11 +211,10 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ onClose 
               <div>
                 <button
                   onClick={handleMicTest}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    testingMic
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${testingMic
                       ? 'bg-red-600 hover:bg-red-700 text-white'
                       : 'bg-purple-600 hover:bg-purple-700 text-white'
-                  }`}
+                    }`}
                 >
                   {testingMic ? 'Stop Test' : 'Test Microphone'}
                 </button>

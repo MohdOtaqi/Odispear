@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, PhoneOff, Volume2, VolumeX, Settings, Wifi, Loader2 } from 'lucide-react';
-import { useVoiceChat } from './VoiceChatProvider';
+import { useVoiceChat } from './LiveKitProvider';
 import { VoiceSettingsModal } from './VoiceSettingsModal';
 
 interface VoicePanelAdvancedProps {

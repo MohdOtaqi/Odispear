@@ -11,13 +11,13 @@ import ResetPassword from './pages/ResetPassword';
 import AuthCallback from './pages/AuthCallback';
 import { useAuthStore } from './store/authStore';
 import { useVoiceUsersStore } from './store/voiceUsersStore';
-import { VoiceChatProvider } from './components/VoiceChat/VoiceChatProvider';
+import { LiveKitProvider } from './components/VoiceChat/LiveKitProvider';
 import { useGlobalKeybinds } from './hooks/useGlobalKeybinds';
 
 function App() {
   const { isAuthenticated, isInitialized, fetchCurrentUser } = useAuthStore();
   const initializeVoiceListeners = useVoiceUsersStore(state => state.initializeListeners);
-  
+
   // Initialize global keybinds for voice shortcuts
   useGlobalKeybinds();
 
@@ -41,11 +41,11 @@ function App() {
         </div>
       </div>
     );
-  } 
+  }
 
   return (
     <BrowserRouter>
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
@@ -80,9 +80,9 @@ function App() {
           path="/app/*"
           element={
             isAuthenticated ? (
-              <VoiceChatProvider>
+              <LiveKitProvider>
                 <MainApp />
-              </VoiceChatProvider>
+              </LiveKitProvider>
             ) : (
               <Navigate to="/login" replace />
             )

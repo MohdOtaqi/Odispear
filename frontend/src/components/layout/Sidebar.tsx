@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
 import { useGuildStore } from '../../store/guildStore';
 import { Tooltip } from '../ui/Tooltip';
 import { Avatar } from '../ui/Avatar';
-import { useVoiceChat } from '../VoiceChat/VoiceChatProvider';
+import { useVoiceChat } from '../VoiceChat/LiveKitProvider';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 
 interface Channel {

@@ -27,6 +27,7 @@ import dmRoutes from './routes/dmRoutes';
 import rolesRoutes from './routes/rolesRoutes';
 import memberRoutes from './routes/memberRoutes';
 import voiceRoutes from './routes/voiceRoutes';
+import voiceLivekitRoutes from './routes/voiceLivekitRoutes';
 import statusRoutes from './routes/statusRoutes';
 import reactionRoutes from './routes/reactionRoutes';
 import soundboardRoutes from './routes/soundboardRoutes';
@@ -104,6 +105,7 @@ app.use('/api/v1/dm', dmRoutes);
 app.use('/api/v1', rolesRoutes); // Routes: /guilds/:guildId/roles
 app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1/voice', voiceRoutes);
+app.use('/api/v1/voice', voiceLivekitRoutes);
 app.use('/api/v1/status', statusRoutes);
 app.use('/api/v1/reactions', reactionRoutes);
 app.use('/api/v1/soundboard', soundboardRoutes);

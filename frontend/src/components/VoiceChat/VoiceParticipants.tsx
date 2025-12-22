@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Mic, MicOff, Headphones, HeadphonesOff, Volume2, User, Signal } from 'lucide-react';
-import { useVoiceChat } from './VoiceChatProvider';
+import { useVoiceChat } from './LiveKitProvider';
 import { Tooltip } from '../ui/Tooltip';
 
 interface VoiceParticipantsProps {

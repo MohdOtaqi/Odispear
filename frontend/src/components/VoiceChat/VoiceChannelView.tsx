@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Volume2, Mic, MicOff, Headphones, Video, Monitor, Users, PhoneOff, Settings, VolumeX, ChevronDown, X, Maximize2, MessageSquare, User, UserX } from 'lucide-react';
-import { useVoiceChat, RESOLUTION_OPTIONS, FPS_OPTIONS, ScreenShareSettings } from './VoiceChatProvider';
+import { useVoiceChat, RESOLUTION_OPTIONS, FPS_OPTIONS, ScreenShareSettings } from './LiveKitProvider';
 import { useAuthStore } from '../../store/authStore';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { UserProfileModal } from '../UserProfileModal';
