@@ -31,11 +31,20 @@ const ParticipantVideo: React.FC<{
         // Get the correct track based on whether it's screen share or camera
         const trackSource = isScreen ? Track.Source.ScreenShare : Track.Source.Camera;
 
-        participant.videoTrackPublications.forEach((publication) => {
-          if (publication.track && publication.source === trackSource) {
-            publication.track.attach(videoRef.current!);
-          }
-        });
+        // Try to get the track publication for this source
+        const publication = participant.getTrackPublication(trackSource);
+        if (publication?.track && videoRef.current) {
+          publication.track.attach(videoRef.current);
+          console.log('[ParticipantVideo] Attached', isScreen ? 'screen' : 'camera', 'track for:', participant.identity);
+        } else {
+          // Fallback: iterate through all video publications
+          participant.videoTrackPublications.forEach((pub) => {
+            if (pub.track && pub.source === trackSource && videoRef.current) {
+              pub.track.attach(videoRef.current);
+              console.log('[ParticipantVideo] Attached via fallback:', isScreen ? 'screen' : 'camera', 'for:', participant.identity);
+            }
+          });
+        }
       };
 
       // Attach track initially
@@ -296,7 +305,13 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
         <div className={`${isScreenShareMaximized ? 'fixed inset-0 z-50' : 'flex-1'} flex items-center justify-center bg-black`}>
           <div className={`relative ${isScreenShareMaximized ? 'w-full h-full' : 'w-full h-full'} overflow-hidden`}>
             <ParticipantVideo
-              participant={localParticipant || participants.find(p => p.identity === screenShareParticipant)!}
+              participant={
+                // For local screen sharing, use localParticipant
+                // For remote screen sharing, find the participant by identity
+                screenShareParticipant && screenShareParticipant !== localParticipant?.identity
+                  ? (participants.find(p => p.identity === screenShareParticipant) || localParticipant)!
+                  : localParticipant!
+              }
               isScreen={true}
               isLocal={isLocalScreenSharing || (!screenShareParticipant && isScreenSharing)}
             />

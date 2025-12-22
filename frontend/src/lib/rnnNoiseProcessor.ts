@@ -10,12 +10,12 @@ let analyserNode: AnalyserNode | null = null;
 let gateGainNode: GainNode | null = null;
 let gateIntervalId: ReturnType<typeof setInterval> | null = null;
 
-// Noise gate settings - AGGRESSIVE for maximum noise removal
-const GATE_THRESHOLD = -50; // dB - signals below this are gated
-const GATE_OPEN_THRESHOLD = -40; // dB - signals above this fully open the gate
-const GATE_ATTACK = 0.003; // 3ms - how fast the gate opens (fast for voice)
-const GATE_RELEASE = 0.15; // 150ms - how fast the gate closes (longer to avoid chopping)
-const GATE_FLOOR = 0.01; // Minimum gain when gate is closed (nearly silent)
+// Noise gate settings - MORE AGGRESSIVE for maximum noise removal
+const GATE_THRESHOLD = -35; // dB - signals below this are gated (was -50, more aggressive now)
+const GATE_OPEN_THRESHOLD = -28; // dB - signals above this fully open the gate (was -40)
+const GATE_ATTACK = 0.005; // 5ms - how fast the gate opens (fast for voice)
+const GATE_RELEASE = 0.25; // 250ms - how fast the gate closes (longer to avoid chopping)
+const GATE_FLOOR = 0.02; // Minimum gain when gate is closed (2% - nearly silent)
 
 // Debug flag
 const DEBUG_NOISE_GATE = true;

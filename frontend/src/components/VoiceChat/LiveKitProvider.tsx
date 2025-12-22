@@ -337,8 +337,28 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
             });
 
+            // Listen for connection quality changes
+            roomInstance.on(RoomEvent.ConnectionQualityChanged, (quality, participant) => {
+                // Only care about local participant's quality
+                if (participant === roomInstance.localParticipant) {
+                    const qualityMap: Record<string, 'excellent' | 'good' | 'poor' | 'lost' | 'unknown'> = {
+                        'excellent': 'excellent',
+                        'good': 'good',
+                        'poor': 'poor',
+                        'lost': 'lost',
+                        'unknown': 'unknown',
+                    };
+                    const qualityStr = quality?.toString()?.toLowerCase() || 'unknown';
+                    setConnectionQuality(qualityMap[qualityStr] || 'unknown');
+                    console.log('[LiveKit] Connection quality changed:', qualityStr);
+                }
+            });
+
             // Connect to room
             await roomInstance.connect(livekitUrl, token);
+
+            // Set initial connection quality to 'good' after successful connection
+            setConnectionQuality('good');
 
             // Create audio track with noise suppression
             console.log('[LiveKit] Creating audio track with noise suppression...');
