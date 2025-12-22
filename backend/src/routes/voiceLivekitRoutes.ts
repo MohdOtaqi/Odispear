@@ -13,13 +13,14 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://n0tmot.com/livekit/';
  * Generate a LiveKit access token for a user to join a voice channel
  * GET /api/voice/livekit-token/:channelId
  */
-router.get('/livekit-token/:channelId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/livekit-token/:channelId', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { channelId } = req.params;
     const user = (req as any).user;
 
     if (!user) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
     }
 
     // Create room name from channel ID (LiveKit rooms are named by channel)
@@ -50,14 +51,14 @@ router.get('/livekit-token/:channelId', authenticateToken, async (req: Request, 
 
     console.log(`[LiveKit] Generated token for user ${user.username} (${user.id}) to room ${roomName}`);
 
-    return res.json({
+    res.json({
       token: jwt,
       roomName,
       livekitUrl: LIVEKIT_URL,
     });
   } catch (error) {
     console.error('[LiveKit] Token generation error:', error);
-    return res.status(500).json({ error: 'Failed to generate voice token' });
+    res.status(500).json({ error: 'Failed to generate voice token' });
   }
 });
 
@@ -65,8 +66,8 @@ router.get('/livekit-token/:channelId', authenticateToken, async (req: Request, 
  * Get LiveKit room info (for debugging)
  * GET /api/voice/livekit-info
  */
-router.get('/livekit-info', authenticateToken, async (_req: Request, res: Response) => {
-  return res.json({
+router.get('/livekit-info', authenticateToken, async (_req: Request, res: Response): Promise<void> => {
+  res.json({
     livekitUrl: LIVEKIT_URL,
     hasApiKey: !!LIVEKIT_API_KEY,
     hasApiSecret: !!LIVEKIT_API_SECRET,
