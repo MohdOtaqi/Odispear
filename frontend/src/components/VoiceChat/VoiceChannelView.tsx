@@ -204,8 +204,10 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
   const [expandedVideo, setExpandedVideo] = useState<{ sessionId: string; username: string; isLocal: boolean } | null>(null);
   const [isScreenShareMaximized, setIsScreenShareMaximized] = useState(false);
   const isInThisChannel = isConnected && currentChannelId === channelId;
-  const isMuted = localParticipant?.audio === false;
-  const isSpeaking = localParticipant?.session_id ? speakingParticipants.has(localParticipant.session_id) : false;
+  // LiveKit: use isMuted from context instead of localParticipant.audio
+  // LiveKit: use identity instead of session_id for participant identification
+  const localParticipantId = localParticipant?.identity || localParticipant?.sid;
+  const isSpeaking = localParticipantId ? speakingParticipants.has(localParticipantId) : false;
 
   // Helper to find avatar_url from voiceUsersStore
   const findAvatarUrl = (userId: string) => {
@@ -214,6 +216,7 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
   };
 
   // Build the list of users from participants
+  // Note: LiveKit uses 'identity' not 'session_id', 'name' not 'user_name', 'isLocal' not 'local'
   const allUsers = isInThisChannel && user
     ? [
       {
@@ -223,23 +226,26 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
         muted: isMuted,
         deafened: isDeafened,
         speaking: isSpeaking,
-        session_id: localParticipant?.session_id,
+        session_id: localParticipant?.identity || localParticipant?.sid || user.id,
         hasVideo: isVideoEnabled,
         hasScreen: isScreenSharing,
         isLocal: true
       },
-      ...participants.filter(p => !p.local).map(p => ({
-        id: p.user_id || p.session_id,
-        username: p.user_name || 'User',
-        avatar_url: findAvatarUrl(p.user_id || p.session_id),
-        muted: !p.audio,
-        deafened: false,
-        speaking: speakingParticipants.has(p.session_id),
-        session_id: p.session_id,
-        hasVideo: p.video === true,
-        hasScreen: p.screen === true,
-        isLocal: false
-      }))
+      // Filter and map remote participants using LiveKit properties
+      ...participants
+        .filter(p => !p.isLocal)
+        .map(p => ({
+          id: p.identity || p.sid,
+          username: p.name || 'User',
+          avatar_url: findAvatarUrl(p.identity || p.sid),
+          muted: p.isMicrophoneEnabled === false,
+          deafened: false,
+          speaking: speakingParticipants.has(p.identity),
+          session_id: p.identity || p.sid,
+          hasVideo: p.isCameraEnabled === true,
+          hasScreen: p.isScreenShareEnabled === true,
+          isLocal: false
+        }))
     ]
     : connectedUsers;
 
