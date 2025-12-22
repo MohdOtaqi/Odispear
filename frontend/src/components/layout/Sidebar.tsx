@@ -377,12 +377,12 @@ export const Sidebar = React.memo<SidebarProps>(({
               {/* Connection quality indicator */}
               <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30`}>
                 <Wifi className={`h-3 w-3 ${connectionQuality === 'excellent' || connectionQuality === 'good' ? 'text-green-400' :
-                    connectionQuality === 'poor' ? 'text-yellow-400' :
-                      connectionQuality === 'lost' ? 'text-red-400' : 'text-gray-400'
+                  connectionQuality === 'poor' ? 'text-yellow-400' :
+                    connectionQuality === 'lost' ? 'text-red-400' : 'text-gray-400'
                   }`} />
                 <span className={`text-[10px] font-medium capitalize ${connectionQuality === 'excellent' || connectionQuality === 'good' ? 'text-green-400' :
-                    connectionQuality === 'poor' ? 'text-yellow-400' :
-                      connectionQuality === 'lost' ? 'text-red-400' : 'text-gray-400'
+                  connectionQuality === 'poor' ? 'text-yellow-400' :
+                    connectionQuality === 'lost' ? 'text-red-400' : 'text-gray-400'
                   }`}>
                   {connectionQuality === 'unknown' ? 'Connecting...' : connectionQuality}
                 </span>
@@ -391,24 +391,23 @@ export const Sidebar = React.memo<SidebarProps>(({
 
             {/* Voice Controls - Discord Style */}
             <div className="flex items-center justify-between gap-1 mt-2">
-              {/* Mute */}
-              <Tooltip content={!localParticipant?.isMicrophoneEnabled ? 'Unmute' : 'Mute'} position="top">
+              {/* Mute - Disabled when deafened */}
+              <Tooltip content={isDeafened ? 'Deafened' : (!localParticipant?.isMicrophoneEnabled ? 'Unmute' : 'Mute')} position="top">
                 <button
                   onClick={toggleMute}
+                  disabled={isDeafened}
                   className={cn(
                     'flex-1 p-2.5 rounded-lg transition-all duration-200 flex items-center justify-center relative group',
-                    'bg-white/5 hover:bg-white/10 border border-white/5',
-                    !localParticipant?.isMicrophoneEnabled && 'bg-red-500/20 border-red-500/30 hover:bg-red-500/30'
+                    isDeafened
+                      ? 'bg-neutral-800/50 cursor-not-allowed opacity-50'
+                      : 'bg-white/5 hover:bg-white/10 border border-white/5',
+                    !localParticipant?.isMicrophoneEnabled && !isDeafened && 'bg-red-500/20 border-red-500/30 hover:bg-red-500/30'
                   )}
                 >
-                  <Mic className={cn(
-                    'h-4 w-4 transition-colors',
-                    !localParticipant?.isMicrophoneEnabled ? 'text-red-400' : 'text-gray-400 group-hover:text-white'
-                  )} />
-                  {!localParticipant?.isMicrophoneEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-6 h-0.5 bg-red-400 rotate-45 rounded-full" />
-                    </div>
+                  {!localParticipant?.isMicrophoneEnabled ? (
+                    <MicOff className="h-4 w-4 text-red-400" />
+                  ) : (
+                    <Mic className="h-4 w-4 text-gray-400 group-hover:text-white transition-colors" />
                   )}
                 </button>
               </Tooltip>
