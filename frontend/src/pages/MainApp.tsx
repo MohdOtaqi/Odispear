@@ -20,7 +20,7 @@ import { CreateChannelModal } from '../components/modals/CreateChannelModal';
 import { CreateCategoryModal } from '../components/modals/CreateCategoryModal';
 import { VoicePanelAdvanced } from '../components/VoiceChat/VoicePanelAdvanced';
 import { VoiceChannelView } from '../components/VoiceChat/VoiceChannelView';
-import { useVoiceChat } from '../components/VoiceChat/VoiceChatProvider';
+import { useVoiceChat } from '../components/VoiceChat/LiveKitProvider';
 import { useAuthStore } from '../store/authStore';
 import { useGuildStore } from '../store/guildStore';
 import { useMessageStore } from '../store/messageStore';
