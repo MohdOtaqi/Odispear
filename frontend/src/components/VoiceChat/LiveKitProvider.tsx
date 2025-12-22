@@ -145,7 +145,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Get token from backend
     const getToken = async (channelId: string): Promise<{ token: string; roomName: string; livekitUrl: string }> => {
-        const response = await fetch(`${API_BASE}/api/v1/voice/livekit-token/${channelId}`, {
+        const response = await fetch(`${API_BASE}/v1/voice/livekit-token/${channelId}`, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
