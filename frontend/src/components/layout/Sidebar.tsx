@@ -188,7 +188,8 @@ export const Sidebar = React.memo<SidebarProps>(({
     leaveChannel,
     isDeafened,
     isVideoEnabled,
-    isScreenSharing
+    isScreenSharing,
+    connectionQuality
   } = useVoiceChat();
 
   // Get voice users from the global store (populated by WebSocket events)
@@ -373,10 +374,18 @@ export const Sidebar = React.memo<SidebarProps>(({
                   </p>
                 </div>
               </div>
-              {/* Latency indicator */}
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30">
-                <Wifi className="h-3 w-3 text-green-400" />
-                <span className="text-[10px] text-green-400 font-medium">Good</span>
+              {/* Connection quality indicator */}
+              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30`}>
+                <Wifi className={`h-3 w-3 ${connectionQuality === 'excellent' || connectionQuality === 'good' ? 'text-green-400' :
+                    connectionQuality === 'poor' ? 'text-yellow-400' :
+                      connectionQuality === 'lost' ? 'text-red-400' : 'text-gray-400'
+                  }`} />
+                <span className={`text-[10px] font-medium capitalize ${connectionQuality === 'excellent' || connectionQuality === 'good' ? 'text-green-400' :
+                    connectionQuality === 'poor' ? 'text-yellow-400' :
+                      connectionQuality === 'lost' ? 'text-red-400' : 'text-gray-400'
+                  }`}>
+                  {connectionQuality === 'unknown' ? 'Connecting...' : connectionQuality}
+                </span>
               </div>
             </div>
 

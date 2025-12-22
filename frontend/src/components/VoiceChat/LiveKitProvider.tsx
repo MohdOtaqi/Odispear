@@ -8,6 +8,7 @@ import {
     Participant,
     LocalAudioTrack,
     ConnectionState,
+    ConnectionQuality,
     createLocalAudioTrack,
 } from 'livekit-client';
 import { createRNNoiseSuppressedStream, destroyRNNoise } from '../../lib/rnnNoiseProcessor';
@@ -83,6 +84,7 @@ interface LiveKitContextType {
     participants: Participant[];
     localParticipant: Participant | null;
     speakingParticipants: Set<string>;
+    connectionQuality: 'excellent' | 'good' | 'poor' | 'lost' | 'unknown';
 
     // Screen share settings
     screenShareSettings: ScreenShareSettings;
@@ -140,6 +142,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [localParticipant, setLocalParticipant] = useState<Participant | null>(null);
     const [speakingParticipants, setSpeakingParticipants] = useState<Set<string>>(new Set());
+    const [connectionQuality, setConnectionQuality] = useState<'excellent' | 'good' | 'poor' | 'lost' | 'unknown'>('unknown');
     const [screenShareSettings, setScreenShareSettings] = useState<ScreenShareSettings>({ resolution: '1080p', fps: 30 });
     const [settings, setSettings] = useState({ inputVolume: 100, outputVolume: 100 });
 
@@ -571,6 +574,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
         participants,
         localParticipant,
         speakingParticipants,
+        connectionQuality,
         screenShareSettings,
         setScreenShareSettings,
         joinChannel,

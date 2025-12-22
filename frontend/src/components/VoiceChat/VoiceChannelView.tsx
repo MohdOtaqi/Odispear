@@ -6,19 +6,23 @@ import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { UserProfileModal } from '../UserProfileModal';
 import { Track, Participant } from 'livekit-client';
 
-// Component to render a participant's video using LiveKit
+// Component to render a participant's video using LiveKit with PiP support
 const ParticipantVideo: React.FC<{
   participant: Participant;
   isScreen?: boolean;
   isLocal?: boolean;
-  className?: string
+  className?: string;
+  showPiPButton?: boolean;
 }> = ({
   participant,
   isScreen = false,
   isLocal = false,
-  className
+  className,
+  showPiPButton = true
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [isInPiP, setIsInPiP] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     useEffect(() => {
       if (!participant || !videoRef.current) return;
@@ -62,14 +66,78 @@ const ParticipantVideo: React.FC<{
       };
     }, [participant, isScreen]);
 
+    // Handle PiP state changes
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const handleEnterPiP = () => setIsInPiP(true);
+      const handleLeavePiP = () => setIsInPiP(false);
+
+      video.addEventListener('enterpictureinpicture', handleEnterPiP);
+      video.addEventListener('leavepictureinpicture', handleLeavePiP);
+
+      return () => {
+        video.removeEventListener('enterpictureinpicture', handleEnterPiP);
+        video.removeEventListener('leavepictureinpicture', handleLeavePiP);
+      };
+    }, []);
+
+    // Toggle PiP mode
+    const togglePiP = async () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (document.pictureInPictureEnabled) {
+          await video.requestPictureInPicture();
+        }
+      } catch (error) {
+        console.error('[PiP] Failed to toggle:', error);
+      }
+    };
+
+    // Check if PiP is supported
+    const isPiPSupported = 'pictureInPictureEnabled' in document && document.pictureInPictureEnabled;
+
     return (
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className={className || `absolute inset-0 w-full h-full ${isScreen ? 'object-contain' : 'object-cover'} bg-black`}
-      />
+      <div
+        className="relative w-full h-full"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={className || `absolute inset-0 w-full h-full ${isScreen ? 'object-contain' : 'object-cover'} bg-black`}
+        />
+
+        {/* PiP Button - appears on hover */}
+        {showPiPButton && isPiPSupported && isHovered && (
+          <button
+            onClick={togglePiP}
+            className="absolute top-2 right-2 p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-all duration-200 backdrop-blur-sm z-10"
+            title={isInPiP ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
+          >
+            {isInPiP ? (
+              <X className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+          </button>
+        )}
+
+        {/* PiP indicator */}
+        {isInPiP && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <div className="text-white text-sm font-medium">Playing in Picture-in-Picture</div>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -484,8 +552,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                       <button
                         onClick={() => setScreenShareSettings({ resolution: '720p', fps: 30 })}
                         className={`p-2 rounded-lg border text-center transition-all ${screenShareSettings.resolution === '720p' && screenShareSettings.fps === 30
-                            ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
-                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
                           }`}
                       >
                         <span className="text-xs font-semibold block">720p</span>
@@ -494,8 +562,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                       <button
                         onClick={() => setScreenShareSettings({ resolution: '1080p', fps: 30 })}
                         className={`p-2 rounded-lg border text-center transition-all ${screenShareSettings.resolution === '1080p' && screenShareSettings.fps === 30
-                            ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
-                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
                           }`}
                       >
                         <span className="text-xs font-semibold block">1080p</span>
@@ -504,8 +572,8 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                       <button
                         onClick={() => setScreenShareSettings({ resolution: '1080p', fps: 60 })}
                         className={`p-2 rounded-lg border text-center transition-all relative ${screenShareSettings.resolution === '1080p' && screenShareSettings.fps === 60
-                            ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
-                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
                           }`}
                       >
                         <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-mot-gold text-black rounded-full">HD</span>
