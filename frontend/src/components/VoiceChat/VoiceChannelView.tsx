@@ -185,6 +185,7 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
     isConnected,
     channelId: currentChannelId,
     localParticipant,
+    isMuted,
     isDeafened,
     toggleMute,
     toggleDeafen,
@@ -195,7 +196,7 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
     screenShareParticipant,
     speakingParticipants,
     participants,
-    getCallObject,
+    getRoom,
     screenShareSettings,
     setScreenShareSettings
   } = useVoiceChat();
