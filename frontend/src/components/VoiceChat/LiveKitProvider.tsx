@@ -423,7 +423,14 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return;
         }
 
+        // IMPORTANT: If user is deafened, they cannot unmute - must undeafen first
         const newMuted = !isMuted;
+        if (isDeafened && !newMuted) {
+            console.log('[LiveKit] toggleMute: Cannot unmute while deafened');
+            toast.error('You must undeafen to unmute');
+            return;
+        }
+
         console.log('[LiveKit] toggleMute: isMuted=', isMuted, 'newMuted=', newMuted);
 
         try {
@@ -477,7 +484,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             console.error('[LiveKit] Failed to toggle mute:', error);
             toast.error('Failed to toggle microphone');
         }
-    }, [isMuted, channelId]);
+    }, [isMuted, isDeafened, channelId]);
 
     // Toggle deafen
     const toggleDeafen = useCallback(() => {
