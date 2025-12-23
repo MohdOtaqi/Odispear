@@ -11,7 +11,7 @@ import {
     ConnectionQuality,
     createLocalAudioTrack,
 } from 'livekit-client';
-import { createRNNoiseSuppressedStream, destroyRNNoise } from '../../lib/rnnNoiseProcessor';
+import { createRealRNNoiseSuppressedStream, destroyRealRNNoise } from '../../lib/realRNNoiseProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { socketManager } from '../../lib/socket';
@@ -382,7 +382,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             });
 
             try {
-                processedStream = await createRNNoiseSuppressedStream(rawStream);
+                processedStream = await createRealRNNoiseSuppressedStream(rawStream);
 
                 console.log('[LiveKit] Noise processor returned:', {
                     sameStream: processedStream === rawStream,
@@ -476,7 +476,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             processedTrackRef.current = null;
         }
 
-        destroyRNNoise();
+        destroyRealRNNoise();
 
         if (channelId) {
             socketManager.leaveVoice(channelId);
@@ -643,7 +643,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (roomRef.current) {
                 roomRef.current.disconnect();
             }
-            destroyRNNoise();
+            destroyRealRNNoise();
         };
     }, []);
 
@@ -723,7 +723,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     processedTrackRef.current.stop();
                     processedTrackRef.current = null;
                 }
-                destroyRNNoise();
+                destroyRealRNNoise();
 
                 const rawStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
@@ -734,7 +734,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     },
                 });
 
-                const processedStream = await createRNNoiseSuppressedStream(rawStream);
+                const processedStream = await createRealRNNoiseSuppressedStream(rawStream);
                 const audioTrack = processedStream.getAudioTracks()[0];
                 const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
                 processedTrackRef.current = localAudioTrack;
