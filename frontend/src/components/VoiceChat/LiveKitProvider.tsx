@@ -12,6 +12,7 @@ import {
     createLocalAudioTrack,
 } from 'livekit-client';
 import { createRNNoiseSuppressedStream, destroyRNNoise } from '../../lib/rnnNoiseProcessor';
+import { createEdgeNoiseReducedStream, isEdgeBrowser } from '../../lib/edgeNoiseProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { socketManager } from '../../lib/socket';
@@ -360,8 +361,8 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Set initial connection quality to 'good' after successful connection
             setConnectionQuality('good');
 
-            // Create audio track with noise gate processor
-            console.log('[LiveKit] Creating audio track with noise gate processor...');
+            // Create audio track with noise processing
+            console.log('[LiveKit] Creating audio track with noise suppression...');
 
             // Get raw audio with browser enhancements
             const rawStream = await navigator.mediaDevices.getUserMedia({
@@ -374,16 +375,27 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 },
             });
 
-            // Apply noise gate + audio filters
+            // Detect browser and use appropriate noise processor
+            const isEdge = isEdgeBrowser();
+            console.log('[LiveKit] Browser detection - Edge:', isEdge);
+
             let processedStream: MediaStream;
             try {
-                processedStream = await createRNNoiseSuppressedStream(rawStream);
-                console.log('[LiveKit] ✅ Noise gate applied successfully');
-                toast.success('🎤 Noise suppression active!', { duration: 3000 });
+                if (isEdge) {
+                    // Edge: Use edge-specific processor (HP@100Hz + Compressor + Gate)
+                    processedStream = await createEdgeNoiseReducedStream(rawStream);
+                    console.log('[LiveKit] ✅ Edge noise processor active');
+                    toast.success('🎤 Edge noise suppression active!', { duration: 3000 });
+                } else {
+                    // Other browsers: Use RNNoise processor (aggressive gate + filters)
+                    processedStream = await createRNNoiseSuppressedStream(rawStream);
+                    console.log('[LiveKit] ✅ RNN noise processor active');
+                    toast.success('🎤 Noise suppression active!', { duration: 3000 });
+                }
             } catch (error) {
-                console.error('[LiveKit] Noise gate failed:', error);
+                console.error('[LiveKit] Noise processing failed:', error);
                 processedStream = rawStream;
-                toast.error('Noise suppression failed');
+                toast.error('Noise suppression failed - using raw audio');
             }
 
             const audioTrack = processedStream.getAudioTracks()[0];
