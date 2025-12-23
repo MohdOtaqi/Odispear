@@ -77,7 +77,7 @@ export async function createRealRNNoiseSuppressedStream(
         // Create script processor for RNNoise processing
         // Note: ScriptProcessorNode is deprecated but still works and is simpler
         const bufferSize = 4096; // Must be power of 2
-        const scriptProcessor = audioContext.createScriptProcessorNode(bufferSize, 1, 1);
+        const scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
 
         // Buffer to accumulate samples for RNNoise (needs 480 samples per frame)
         let inputBuffer: Float32Array = new Float32Array(0);
