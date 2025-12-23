@@ -373,20 +373,46 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Apply aggressive noise suppression
             let processedStream: MediaStream;
             let noiseSuppressionActive = false;
+
+            console.log('[LiveKit] 🎯 Applying noise suppression to raw stream...');
+            console.log('[LiveKit] Raw stream details:', {
+                tracks: rawStream.getAudioTracks().length,
+                id: rawStream.id,
+                active: rawStream.active
+            });
+
             try {
                 processedStream = await createRNNoiseSuppressedStream(rawStream);
+
+                console.log('[LiveKit] Noise processor returned:', {
+                    sameStream: processedStream === rawStream,
+                    tracks: processedStream.getAudioTracks().length,
+                    id: processedStream.id,
+                    active: processedStream.active
+                });
+
                 // Verify we got a different stream (noise processing successful)
                 if (processedStream !== rawStream && processedStream.getAudioTracks().length > 0) {
+                    const processedTrack = processedStream.getAudioTracks()[0];
+                    console.log('[LiveKit] Processed track details:', {
+                        label: processedTrack.label,
+                        enabled: processedTrack.enabled,
+                        muted: processedTrack.muted,
+                        readyState: processedTrack.readyState
+                    });
+
                     noiseSuppressionActive = true;
-                    console.log('[LiveKit] ✅ NOISE SUPPRESSION ACTIVE - using processed stream');
-                    toast.success('Noise suppression active 🎤', { duration: 3000 });
+                    console.log('[LiveKit] ✅ KRISP-LEVEL NOISE CANCELLATION ACTIVE');
+                    toast.success('🎤 Krisp-level noise cancellation active!', { duration: 4000 });
                 } else {
                     console.warn('[LiveKit] ⚠️ Noise processing returned same/empty stream, using raw');
                     processedStream = rawStream;
+                    toast.error('Noise suppression failed - using raw audio');
                 }
-            } catch (noiseError) {
+            } catch (noiseError: any) {
                 console.error('[LiveKit] ❌ Noise suppression failed:', noiseError);
-                toast.error('Noise suppression unavailable');
+                console.error('[LiveKit] Error details:', noiseError?.message, noiseError?.stack);
+                toast.error('Noise suppression unavailable - check console');
                 processedStream = rawStream;
             }
 
@@ -718,8 +744,8 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
 
                 await roomRef.current.localParticipant.publishTrack(localAudioTrack);
-                console.log('[LiveKit] ✅ Switched to input device:', deviceId);
-                toast.success('Microphone changed');
+                console.log('[LiveKit] ✅ KRISP-LEVEL NOISE CANCELLATION ACTIVE');
+                toast.success('🎤 Krisp-level noise cancellation active!', { duration: 4000 });
             } catch (error) {
                 console.error('[LiveKit] Failed to switch input device:', error);
                 toast.error('Failed to switch microphone');

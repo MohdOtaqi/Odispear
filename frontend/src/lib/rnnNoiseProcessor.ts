@@ -17,8 +17,8 @@ const GATE_ATTACK = 0.005; // 5ms - how fast the gate opens (fast for voice)
 const GATE_RELEASE = 0.25; // 250ms - how fast the gate closes (longer to avoid chopping)
 const GATE_FLOOR = 0.02; // Minimum gain when gate is closed (2% - nearly silent)
 
-// Debug flag
-const DEBUG_NOISE_GATE = true;
+// Debug flag - reduced logging
+const DEBUG_NOISE_GATE = false;
 
 /**
  * Get RMS level in dB from audio data
@@ -97,12 +97,15 @@ export async function createRNNoiseSuppressedStream(
     originalStream: MediaStream
 ): Promise<MediaStream> {
     try {
+        console.log('[NoiseProcessor] 🎯 STARTING noise suppression process...');
+        
         // Clean up any existing context
         destroyRNNoise();
 
         // Get original track settings
         const originalTrack = originalStream.getAudioTracks()[0];
         const settings = originalTrack?.getSettings();
+        console.log('[NoiseProcessor] Original track settings:', settings);
 
         // Request new stream with browser noise suppression
         let enhancedStream = originalStream;
@@ -117,9 +120,9 @@ export async function createRNNoiseSuppressedStream(
                     sampleRate: 48000,
                 }
             });
-            console.log('[NoiseProcessor] Browser noise suppression enabled');
+            console.log('[NoiseProcessor] ✅ Browser noise suppression enabled');
         } catch (e) {
-            console.log('[NoiseProcessor] Using original stream');
+            console.log('[NoiseProcessor] ⚠️ Using original stream, browser NS failed:', e);
             enhancedStream = originalStream;
         }
 
@@ -227,10 +230,22 @@ export async function createRNNoiseSuppressedStream(
         console.log('[NoiseProcessor] Chain: DC Block -> HP@85Hz -> Notch@50/60/100/120Hz -> LP@7.5kHz -> Presence@2.8kHz -> Compressor -> Gate -> Output');
         console.log('[NoiseProcessor] Gate: Threshold=' + GATE_THRESHOLD + 'dB, Open=' + GATE_OPEN_THRESHOLD + 'dB, Floor=' + (GATE_FLOOR * 100) + '%');
         console.log('[NoiseProcessor] Sample rate:', audioContext.sampleRate);
+        console.log('[NoiseProcessor] Output stream tracks:', destination.stream.getAudioTracks().length);
 
+        // Verify the stream is different from input
+        if (destination.stream === originalStream) {
+            console.error('[NoiseProcessor] ❌ OUTPUT STREAM IS SAME AS INPUT - PROCESSING FAILED');
+            return originalStream;
+        }
+
+        console.log('[NoiseProcessor] 🎉 NOISE SUPPRESSION SUCCESSFULLY CREATED - Stream is processed');
         return destination.stream;
-    } catch (error) {
-        console.error('[NoiseProcessor] Failed to create noise-suppressed stream:', error);
+    } catch (error: any) {
+        console.error('[NoiseProcessor] ❌ FATAL ERROR in noise suppression:', error);
+        console.error('[NoiseProcessor] Error stack:', error?.stack);
+        
+        // Clean up on error
+        destroyRNNoise();
         return originalStream;
     }
 }
