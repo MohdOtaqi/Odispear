@@ -11,7 +11,7 @@ import {
     ConnectionQuality,
     createLocalAudioTrack,
 } from 'livekit-client';
-import { KrispNoiseFilter, isKrispNoiseFilterSupported } from '@livekit/krisp-noise-filter';
+import { createRNNoiseSuppressedStream, destroyRNNoise } from '../../lib/rnnNoiseProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { socketManager } from '../../lib/socket';
@@ -360,71 +360,34 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Set initial connection quality to 'good' after successful connection
             setConnectionQuality('good');
 
-            // Create audio track with Krisp AI noise cancellation
-            console.log('[LiveKit] Creating audio track with Krisp AI noise cancellation...');
+            // Create audio track with noise gate processor
+            console.log('[LiveKit] Creating audio track with noise gate processor...');
 
-            // Check if Krisp is supported
-            const krispSupported = isKrispNoiseFilterSupported();
-            console.log('[LiveKit] Krisp noise filter supported:', krispSupported);
-
-            let localAudioTrack;
-
-            if (krispSupported) {
-                try {
-                    // Create Krisp noise filter processor
-                    const krispFilter = new KrispNoiseFilter();
-                    console.log('[LiveKit] Krisp filter created');
-
-                    // Create audio track with Krisp processor
-                    localAudioTrack = await createLocalAudioTrack({
-                        echoCancellation: true,
-                        noiseSuppression: false, // Krisp handles this
-                        autoGainControl: true,
-                        sampleRate: 48000,
-                        channelCount: 1,
-                        processor: krispFilter,
-                    });
-
-                    console.log('[LiveKit] ✅ Audio track created with KRISP AI:', {
-                        kind: localAudioTrack.kind,
-                        isMuted: localAudioTrack.isMuted,
-                    });
-
-                    toast.success('🎤 KRISP AI noise cancellation active!', { duration: 4000 });
-                } catch (krispError) {
-                    console.error('[LiveKit] Krisp failed, falling back to browser:', krispError);
-
-                    // Fallback to browser noise suppression
-                    localAudioTrack = await createLocalAudioTrack({
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                        sampleRate: 48000,
-                        channelCount: 1,
-                    });
-
-                    toast('🎤 Using browser noise suppression', { duration: 3000 });
-                }
-            } else {
-                console.log('[LiveKit] Krisp not supported, using browser noise suppression');
-
-                // Use browser noise suppression
-                localAudioTrack = await createLocalAudioTrack({
+            // Get raw audio with browser enhancements
+            const rawStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
                     sampleRate: 48000,
                     channelCount: 1,
-                });
+                },
+            });
 
-                console.log('[LiveKit] ✅ Audio track created with browser noise suppression:', {
-                    kind: localAudioTrack.kind,
-                    isMuted: localAudioTrack.isMuted,
-                });
-
-                toast('🎤 Noise suppression active', { duration: 3000 });
+            // Apply noise gate + audio filters
+            let processedStream: MediaStream;
+            try {
+                processedStream = await createRNNoiseSuppressedStream(rawStream);
+                console.log('[LiveKit] ✅ Noise gate applied successfully');
+                toast.success('🎤 Noise suppression active!', { duration: 3000 });
+            } catch (error) {
+                console.error('[LiveKit] Noise gate failed:', error);
+                processedStream = rawStream;
+                toast.error('Noise suppression failed');
             }
 
+            const audioTrack = processedStream.getAudioTracks()[0];
+            const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
             processedTrackRef.current = localAudioTrack;
 
             // Publish the track
@@ -476,7 +439,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             processedTrackRef.current = null;
         }
 
-        destroyRealRNNoise();
+        destroyRNNoise();
 
         if (channelId) {
             socketManager.leaveVoice(channelId);
@@ -643,7 +606,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (roomRef.current) {
                 roomRef.current.disconnect();
             }
-            destroyRealRNNoise();
+            destroyRNNoise();
         };
     }, []);
 
@@ -723,7 +686,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     processedTrackRef.current.stop();
                     processedTrackRef.current = null;
                 }
-                destroyRealRNNoise();
+                destroyRNNoise();
 
                 const rawStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
@@ -734,7 +697,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     },
                 });
 
-                const processedStream = await createRealRNNoiseSuppressedStream(rawStream);
+                const processedStream = await createRNNoiseSuppressedStream(rawStream);
                 const audioTrack = processedStream.getAudioTracks()[0];
                 const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
                 processedTrackRef.current = localAudioTrack;
