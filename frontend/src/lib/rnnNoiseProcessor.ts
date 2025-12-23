@@ -33,6 +33,10 @@ function getRMSdB(dataArray: Float32Array): number {
     return 20 * Math.log10(Math.max(rms, 1e-10));
 }
 
+// Track gate state for logging
+let lastLogTime = 0;
+let lastGateState = 'unknown';
+
 /**
  * Noise gate processing function - called via setInterval
  */
@@ -49,18 +53,22 @@ function processNoiseGate() {
     const now = audioContext.currentTime;
 
     let targetGain: number;
+    let gateState: string;
 
     if (currentDB > GATE_OPEN_THRESHOLD) {
         // Signal is strong - fully open the gate
         targetGain = 1.0;
+        gateState = 'OPEN (voice detected)';
     } else if (currentDB > GATE_THRESHOLD) {
         // Signal is in transition zone - partial opening (smooth ramp)
         const ratio = (currentDB - GATE_THRESHOLD) / (GATE_OPEN_THRESHOLD - GATE_THRESHOLD);
         // Use exponential curve for more natural sound
         targetGain = GATE_FLOOR + (1.0 - GATE_FLOOR) * (ratio * ratio);
+        gateState = 'PARTIAL';
     } else {
-        // Signal is below threshold - close the gate
+        // Signal is below threshold - close the gate (SUPPRESS NOISE)
         targetGain = GATE_FLOOR;
+        gateState = 'CLOSED (suppressing)';
     }
 
     // Apply attack/release timing
@@ -72,11 +80,15 @@ function processNoiseGate() {
         gateGainNode.gain.setTargetAtTime(targetGain, now, GATE_RELEASE);
     }
 
-    // Debug logging (throttled)
-    if (DEBUG_NOISE_GATE && Math.random() < 0.02) {
-        console.log(`[NoiseGate] Level: ${currentDB.toFixed(1)}dB, Gain: ${(currentGain * 100).toFixed(0)}%, Target: ${(targetGain * 100).toFixed(0)}%`);
+    // Log every 2 seconds OR when gate state changes
+    const logNow = Date.now();
+    if (DEBUG_NOISE_GATE && (gateState !== lastGateState || logNow - lastLogTime > 2000)) {
+        console.log(`[NoiseGate] ${gateState} | Level: ${currentDB.toFixed(1)}dB | Gain: ${(targetGain * 100).toFixed(0)}%`);
+        lastLogTime = logNow;
+        lastGateState = gateState;
     }
 }
+
 
 /**
  * Create a noise-suppressed audio stream with proper noise gate

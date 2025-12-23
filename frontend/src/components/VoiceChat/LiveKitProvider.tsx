@@ -371,8 +371,31 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             });
 
             // Apply aggressive noise suppression
-            const processedStream = await createRNNoiseSuppressedStream(rawStream);
+            let processedStream: MediaStream;
+            let noiseSuppressionActive = false;
+            try {
+                processedStream = await createRNNoiseSuppressedStream(rawStream);
+                // Verify we got a different stream (noise processing successful)
+                if (processedStream !== rawStream && processedStream.getAudioTracks().length > 0) {
+                    noiseSuppressionActive = true;
+                    console.log('[LiveKit] ✅ NOISE SUPPRESSION ACTIVE - using processed stream');
+                    toast.success('Noise suppression active 🎤', { duration: 3000 });
+                } else {
+                    console.warn('[LiveKit] ⚠️ Noise processing returned same/empty stream, using raw');
+                    processedStream = rawStream;
+                }
+            } catch (noiseError) {
+                console.error('[LiveKit] ❌ Noise suppression failed:', noiseError);
+                toast.error('Noise suppression unavailable');
+                processedStream = rawStream;
+            }
+
             const audioTrack = processedStream.getAudioTracks()[0];
+            console.log('[LiveKit] Audio track ready:', {
+                label: audioTrack.label,
+                enabled: audioTrack.enabled,
+                noiseSuppressionActive,
+            });
 
             // Create LiveKit track from processed audio
             const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);

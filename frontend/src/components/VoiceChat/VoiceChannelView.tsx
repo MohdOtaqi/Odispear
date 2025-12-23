@@ -575,16 +575,6 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                         <span className="text-[10px] opacity-70">30 FPS</span>
                       </button>
                       <button
-                        onClick={() => setScreenShareSettings({ resolution: '1080p', fps: 30 })}
-                        className={`p-2 rounded-lg border text-center transition-all ${screenShareSettings.resolution === '1080p' && screenShareSettings.fps === 30
-                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
-                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
-                          }`}
-                      >
-                        <span className="text-xs font-semibold block">1080p</span>
-                        <span className="text-[10px] opacity-70">30 FPS</span>
-                      </button>
-                      <button
                         onClick={() => setScreenShareSettings({ resolution: '1080p', fps: 60 })}
                         className={`p-2 rounded-lg border text-center transition-all relative ${screenShareSettings.resolution === '1080p' && screenShareSettings.fps === 60
                           ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
@@ -594,6 +584,50 @@ export const VoiceChannelView: React.FC<VoiceChannelViewProps> = ({
                         <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-mot-gold text-black rounded-full">HD</span>
                         <span className="text-xs font-semibold block">1080p</span>
                         <span className="text-[10px] opacity-70">60 FPS</span>
+                      </button>
+                      <button
+                        onClick={() => setScreenShareSettings({ resolution: '1440p', fps: 60 })}
+                        className={`p-2 rounded-lg border text-center transition-all relative ${screenShareSettings.resolution === '1440p' && screenShareSettings.fps === 60
+                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-blue-500 text-white rounded-full">2K</span>
+                        <span className="text-xs font-semibold block">1440p</span>
+                        <span className="text-[10px] opacity-70">60 FPS</span>
+                      </button>
+                      <button
+                        onClick={() => setScreenShareSettings({ resolution: '4k', fps: 60 })}
+                        className={`p-2 rounded-lg border text-center transition-all relative ${screenShareSettings.resolution === '4k' && screenShareSettings.fps === 60
+                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-purple-500 text-white rounded-full">4K</span>
+                        <span className="text-xs font-semibold block">4K</span>
+                        <span className="text-[10px] opacity-70">60 FPS</span>
+                      </button>
+                      <button
+                        onClick={() => setScreenShareSettings({ resolution: '4k', fps: 120 })}
+                        className={`p-2 rounded-lg border text-center transition-all relative ${screenShareSettings.resolution === '4k' && screenShareSettings.fps === 120
+                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full">MAX</span>
+                        <span className="text-xs font-semibold block">4K</span>
+                        <span className="text-[10px] opacity-70">120 FPS</span>
+                      </button>
+                      <button
+                        onClick={() => setScreenShareSettings({ resolution: 'source', fps: 'max' })}
+                        className={`p-2 rounded-lg border text-center transition-all relative ${screenShareSettings.resolution === 'source'
+                          ? 'bg-mot-gold/20 border-mot-gold/50 text-mot-gold'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                          }`}
+                      >
+                        <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-full">AUTO</span>
+                        <span className="text-xs font-semibold block">Source</span>
+                        <span className="text-[10px] opacity-70">Max FPS</span>
                       </button>
                     </div>
                   </div>
