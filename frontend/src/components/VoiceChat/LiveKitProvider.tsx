@@ -11,7 +11,7 @@ import {
     ConnectionQuality,
     createLocalAudioTrack,
 } from 'livekit-client';
-// Noise suppression is handled by LiveKit's createLocalAudioTrack with browser WebRTC
+import { KrispNoiseFilter, isKrispNoiseFilterSupported } from '@livekit/krisp-noise-filter';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { socketManager } from '../../lib/socket';
@@ -360,29 +360,76 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Set initial connection quality to 'good' after successful connection
             setConnectionQuality('good');
 
-            // Create audio track using LiveKit's createLocalAudioTrack
-            // Uses browser's built-in WebRTC noise suppression which is reliable
-            console.log('[LiveKit] Creating audio track with browser noise suppression...');
+            // Create audio track with Krisp AI noise cancellation
+            console.log('[LiveKit] Creating audio track with Krisp AI noise cancellation...');
 
-            const localAudioTrack = await createLocalAudioTrack({
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: 48000,
-                channelCount: 1,
-            });
+            // Check if Krisp is supported
+            const krispSupported = isKrispNoiseFilterSupported();
+            console.log('[LiveKit] Krisp noise filter supported:', krispSupported);
 
-            console.log('[LiveKit] ✅ Audio track created:', {
-                kind: localAudioTrack.kind,
-                isMuted: localAudioTrack.isMuted,
-            });
+            let localAudioTrack;
+
+            if (krispSupported) {
+                try {
+                    // Create Krisp noise filter processor
+                    const krispFilter = new KrispNoiseFilter();
+                    console.log('[LiveKit] Krisp filter created');
+
+                    // Create audio track with Krisp processor
+                    localAudioTrack = await createLocalAudioTrack({
+                        echoCancellation: true,
+                        noiseSuppression: false, // Krisp handles this
+                        autoGainControl: true,
+                        sampleRate: 48000,
+                        channelCount: 1,
+                        processor: krispFilter,
+                    });
+
+                    console.log('[LiveKit] ✅ Audio track created with KRISP AI:', {
+                        kind: localAudioTrack.kind,
+                        isMuted: localAudioTrack.isMuted,
+                    });
+
+                    toast.success('🎤 KRISP AI noise cancellation active!', { duration: 4000 });
+                } catch (krispError) {
+                    console.error('[LiveKit] Krisp failed, falling back to browser:', krispError);
+
+                    // Fallback to browser noise suppression
+                    localAudioTrack = await createLocalAudioTrack({
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 48000,
+                        channelCount: 1,
+                    });
+
+                    toast('🎤 Using browser noise suppression', { duration: 3000 });
+                }
+            } else {
+                console.log('[LiveKit] Krisp not supported, using browser noise suppression');
+
+                // Use browser noise suppression
+                localAudioTrack = await createLocalAudioTrack({
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 48000,
+                    channelCount: 1,
+                });
+
+                console.log('[LiveKit] ✅ Audio track created with browser noise suppression:', {
+                    kind: localAudioTrack.kind,
+                    isMuted: localAudioTrack.isMuted,
+                });
+
+                toast('🎤 Noise suppression active', { duration: 3000 });
+            }
 
             processedTrackRef.current = localAudioTrack;
 
             // Publish the track
             await roomInstance.localParticipant.publishTrack(localAudioTrack);
-            console.log('[LiveKit] ✅ Published audio track with noise suppression');
-            toast.success('🎤 Noise suppression active!', { duration: 3000 });
+            console.log('[LiveKit] ✅ Published audio track');
 
             // Ensure initial mute state is synced (track starts unmuted)
             setIsMuted(false);
