@@ -11,7 +11,7 @@ import {
     ConnectionQuality,
     createLocalAudioTrack,
 } from 'livekit-client';
-import { createRealRNNoiseSuppressedStream, destroyRealRNNoise } from '../../lib/realRNNoiseProcessor';
+// Noise suppression is handled by LiveKit's createLocalAudioTrack with browser WebRTC
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { socketManager } from '../../lib/socket';
@@ -360,76 +360,29 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Set initial connection quality to 'good' after successful connection
             setConnectionQuality('good');
 
-            // Create audio track with noise suppression
-            console.log('[LiveKit] Creating audio track with noise suppression...');
-            const rawStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                },
+            // Create audio track using LiveKit's createLocalAudioTrack
+            // Uses browser's built-in WebRTC noise suppression which is reliable
+            console.log('[LiveKit] Creating audio track with browser noise suppression...');
+
+            const localAudioTrack = await createLocalAudioTrack({
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 48000,
+                channelCount: 1,
             });
 
-            // Apply aggressive noise suppression
-            let processedStream: MediaStream;
-            let noiseSuppressionActive = false;
-
-            console.log('[LiveKit] 🎯 Applying noise suppression to raw stream...');
-            console.log('[LiveKit] Raw stream details:', {
-                tracks: rawStream.getAudioTracks().length,
-                id: rawStream.id,
-                active: rawStream.active
+            console.log('[LiveKit] ✅ Audio track created:', {
+                kind: localAudioTrack.kind,
+                isMuted: localAudioTrack.isMuted,
             });
 
-            try {
-                processedStream = await createRealRNNoiseSuppressedStream(rawStream);
-
-                console.log('[LiveKit] Noise processor returned:', {
-                    sameStream: processedStream === rawStream,
-                    tracks: processedStream.getAudioTracks().length,
-                    id: processedStream.id,
-                    active: processedStream.active
-                });
-
-                // Verify we got a different stream (noise processing successful)
-                if (processedStream !== rawStream && processedStream.getAudioTracks().length > 0) {
-                    const processedTrack = processedStream.getAudioTracks()[0];
-                    console.log('[LiveKit] Processed track details:', {
-                        label: processedTrack.label,
-                        enabled: processedTrack.enabled,
-                        muted: processedTrack.muted,
-                        readyState: processedTrack.readyState
-                    });
-
-                    noiseSuppressionActive = true;
-                    console.log('[LiveKit] ✅ KRISP-LEVEL NOISE CANCELLATION ACTIVE');
-                    toast.success('🎤 Krisp-level noise cancellation active!', { duration: 4000 });
-                } else {
-                    console.warn('[LiveKit] ⚠️ Noise processing returned same/empty stream, using raw');
-                    processedStream = rawStream;
-                    toast.error('Noise suppression failed - using raw audio');
-                }
-            } catch (noiseError: any) {
-                console.error('[LiveKit] ❌ Noise suppression failed:', noiseError);
-                console.error('[LiveKit] Error details:', noiseError?.message, noiseError?.stack);
-                toast.error('Noise suppression unavailable - check console');
-                processedStream = rawStream;
-            }
-
-            const audioTrack = processedStream.getAudioTracks()[0];
-            console.log('[LiveKit] Audio track ready:', {
-                label: audioTrack.label,
-                enabled: audioTrack.enabled,
-                noiseSuppressionActive,
-            });
-
-            // Create LiveKit track from processed audio
-            const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
             processedTrackRef.current = localAudioTrack;
 
             // Publish the track
             await roomInstance.localParticipant.publishTrack(localAudioTrack);
             console.log('[LiveKit] ✅ Published audio track with noise suppression');
+            toast.success('🎤 Noise suppression active!', { duration: 3000 });
 
             // Ensure initial mute state is synced (track starts unmuted)
             setIsMuted(false);
