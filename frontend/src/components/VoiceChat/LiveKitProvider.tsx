@@ -11,8 +11,7 @@ import {
     ConnectionQuality,
     createLocalAudioTrack,
 } from 'livekit-client';
-import { createRNNoiseSuppressedStream, destroyRNNoise } from '../../lib/rnnNoiseProcessor';
-import { createEdgeNoiseReducedStream, isEdgeBrowser } from '../../lib/edgeNoiseProcessor';
+import { createKrispLevelNoiseSuppressedStream, destroyKrispLevelNoise, destroyKrispLevelNoiseFull, setKrispMuted } from '../../lib/krispLevelNoiseProcessor';
 import { useVoiceUsersStore } from '../../store/voiceUsersStore';
 import { useAuthStore } from '../../store/authStore';
 import { socketManager } from '../../lib/socket';
@@ -375,23 +374,14 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 },
             });
 
-            // Detect browser and use appropriate noise processor
-            const isEdge = isEdgeBrowser();
-            console.log('[LiveKit] Browser detection - Edge:', isEdge);
+            // Use RNNoise AI for noise suppression (same for ALL browsers)
+            console.log('[LiveKit] Applying RNNoise AI noise suppression...');
 
             let processedStream: MediaStream;
             try {
-                if (isEdge) {
-                    // Edge: Use edge-specific processor (HP@100Hz + Compressor + Gate)
-                    processedStream = await createEdgeNoiseReducedStream(rawStream);
-                    console.log('[LiveKit] ✅ Edge noise processor active');
-                    toast.success('🎤 Edge noise suppression active!', { duration: 3000 });
-                } else {
-                    // Other browsers: Use RNNoise processor (aggressive gate + filters)
-                    processedStream = await createRNNoiseSuppressedStream(rawStream);
-                    console.log('[LiveKit] ✅ RNN noise processor active');
-                    toast.success('🎤 Noise suppression active!', { duration: 3000 });
-                }
+                processedStream = await createKrispLevelNoiseSuppressedStream(rawStream);
+                console.log('[LiveKit] ✅ RNNoise AI noise processor active');
+                toast.success('🎤 AI Noise Suppression active!', { duration: 3000 });
             } catch (error) {
                 console.error('[LiveKit] Noise processing failed:', error);
                 processedStream = rawStream;
@@ -451,7 +441,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             processedTrackRef.current = null;
         }
 
-        destroyRNNoise();
+        destroyKrispLevelNoiseFull();  // Full cleanup when leaving channel
 
         if (channelId) {
             socketManager.leaveVoice(channelId);
@@ -488,6 +478,10 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.log('[LiveKit] toggleMute: isMuted=', isMuted, 'newMuted=', newMuted);
 
         try {
+            // IMPORTANT: Control the noise processor's internal mute state
+            // This properly handles buffer clearing on unmute to prevent audio issues
+            setKrispMuted(newMuted);
+
             // Method 1: Control the underlying MediaStreamTrack directly
             if (processedTrackRef.current) {
                 const mediaTrack = processedTrackRef.current.mediaStreamTrack;
@@ -618,7 +612,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (roomRef.current) {
                 roomRef.current.disconnect();
             }
-            destroyRNNoise();
+            destroyKrispLevelNoiseFull();  // Full cleanup on unmount
         };
     }, []);
 
@@ -698,7 +692,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     processedTrackRef.current.stop();
                     processedTrackRef.current = null;
                 }
-                destroyRNNoise();
+                destroyKrispLevelNoise();
 
                 const rawStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
@@ -709,7 +703,8 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     },
                 });
 
-                const processedStream = await createRNNoiseSuppressedStream(rawStream);
+                // Use RNNoise AI for device switch (same for ALL browsers)
+                const processedStream = await createKrispLevelNoiseSuppressedStream(rawStream);
                 const audioTrack = processedStream.getAudioTracks()[0];
                 const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
                 processedTrackRef.current = localAudioTrack;

@@ -1,290 +1,307 @@
 /**
- * Krisp-Level Noise Cancellation
- * Uses RNNoise algorithm via WebAssembly for industry-standard noise suppression
- * Preserves audio quality while providing excellent noise cancellation
+ * Enhanced RNNoise AI Noise Suppression with Transient Detection
+ * Features:
+ * - RNNoise neural network for continuous noise suppression
+ * - Transient detection to suppress keyboard clicks even during speech
+ * - Proper mute/unmute handling with buffer clearing
+ * - State persists across mute/unmute cycles
  */
 
-// RNNoise WASM module (we'll load this dynamically)
-let rnnoise: any = null;
-let wasmModule: any = null;
-let isInitialized = false;
+const RNNOISE_FRAME_SIZE = 480;
+const SAMPLE_RATE = 48000;
 
-// Audio processing state
+// Persistent module state (survives mute/unmute)
+let rnnoiseModule: any = null;
+let denoiseState: number = 0;
+let inputPtr: number = 0;
+let outputPtr: number = 0;
+let isModuleReady = false;
+
+// Per-stream state (recreated each time)
 let audioContext: AudioContext | null = null;
-let processorNode: ScriptProcessorNode | null = null;
+let scriptProcessor: ScriptProcessorNode | null = null;
+let sourceNode: MediaStreamAudioSourceNode | null = null;
 
-// RNNoise state
-let denoiseState: any = null;
-const FRAME_SIZE = 480; // RNNoise requires 480 samples (10ms at 48kHz)
-let inputBuffer: Float32Array = new Float32Array(FRAME_SIZE);
-let outputBuffer: Float32Array = new Float32Array(FRAME_SIZE);
-let bufferIndex = 0;
+// Mute control state
+let isMutedByControl = false;
+let inputBuffer = new Float32Array(0);
+let outputBuffer = new Float32Array(0);
 
-// Quality preservation settings
-const INPUT_GAIN = 1.0;  // Don't alter input gain
-const OUTPUT_GAIN = 1.0; // Don't alter output gain
-const VAD_THRESHOLD = 0.1; // Voice activity detection threshold
+// Transient detection state
+const TRANSIENT_HISTORY_SIZE = 8; // ~8 frames of history for detection
+const TRANSIENT_THRESHOLD_RATIO = 4.0; // Energy spike must be 4x the average to be a transient
+const TRANSIENT_RECOVERY_FRAMES = 3; // How many frames to attenuate after transient
+let energyHistory: number[] = [];
+let transientRecoveryCounter = 0;
 
 /**
- * Load RNNoise WebAssembly module
+ * Initialize RNNoise module (only once)
  */
-async function loadRNNoiseWASM(): Promise<boolean> {
+async function ensureRNNoiseModule(): Promise<void> {
+    if (isModuleReady && rnnoiseModule && denoiseState) {
+        console.log('[RNNoiseAI] ✅ Reusing existing RNNoise module');
+        return;
+    }
+
+    console.log('[RNNoiseAI] 🔄 Initializing RNNoise AI...');
+
     try {
-        console.log('[KrispLevel] Loading RNNoise WASM module...');
-        
-        // RNNoise WASM inline (compiled from xiph.org RNNoise)
-        const wasmBase64 = `
-        // This would be the actual RNNoise WASM binary in base64
-        // For now, we'll use a fallback implementation
-        `;
-        
-        // Since we don't have the actual WASM, use a high-quality fallback
-        console.log('[KrispLevel] Using high-quality fallback implementation');
-        isInitialized = true;
-        return true;
-        
+        const { createRNNWasmModule } = await import('@jitsi/rnnoise-wasm');
+        rnnoiseModule = await createRNNWasmModule();
+
+        denoiseState = rnnoiseModule._rnnoise_create(null);
+        if (!denoiseState) throw new Error('Failed to create denoise state');
+
+        inputPtr = rnnoiseModule._malloc(RNNOISE_FRAME_SIZE * 4);
+        outputPtr = rnnoiseModule._malloc(RNNOISE_FRAME_SIZE * 4);
+
+        isModuleReady = true;
+        console.log('[RNNoiseAI] ✅ RNNoise AI ready');
     } catch (error) {
-        console.error('[KrispLevel] Failed to load RNNoise WASM:', error);
-        return false;
+        console.error('[RNNoiseAI] ❌ Init failed:', error);
+        throw error;
     }
 }
 
 /**
- * Initialize RNNoise denoising state
+ * Calculate frame energy (RMS)
  */
-function initializeRNNoise(): boolean {
-    try {
-        // In real RNNoise, this would be: rnnoise_create()
-        denoiseState = { initialized: true };
-        console.log('[KrispLevel] RNNoise state initialized');
-        return true;
-    } catch (error) {
-        console.error('[KrispLevel] Failed to initialize RNNoise:', error);
-        return false;
+function calculateEnergy(frame: Float32Array): number {
+    let sum = 0;
+    for (let i = 0; i < frame.length; i++) {
+        sum += frame[i] * frame[i];
     }
+    return Math.sqrt(sum / frame.length);
 }
 
 /**
- * High-quality noise suppression using RNNoise-style processing
- * This preserves audio quality while removing noise
+ * Detect transient (keyboard click, mouse click, etc.)
+ * Returns attenuation factor (1.0 = no attenuation, 0.0 = full mute)
  */
-function processAudioWithRNNoise(inputData: Float32Array, outputData: Float32Array): void {
-    // Copy input to buffer
-    const samplesToProcess = Math.min(inputData.length, FRAME_SIZE - bufferIndex);
-    
-    for (let i = 0; i < samplesToProcess; i++) {
-        inputBuffer[bufferIndex + i] = inputData[i] * INPUT_GAIN;
+function detectTransientAndGetAttenuation(currentEnergy: number): number {
+    // Update energy history
+    energyHistory.push(currentEnergy);
+    if (energyHistory.length > TRANSIENT_HISTORY_SIZE) {
+        energyHistory.shift();
     }
-    bufferIndex += samplesToProcess;
-    
-    // Process when we have a full frame
-    if (bufferIndex >= FRAME_SIZE) {
-        // RNNoise-style processing (high-quality noise suppression)
-        processRNNoiseFrame(inputBuffer, outputBuffer);
-        
-        // Copy processed data to output
-        const outputSamples = Math.min(outputData.length, FRAME_SIZE);
-        for (let i = 0; i < outputSamples; i++) {
-            outputData[i] = outputBuffer[i] * OUTPUT_GAIN;
+
+    // Need enough history to detect transients
+    if (energyHistory.length < 3) {
+        return 1.0;
+    }
+
+    // Calculate average energy (excluding current frame)
+    const historyWithoutCurrent = energyHistory.slice(0, -1);
+    const avgEnergy = historyWithoutCurrent.reduce((a, b) => a + b, 0) / historyWithoutCurrent.length;
+
+    // Detect transient: sudden spike in energy
+    const isTransient = avgEnergy > 0.0001 && currentEnergy > avgEnergy * TRANSIENT_THRESHOLD_RATIO;
+
+    if (isTransient) {
+        transientRecoveryCounter = TRANSIENT_RECOVERY_FRAMES;
+        console.log('[RNNoiseAI] 🎹 Transient detected - suppressing');
+    }
+
+    // Apply attenuation during recovery
+    if (transientRecoveryCounter > 0) {
+        transientRecoveryCounter--;
+        // Gradual recovery: start at 0.1 and ramp up
+        const recoveryProgress = 1 - (transientRecoveryCounter / TRANSIENT_RECOVERY_FRAMES);
+        return 0.1 + (0.9 * recoveryProgress * recoveryProgress); // Quadratic ramp for smooth recovery
+    }
+
+    return 1.0;
+}
+
+/**
+ * Process single frame through AI + transient detection
+ */
+function processFrame(inputFrame: Float32Array): Float32Array {
+    if (!rnnoiseModule || !denoiseState) return inputFrame;
+
+    try {
+        const inOff = inputPtr / 4;
+        const outOff = outputPtr / 4;
+
+        // Scale to PCM16 range
+        for (let i = 0; i < RNNOISE_FRAME_SIZE; i++) {
+            rnnoiseModule.HEAPF32[inOff + i] = inputFrame[i] * 32767;
         }
-        
-        // Shift buffer for overlap
-        const remaining = bufferIndex - FRAME_SIZE;
-        if (remaining > 0) {
-            for (let i = 0; i < remaining; i++) {
-                inputBuffer[i] = inputBuffer[FRAME_SIZE + i];
+
+        // AI denoise
+        rnnoiseModule._rnnoise_process_frame(denoiseState, outputPtr, inputPtr);
+
+        // Read processed audio
+        const output = new Float32Array(RNNOISE_FRAME_SIZE);
+        for (let i = 0; i < RNNOISE_FRAME_SIZE; i++) {
+            output[i] = rnnoiseModule.HEAPF32[outOff + i] / 32767;
+        }
+
+        // Calculate energy of the PROCESSED frame and detect transients
+        const energy = calculateEnergy(output);
+        const transientAttenuation = detectTransientAndGetAttenuation(energy);
+
+        // Apply transient attenuation if needed
+        if (transientAttenuation < 1.0) {
+            for (let i = 0; i < RNNOISE_FRAME_SIZE; i++) {
+                output[i] *= transientAttenuation;
             }
         }
-        bufferIndex = remaining;
-    } else {
-        // Not enough data yet, pass through with minimal processing
-        for (let i = 0; i < outputData.length; i++) {
-            outputData[i] = inputData[i];
-        }
+
+        return output;
+    } catch (e) {
+        return inputFrame;
     }
 }
 
 /**
- * RNNoise-style frame processing
- * Uses advanced techniques to preserve voice quality
- */
-function processRNNoiseFrame(input: Float32Array, output: Float32Array): void {
-    // Calculate frame energy for voice activity detection
-    let energy = 0;
-    for (let i = 0; i < FRAME_SIZE; i++) {
-        energy += input[i] * input[i];
-    }
-    energy = Math.sqrt(energy / FRAME_SIZE);
-    
-    // Voice activity detection
-    const isVoice = energy > VAD_THRESHOLD;
-    
-    if (isVoice) {
-        // Voice detected - use gentle processing to preserve quality
-        applyGentleNoiseReduction(input, output, energy);
-    } else {
-        // No voice - apply aggressive noise suppression
-        applyAggressiveNoiseReduction(input, output, energy);
-    }
-}
-
-/**
- * Gentle noise reduction that preserves voice quality
- */
-function applyGentleNoiseReduction(input: Float32Array, output: Float32Array, energy: number): void {
-    // Use spectral gating instead of aggressive suppression
-    const noiseFloor = 0.01;
-    const suppressionFactor = Math.max(0.3, Math.min(1.0, energy / (noiseFloor + 0.05)));
-    
-    for (let i = 0; i < FRAME_SIZE; i++) {
-        output[i] = input[i] * suppressionFactor;
-    }
-}
-
-/**
- * Aggressive noise reduction for non-voice periods
- */
-function applyAggressiveNoiseReduction(input: Float32Array, output: Float32Array, energy: number): void {
-    // Strong suppression during silence
-    const noiseFloor = 0.01;
-    const suppressionFactor = Math.max(0.05, Math.min(0.3, energy / noiseFloor));
-    
-    for (let i = 0; i < FRAME_SIZE; i++) {
-        output[i] = input[i] * suppressionFactor;
-    }
-}
-
-/**
- * Create Krisp-level noise suppressed stream
+ * Create noise-suppressed stream
  */
 export async function createKrispLevelNoiseSuppressedStream(
     originalStream: MediaStream
 ): Promise<MediaStream> {
     try {
-        console.log('[KrispLevel] 🎯 Initializing Krisp-level noise cancellation...');
-        
-        // Clean up previous context
-        if (audioContext) {
-            await audioContext.close();
-            audioContext = null;
-        }
-        
-        // Load RNNoise WASM module
-        const wasmLoaded = await loadRNNoiseWASM();
-        if (!wasmLoaded) {
-            console.warn('[KrispLevel] WASM loading failed, using fallback');
-        }
-        
-        // Initialize RNNoise
-        if (!initializeRNNoise()) {
-            throw new Error('Failed to initialize noise suppression');
-        }
-        
-        // Get original track settings
-        const originalTrack = originalStream.getAudioTracks()[0];
-        const settings = originalTrack?.getSettings();
-        
-        // Create high-quality audio stream
-        const enhancedStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                deviceId: settings?.deviceId ? { exact: settings.deviceId } : undefined,
-                echoCancellation: false, // We handle this ourselves
-                noiseSuppression: false, // We handle this ourselves
-                autoGainControl: false,  // Preserve original levels
-                channelCount: 1,
-                sampleRate: 48000,
-                latency: 0.01,
-                volume: 1.0,
+        await ensureRNNoiseModule();
+
+        // Clean up any previous stream resources (but keep module)
+        destroyKrispLevelNoise();
+
+        // Reset state for new stream
+        isMutedByControl = false;
+        inputBuffer = new Float32Array(0);
+        outputBuffer = new Float32Array(0);
+        energyHistory = [];
+        transientRecoveryCounter = 0;
+
+        // Always create fresh AudioContext for the stream
+        audioContext = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' });
+        if (audioContext.state === 'suspended') await audioContext.resume();
+
+        sourceNode = audioContext.createMediaStreamSource(originalStream);
+        scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+
+        scriptProcessor.onaudioprocess = (e) => {
+            const input = e.inputBuffer.getChannelData(0);
+            const output = e.outputBuffer.getChannelData(0);
+
+            // If muted, output silence and clear buffers
+            if (isMutedByControl) {
+                output.fill(0);
+                inputBuffer = new Float32Array(0);
+                outputBuffer = new Float32Array(0);
+                return;
             }
-        });
-        
-        console.log('[KrispLevel] High-quality audio stream created');
-        
-        // Create audio context with optimal settings
-        audioContext = new AudioContext({
-            sampleRate: 48000,
-            latencyHint: 'interactive'
-        });
-        
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
-        
-        const source = audioContext.createMediaStreamSource(enhancedStream);
-        
-        // Use smaller buffer for lower latency (but still avoid the deprecated warning)
-        processorNode = audioContext.createScriptProcessor(1024, 1, 1);
-        
-        let frameCount = 0;
-        
-        processorNode.onaudioprocess = (event) => {
-            const inputData = event.inputBuffer.getChannelData(0);
-            const outputData = event.outputBuffer.getChannelData(0);
-            
-            try {
-                // Apply RNNoise-style processing
-                processAudioWithRNNoise(inputData, outputData);
-                
-                // Log initialization completion
-                if (frameCount === 30) {
-                    console.log('[KrispLevel] ✅ Krisp-level noise cancellation active');
-                }
-                frameCount++;
-                
-            } catch (error) {
-                console.error('[KrispLevel] Processing error:', error);
-                // Fallback to passthrough
-                for (let i = 0; i < outputData.length; i++) {
-                    outputData[i] = inputData[i];
-                }
+
+            // Append input
+            const newIn = new Float32Array(inputBuffer.length + input.length);
+            newIn.set(inputBuffer);
+            newIn.set(input, inputBuffer.length);
+            inputBuffer = newIn;
+
+            // Process complete frames
+            while (inputBuffer.length >= RNNOISE_FRAME_SIZE) {
+                const frame = inputBuffer.slice(0, RNNOISE_FRAME_SIZE);
+                inputBuffer = inputBuffer.slice(RNNOISE_FRAME_SIZE);
+                const processed = processFrame(frame);
+
+                const newOut = new Float32Array(outputBuffer.length + processed.length);
+                newOut.set(outputBuffer);
+                newOut.set(processed, outputBuffer.length);
+                outputBuffer = newOut;
+            }
+
+            // Output
+            if (outputBuffer.length >= output.length) {
+                output.set(outputBuffer.slice(0, output.length));
+                outputBuffer = outputBuffer.slice(output.length);
+            } else {
+                output.set(outputBuffer);
+                output.fill(0, outputBuffer.length);
+                outputBuffer = new Float32Array(0);
             }
         };
-        
-        // Create output stream
+
+        sourceNode.connect(scriptProcessor);
         const destination = audioContext.createMediaStreamDestination();
-        
-        // Connect processing chain: Input -> RNNoise -> Output
-        source.connect(processorNode);
-        processorNode.connect(destination);
-        
-        console.log('[KrispLevel] ✅ Processing chain established');
-        console.log('[KrispLevel] Using: RNNoise algorithm + VAD + Quality preservation');
-        
+        scriptProcessor.connect(destination);
+
+        console.log('[RNNoiseAI] ✅ ENHANCED AI NOISE SUPPRESSION ACTIVE (with transient detection)');
         return destination.stream;
-        
-    } catch (error: any) {
-        console.error('[KrispLevel] ❌ Failed to create Krisp-level noise suppression:', error);
+    } catch (error) {
+        console.error('[RNNoiseAI] ❌ Failed:', error);
         return originalStream;
     }
 }
 
 /**
- * Cleanup resources
+ * Set muted state (for use by LiveKitProvider)
+ * This properly mutes without breaking the audio pipeline
+ */
+export function setKrispMuted(muted: boolean): void {
+    const wasMuted = isMutedByControl;
+    isMutedByControl = muted;
+
+    if (wasMuted && !muted) {
+        // Unmuting - clear buffers to prevent stale audio
+        inputBuffer = new Float32Array(0);
+        outputBuffer = new Float32Array(0);
+        energyHistory = [];
+        transientRecoveryCounter = 0;
+        console.log('[RNNoiseAI] 🎤 Unmuted - buffers cleared');
+    } else if (!wasMuted && muted) {
+        console.log('[RNNoiseAI] 🔇 Muted');
+    }
+}
+
+/**
+ * Check if currently muted
+ */
+export function isKrispMuted(): boolean {
+    return isMutedByControl;
+}
+
+/**
+ * Disconnect current stream (for device switch)
  */
 export function destroyKrispLevelNoise(): void {
-    try {
-        if (processorNode) {
-            processorNode.disconnect();
-            processorNode = null;
-        }
-        
-        if (audioContext) {
-            audioContext.close().catch(() => {});
-            audioContext = null;
-        }
-        
-        if (denoiseState) {
-            // In real RNNoise: rnnoise_destroy(denoiseState)
-            denoiseState = null;
-        }
-        
-        // Reset buffers
-        bufferIndex = 0;
-        inputBuffer.fill(0);
-        outputBuffer.fill(0);
-        
-        console.log('[KrispLevel] Resources cleaned up');
-    } catch (error) {
-        console.error('[KrispLevel] Cleanup error:', error);
+    if (scriptProcessor) {
+        scriptProcessor.disconnect();
+        scriptProcessor = null;
     }
+    if (sourceNode) {
+        sourceNode.disconnect();
+        sourceNode = null;
+    }
+    if (audioContext) {
+        audioContext.close().catch(() => { });
+        audioContext = null;
+    }
+    // Reset buffers
+    inputBuffer = new Float32Array(0);
+    outputBuffer = new Float32Array(0);
+    console.log('[RNNoiseAI] 🔄 Stream disconnected (module preserved)');
+}
+
+/**
+ * Full cleanup (when leaving channel)
+ */
+export function destroyKrispLevelNoiseFull(): void {
+    destroyKrispLevelNoise();
+
+    if (rnnoiseModule && denoiseState) {
+        try {
+            rnnoiseModule._free(inputPtr);
+            rnnoiseModule._free(outputPtr);
+            rnnoiseModule._rnnoise_destroy(denoiseState);
+        } catch (e) { }
+    }
+    rnnoiseModule = null;
+    denoiseState = 0;
+    inputPtr = 0;
+    outputPtr = 0;
+    isModuleReady = false;
+    isMutedByControl = false;
+    energyHistory = [];
+    transientRecoveryCounter = 0;
+    console.log('[RNNoiseAI] 🧹 Full cleanup complete');
 }
